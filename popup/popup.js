@@ -31,7 +31,7 @@ async function loadSavedAudioState() {
           if (state.audioUrl && (state.isPlaying || state.currentTime > 0)) {
             document.getElementById('play-quran').textContent = state.isPlaying ? '⏸ Playing' : '▶ Resume';
             document.getElementById('pause-quran').disabled = !state.isPlaying;
-            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('progress-container').classList.remove('hidden');
             
             // Update progress display
             if (state.duration > 0) {
@@ -58,7 +58,7 @@ async function loadSavedAudioState() {
 
 async function loadHadith() {
   try {
-    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
+    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-10');
     const data = await response.json();
     const randomHadith = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
     document.getElementById('hadith-text').textContent = 
@@ -171,7 +171,7 @@ async function playQuranAudio(suraId, reciterId) {
   const pauseButton = document.getElementById('pause-quran');
   
   try {
-    loadingEl.style.display = 'block';
+    loadingEl.classList.remove('hidden');
     playButton.disabled = true;
 
     console.log(`Requesting audio for Sura ${suraId}, Reciter ID ${reciterId}`);
@@ -222,7 +222,7 @@ async function playQuranAudio(suraId, reciterId) {
       playButton.disabled = false;
       pauseButton.disabled = false;
       pauseButton.style.display = 'block';
-      document.getElementById('progress-container').style.display = 'block';
+      document.getElementById('progress-container').classList.remove('hidden');
       
       startProgressTracking();
       console.log('Audio playback started successfully');
@@ -236,7 +236,7 @@ async function playQuranAudio(suraId, reciterId) {
     playButton.textContent = '▶ Play';
     playButton.disabled = false;
   } finally {
-    loadingEl.style.display = 'none';
+    loadingEl.classList.add('hidden');
   }
 }
 

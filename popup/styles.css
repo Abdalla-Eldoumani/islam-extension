@@ -107,4 +107,8 @@
   text-align: center;
   color: var(--clr-primary);
   font-weight: bold;
+}
+
+.hidden {
+  display: none;
 } 
