@@ -1,17 +1,15 @@
 /**
  * Popup script for Qur'an & Sunnah Companion
  * Handles UI, API calls, and communication with the background script.
- * This version uses the Quran.com v4 API.
+ * This version uses the Quran.com v4 API for Surah names and quranicaudio.com for audio.
  */
 
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
 let progressTrackingInterval = null;
-// Cache for { reciterId: Set<suraId> }
-const reciterAvailabilityCache = new Map();
-// Cache for { 'reciterId-suraId': 'url' }
-const audioUrlCache = new Map();
+// Cache for { reciterIdentifier: { server, availableSurahs: Set } }
+const recitationDetailsCache = new Map();
 
 // --- LIFECYCLE ---
 
@@ -33,7 +31,7 @@ function setupEventHandlers() {
   pauseButton.addEventListener('click', handlePlayPauseResume);
   
   suraSelect.addEventListener('change', validateQuranSelection);
-  reciterSelect.addEventListener('change', handleReciterChange);
+  reciterSelect.addEventListener('change', validateQuranSelection);
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
@@ -82,12 +80,35 @@ async function loadSavedAudioState() {
     const { audioState } = await chrome.storage.local.get('audioState');
     if (audioState?.suraId && audioState?.reciterKey) {
       document.getElementById('sura-select').value = audioState.suraId;
-      document.getElementById('reciter-select').value = audioState.reciterKey;
+
+      // The reciter select is populated asynchronously. We need to wait for it.
+      const waitForReciters = new Promise(resolve => {
+        const reciterSelect = document.getElementById('reciter-select');
+        if (reciterSelect.options.length > 1) { // Already populated
+          resolve();
+          return;
+        }
+        const observer = new MutationObserver(() => {
+          if (reciterSelect.options.length > 1) {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(reciterSelect, { childList: true });
+        setTimeout(() => { observer.disconnect(); resolve(); }, 3000); // Failsafe timeout
+      });
+
+      await waitForReciters;
       
-      await handleReciterChange();
+      // Check if the saved reciter is still in the list
+      if (Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === audioState.reciterKey)) {
+        document.getElementById('reciter-select').value = audioState.reciterKey;
+      }
+      
+      validateQuranSelection();
 
       const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-      if (stateResponse?.success && stateResponse.state?.audioUrl) {
+      if (stateResponse?.success && stateResponse.state?.audioUrl && stateResponse.state.reciterKey === audioState.reciterKey && stateResponse.state.suraId === audioState.suraId) {
         updateProgressUI(stateResponse.state);
         updatePlayButtonUI(stateResponse.state.isPlaying, true);
         if (stateResponse.state.isPlaying) {
@@ -131,7 +152,7 @@ async function setupQuranSelectors() {
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: r.reciter_name }));
+    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: r.name }));
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
     suraSelect.innerHTML = '<option value="">Error</option>';
@@ -159,74 +180,94 @@ async function fetchSuras() {
 }
 
 async function fetchReciters() {
-  const preferredReciterNames = [
-    "Mishari Rashid al-`Afasy", "Maher Al Muaiqly", "Mahmud Khalil Al-Husary",
-    "Mohamed Siddiq al-Minshawi", "Bandar Baleela", "Badr Al Turki",
-    "Yasser Ad-Dussary", "Ali Abdur-Rahman al-Huthaify", "Mohammad Ayyub",
-    "Mohamed Rifaat", "Abdel Basset Abdel Samad", "Abdur-Rahman as-Sudais"
-  ];
-  const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
-  if (!response.ok) throw new Error('Failed to fetch reciters');
-  const { recitations } = await response.json();
-  const filtered = recitations.filter(r => preferredReciterNames.some(name => r.reciter_name.includes(name)));
-  console.log(`Found ${filtered.length} matching preferred reciters.`);
-  return filtered;
+    // From project overview: Mishary, Abdul Basit, Minshawi, Al-Hussary, Bandar Balila, 
+    // Badr Turki, Maher al-Muaiqly, Muhammad Refat, Ali Jabir, Mohamed Ayoub
+    const preferredReciterSubstrings = [
+        "Mishary", "Basit", "Minshawi", "Husary", "Bandar Balila", 
+        "Badr Al-Turki", "Maher Al Muaiqly", "Rifat", "Ali Jaber", "Ayyub"
+    ];
+
+    const response = await fetch('https://quranicaudio.com/api/reciters');
+    if (!response.ok) throw new Error('Failed to fetch reciters from quranicaudio.com');
+    const data = await response.json();
+    
+    const processedRecitations = [];
+
+    const reciters = data.reciters.filter(r => preferredReciterSubstrings.some(name => r.name.includes(name)));
+
+    reciters.forEach(reciter => {
+        reciter.moshaf.forEach(moshaf => {
+            // We only want full surah recitations, which usually have 114 surahs
+            if (moshaf.surah_total >= 114) { 
+                const identifier = `${reciter.id}-${moshaf.id}`;
+                const displayName = `${reciter.name} (${moshaf.name})`;
+
+                processedRecitations.push({
+                    id: identifier,
+                    name: displayName
+                });
+
+                const availableSurahs = new Set(moshaf.surah_list.split(',').map(s => parseInt(s, 10)));
+                recitationDetailsCache.set(identifier, {
+                    server: moshaf.server,
+                    availableSurahs
+                });
+            }
+        });
+    });
+    
+    console.log(`Found ${processedRecitations.length} full recitations from preferred reciters.`);
+    return processedRecitations.sort((a,b) => a.name.localeCompare(b.name));
 }
 
 // --- AUDIO LOGIC ---
 
-async function fetchAndCacheAvailableSurahs(reciterId) {
-  if (reciterAvailabilityCache.has(reciterId)) {
-    console.log(`Using cached availability for reciter ${reciterId}.`);
-    return; // Already fetched and cached
-  }
-
-  const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files?file_type=surah`);
-  if (!response.ok) {
-    reciterAvailabilityCache.set(reciterId, new Set()); // Cache failure as empty set
-    throw new Error(`API check failed with status ${response.status}.`);
-  }
-
-  const { audio_files } = await response.json();
-  const availableSuraIds = new Set();
-  
-  audio_files.forEach(file => {
-    availableSuraIds.add(file.chapter_id);
-    const url = file.audio_url.startsWith('//') ? `https://${file.audio_url.substring(2)}` : file.audio_url;
-    audioUrlCache.set(`${reciterId}-${file.chapter_id}`, url);
-  });
-  
-  reciterAvailabilityCache.set(reciterId, availableSuraIds);
-  console.log(`Cached ${availableSuraIds.size} available surahs for reciter ${reciterId}.`);
-}
-
 function validateQuranSelection() {
   const suraId = parseInt(document.getElementById('sura-select').value, 10);
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterIdentifier = document.getElementById('reciter-select').value;
   const playButton = document.getElementById('play-quran');
   const availabilityStatus = document.getElementById('quran-availability');
   
-  // With this simplified API, all combinations are assumed to be valid.
-  // We just enable the button and clear any previous error messages.
-  playButton.disabled = !suraId || !reciterId;
-  availabilityStatus.textContent = ''; 
+  if (!suraId || !reciterIdentifier) {
+    playButton.disabled = true;
+    availabilityStatus.textContent = '';
+    return;
+  }
+  
+  const reciterData = recitationDetailsCache.get(reciterIdentifier);
+  
+  if (reciterData && reciterData.availableSurahs.has(suraId)) {
+    availabilityStatus.innerHTML = '&#x2705; Available'; // Checkmark emoji
+    availabilityStatus.style.color = 'green';
+    updatePlayButtonUI(false, true); // isPlaying=false, isEnabled=true
+  } else if (reciterData) {
+    availabilityStatus.innerHTML = '&#x274C; Not available'; // Cross emoji
+    availabilityStatus.style.color = 'red';
+    updatePlayButtonUI(false, false); // isPlaying=false, isEnabled=false
+  } else {
+    availabilityStatus.textContent = '';
+    updatePlayButtonUI(false, false);
+  }
 }
 
 async function playQuranAudio() {
   setUILoading(true);
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterIdentifier = document.getElementById('reciter-select').value;
   
   try {
-    const audioUrl = audioUrlCache.get(`${reciterId}-${suraId}`);
-    if (!audioUrl) throw new Error('Audio URL not found in cache.');
+    const reciterData = recitationDetailsCache.get(reciterIdentifier);
+    if (!reciterData) throw new Error('Reciter data not found in cache.');
+
+    const paddedSuraId = suraId.toString().padStart(3, '0');
+    const audioUrl = `${reciterData.server}/${paddedSuraId}.mp3`;
     console.log('Constructed audio URL:', audioUrl);
     
     const response = await chrome.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
       suraId,
-      reciterKey: reciterId,
+      reciterKey: reciterIdentifier,
     });
 
     if (!response?.success) {
