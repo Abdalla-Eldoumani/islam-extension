@@ -111,7 +111,7 @@ async function setupQuranSelectors() {
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.number, text: `${s.number}. ${s.englishName}` }));
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.identifier, text: r.name }));
+    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.identifier, text: r.englishName }));
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
     suraSelect.innerHTML = '<option value="">Error loading Suras</option>';
@@ -139,20 +139,27 @@ async function fetchSuras() {
 }
 
 async function fetchReciters() {
-  const preferredReciterNames = [
-    "Mishary Rashid al-`Afasy", "Maher Al Muaiqly", "Mahmud Khalil Al-Husary",
-    "Mohamed Siddiq al-Minshawi", "Bandar Baleela", "Badr Al Turki", 
-    "Yasser Ad-Dussary", "Ali Abdur-Rahman al-Huthaify", "Mohammad Ayyub", 
-    "Mohamed Rifaat", "Abdel Basset Abdel Samad", "Abdur-Rahman as-Sudais"
-  ].map(name => name.toLowerCase());
+  // Use keywords to robustly match preferred reciters from the API response.
+  const preferredReciterKeys = [
+    "afasy", "sudais", "shuraym", "muaiqly", "husary", "minshawi", 
+    "baleela", "turki", "dussary", "huthaify", "ayyub", "rifaat", "jaber",
+    "abdul-basit", "abdus-samad" // Covers different transliterations of Abdul Basit
+  ];
 
   const response = await fetch('https://api.alquran.cloud/v1/edition?format=audio&language=ar');
   if (!response.ok) throw new Error('Failed to fetch reciters from alquran.cloud');
   const data = await response.json();
 
-  const reciters = data.data.filter(reciter => 
-    preferredReciterNames.some(preferred => reciter.name.toLowerCase().includes(preferred) || preferred.includes(reciter.name.toLowerCase()))
-  );
+  const reciters = data.data.filter(reciter => {
+    // Check against the English name as it's more consistent for matching.
+    const apiNameLower = reciter.englishName.toLowerCase();
+    return preferredReciterKeys.some(key => apiNameLower.includes(key));
+  });
+
+  if (reciters.length === 0) {
+    console.warn("Found 0 matching reciters. The API might have changed or the matching keys are outdated.");
+  }
+  
   console.log(`Found ${reciters.length} matching preferred reciters.`);
   return reciters;
 }
@@ -185,30 +192,15 @@ async function fetchAndCacheAvailableSurahsForReciter(reciterId) {
 }
 
 function validateQuranSelection() {
-  const suraId = parseInt(document.getElementById('sura-select').value, 10);
+  const suraId = document.getElementById('sura-select').value;
   const reciterId = document.getElementById('reciter-select').value;
+  const playButton = document.getElementById('play-quran');
   const availabilityStatus = document.getElementById('quran-availability');
   
-  updatePlayButtonUI(false, false); // Always disable button first
-
-  if (!suraId || !reciterId) {
-    availabilityStatus.textContent = '';
-    return;
-  }
-
-  const availableSurahs = reciterAvailabilityCache.get(reciterId);
-  
-  // If we haven't loaded this reciter's data yet, the status will be set by handleReciterChange
-  if (!availableSurahs) {
-    return;
-  }
-  
-  if (availableSurahs.has(suraId)) {
-    availabilityStatus.textContent = '✅ Available';
-    updatePlayButtonUI(false, true);
-  } else {
-    availabilityStatus.textContent = '❌ Not available for this reciter.';
-  }
+  // With this simplified API, all combinations are assumed to be valid.
+  // We just enable the button and clear any previous error messages.
+  playButton.disabled = !suraId || !reciterId;
+  availabilityStatus.textContent = ''; 
 }
 
 async function playQuranAudio() {
