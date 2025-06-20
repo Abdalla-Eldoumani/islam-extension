@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qur'an & Sunnah Companion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="popup">
+    <header class="popup__header">
+      <h1 class="popup__title">Qur'an & Sunnah Companion</h1>
+    </header>
+    
+    <section class="cards">
+      <article class="card card--quran">
+        <h2 class="card__title">Qur'an</h2>
+        <select class="card__select" id="sura-select">
+          <option value="">Select Sura...</option>
+        </select>
+        <select class="card__select" id="reciter-select">
+          <option value="">Select Reciter...</option>
+        </select>
+        <div class="card__controls">
+          <button class="card__button" id="play-quran" disabled>▶ Play</button>
+          <button class="card__button card__button--secondary" id="pause-quran" disabled>⏸ Pause</button>
+        </div>
+        <div class="card__progress" id="progress-container" style="display: none;">
+          <input type="range" id="progress-bar" min="0" max="100" value="0" class="card__progress-bar">
+          <div class="card__time">
+            <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+          </div>
+        </div>
+        <div class="card__loading" id="quran-loading" style="display: none;">Loading...</div>
+      </article>
+      
+      <article class="card card--hadith">
+        <h2 class="card__title">Hadith</h2>
+        <p class="card__content" id="hadith-text">Loading...</p>
+      </article>
+      
+      <article class="card card--dhikr">
+        <h2 class="card__title">Dhikr</h2>
+        <p class="card__content" id="dhikr-text">Loading...</p>
+      </article>
+    </section>
+  </main>
+  
+  <script type="module" src="popup.js"></script>
+</body>
+</html> 

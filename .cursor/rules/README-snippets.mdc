@@ -1,0 +1,46 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: README-snippets.mdc                                         -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# README‑snippets.mdc
+
+### Show a notification
+
+```js
+chrome.notifications.create({
+  type: 'basic',
+  iconUrl: 'assets/icon48.png',
+  title: 'Time for Dhikr',
+  message: 'سُبْحَانَ اللَّهِ',
+});
+```
+
+### Schedule hourly alarms
+
+```js
+chrome.alarms.create('dhikr‑tick', { periodInMinutes: 60 });
+```
+
+### Continue audio after popup closes
+
+```js
+if (!await chrome.offscreen.hasDocument()) {
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: ['AUDIO_PLAYBACK'],
+    justification: 'Keep Qur’an audio playing',
+  });
+}
+```
+
+---
+
+

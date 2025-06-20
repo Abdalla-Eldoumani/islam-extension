@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: 40-security.mdc                                              -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# 40‑security.mdc
+
+1. **Zero PII** — do not request, store, or transmit personal identifiers.
+2. **No embedded keys** — all APIs are public; never hard‑code secrets.
+3. **Content‑Security‑Policy**: default‑src 'self'; media‑src https\://*.quran.com https\://*.alquran.cloud; connect‑src same‑origin; object‑src 'none'.
+4. **Halal imagery** — avoid animate beings or faces in UI assets.
+
+
+---

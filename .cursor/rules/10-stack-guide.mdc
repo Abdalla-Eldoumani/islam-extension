@@ -1,0 +1,42 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: 10-stack-guide.mdc                                            -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# 10‑stack‑guide.mdc
+
+### Runtime stack
+
+| Layer            | Choice                                     | Rationale                                     |
+| ---------------- | ------------------------------------------ | --------------------------------------------- |
+| UI               | **HTML 5 + CSS 3**                         | Small bundle, instant load, no framework debt |
+| Styling          | CSS Variables, Flexbox, CSS Grid           | Responsive 1‑file stylesheet                  |
+| Logic            | ES modules (no build)                      | Works natively in Manifest V3 service workers |
+| Bundler (opt‑in) | Vite (dev‑time only)                       | Fast HMR for popup during local dev           |
+| Testing          | Jest (+ jsdom) · Playwright E2E            | Unit + browser popup tests                    |
+| Lint/Format      | ESLint (@eslint/js recommended) · Prettier | Keep codebase consistent                      |
+
+### Key browser APIs
+
+* `chrome.alarms` → timed Hadith/Dhikr rotation
+* `chrome.offscreen` → continue audio when popup closes
+* `chrome.i18n` → English/Arabic UI
+* `chrome.storage.sync` → ≤ 100 KB user prefs
+
+### Command aliases
+
+```bash
+npm run dev        # vite --mode chrome
+npm run build      # vite build && zip release.zip dist/**
+npm run lint       # eslint "src/**/*.js"
+npm run test       # jest --runInBand
+```
+
+
+---

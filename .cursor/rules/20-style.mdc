@@ -1,0 +1,34 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: 20-style.mdc                                                 -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# 20‑style.mdc
+
+## JavaScript
+
+* ECMAScript 2022, modules only
+* 2‑space indent, semi‑colons on, single quotes
+* Avoid `var`; prefer `const` then `let`
+* No `any`‑type globals—document with JSDoc
+
+## CSS
+
+* Single `styles.css`; BEM‑style class names (`.card--hadith`)
+* Custom properties for brand palette (`--clr‑primary: #148f77`)
+* Mobile‑first media queries
+
+## Commit messages (Conventional Commits)
+
+`feat(popup): add reciter selector`
+`fix(alarms): honor quiet hours`
+
+
+---

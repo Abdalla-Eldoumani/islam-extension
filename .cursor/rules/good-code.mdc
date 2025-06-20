@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: good-code.mdc                                               -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# good‑code.mdc
+
+### JavaScript example
+
+```js
+/**
+ * Fetch a random Sahih Bukhari hadith in Arabic & English.
+ * @returns {Promise<{arabic:string, english:string, id:string}>}
+ */
+export async function getRandomHadith() {
+  const res = await fetch('https://hadithapi.com/api/hadiths?book=sahih-bukhari&limit=1');
+  if (!res.ok) throw new Error('Network');
+  const [{ hadithArabic, hadithEnglish, hadithNumber }] = await res.json();
+  return {
+    arabic: hadithArabic,
+    english: hadithEnglish,
+    id: `Bukhari-${hadithNumber}`,
+  };
+}
+```
+
+### CSS example
+
+```css
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--clr-bg);
+  border-radius: 0.75rem;
+}
+.card--hadith { border-inline-start: 4px solid var(--clr-primary); }
+```
+
+
+---

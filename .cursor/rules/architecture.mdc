@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: architecture.mdc                                            -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# architecture.mdc
+
+```mermaid
+graph LR
+    A[Popup index.html] -->|fetch verse| B(api.quran.com)
+    A -->|fetch hadith| C(hadithapi.com)
+    A -->|fetch dhikr| D(dua-dhikr JSON)
+    A --> E[background.js]
+    E -->|audio continue| F[Offscreen document]
+    E -->|alarms| G[chrome.alarms]
+```
+
+Sequence diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant P as Popup
+    participant S as ServiceWorker
+    U->>P: Click extension icon
+    P->>B: GET /reciters
+    P->>C: GET /hadith/random
+    P->>D: GET /dhikr/random
+    P-->>U: Render three cards
+    U->>P: Play audio
+    P->>S: startOffscreen()
+    S->>F: createOffscreenDocument()
+```
+
+
+---

@@ -1,0 +1,30 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+<!-- ------------------------------------------------------------------ -->
+
+<!-- File: 30-testing.mdc                                               -->
+
+<!-- ------------------------------------------------------------------ -->
+
+# 30‑testing.mdc
+
+### Unit tests
+
+* **Jest** with `@jest-environment jsdom`
+* Mock Chrome APIs via `jest-chrome`
+* One test file per module in `tests/unit/`.
+
+### E2E tests
+
+* **Playwright** in `tests/e2e/`
+* Launch Chromium with `--load-extension` pointing to `dist/`
+* Ensure popup renders three cards and audio plays for ≥ 5 s.
+
+### Coverage target: 80 % lines minimum.
+
+
+---

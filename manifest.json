@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Qur'an & Sunnah Companion",
+  "version": "1.0",
+  "description": "Your pocket-size īmān boost in every tab",
+  "permissions": [
+    "offscreen",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://cdn.islamic.network/*",
+    "https://api.hadith.gading.dev/*",
+    "http://api.alquran.cloud/*",
+    "https://api.alquran.cloud/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Qur'an & Sunnah Companion"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png", 
+    "128": "assets/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; media-src https://*.islamic.network https://*.alquran.cloud https://cdn.islamic.network; connect-src 'self' https://api.hadith.gading.dev https://cdn.islamic.network https://*.islamic.network http://api.alquran.cloud https://api.alquran.cloud https://raw.githubusercontent.com; object-src 'none';"
+  }
+} 
