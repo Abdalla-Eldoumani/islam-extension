@@ -9,7 +9,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://api.hadith.gading.dev/*",
+    "https://hadithapi.com/*",
     "https://api.quran.com/*",
     "https://quranicaudio.com/*",
     "https://*.quranicaudio.com/*"

@@ -124,11 +124,12 @@ async function loadSavedAudioState() {
 async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
-    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
+    // The gading.dev API is returning HTML, switching to hadithapi.com
+    const response = await fetch('https://hadithapi.com/api/bukhari/random');
     if (!response.ok) throw new Error('Network response was not ok.');
     const data = await response.json();
-    const randomHadith = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
-    hadithEl.textContent = randomHadith?.arab || 'Error loading Hadith.';
+    // The new API has a different structure
+    hadithEl.textContent = data?.hadith_arabic || 'Error loading Hadith.';
   } catch (error) {
     console.error('Failed to load Hadith:', error);
     hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ - There is no god but Allah';
