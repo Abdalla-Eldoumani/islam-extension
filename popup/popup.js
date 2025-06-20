@@ -7,7 +7,9 @@
 
 // Global progress tracking interval
 let progressTrackingInterval = null;
-// Cache for reciter audio availability { 'reciterId-suraId': 'url' | null }
+// Cache for { reciterId: Set<suraId> }
+const reciterAvailabilityCache = new Map();
+// Cache for { 'reciterId-suraId': 'url' }
 const audioUrlCache = new Map();
 
 // --- LIFECYCLE ---
@@ -24,12 +26,36 @@ function setupEventHandlers() {
   document.getElementById('play-quran').addEventListener('click', handlePlayPauseResume);
   document.getElementById('pause-quran').addEventListener('click', handlePlayPauseResume);
   
+  document.getElementById('reciter-select').addEventListener('change', handleReciterChange);
   document.getElementById('sura-select').addEventListener('change', validateQuranSelection);
-  document.getElementById('reciter-select').addEventListener('change', validateQuranSelection);
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
   });
+}
+
+async function handleReciterChange() {
+  const reciterId = document.getElementById('reciter-select').value;
+  const availabilityStatus = document.getElementById('quran-availability');
+
+  updatePlayButtonUI(false, false); // Disable on change
+
+  if (!reciterId) {
+    availabilityStatus.textContent = '';
+    return;
+  }
+  
+  availabilityStatus.textContent = 'Loading reciter data...';
+  
+  try {
+    await fetchAndCacheAvailableSurahsForReciter(reciterId);
+  } catch (error) {
+    console.error(`Failed to fetch data for reciter ${reciterId}:`, error);
+    availabilityStatus.textContent = '❌ Could not load reciter data.';
+  }
+  
+  // Now that data is loaded (or failed), validate the current selection
+  validateQuranSelection();
 }
 
 async function handlePlayPauseResume(event) {
@@ -57,7 +83,7 @@ async function loadSavedAudioState() {
       document.getElementById('reciter-select').value = audioState.reciterKey;
 
       // Validate the restored selection to update UI availability status
-      await validateQuranSelection();
+      await handleReciterChange();
       
       const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
       if (stateResponse?.success && stateResponse.state?.audioUrl) {
@@ -156,54 +182,56 @@ async function fetchReciters() {
 
 // --- AUDIO LOGIC ---
 
-async function validateQuranSelection() {
-  const suraId = document.getElementById('sura-select').value;
+async function fetchAndCacheAvailableSurahsForReciter(reciterId) {
+  if (reciterAvailabilityCache.has(reciterId)) {
+    console.log(`Using cached availability for reciter ${reciterId}.`);
+    return; // Already fetched and cached
+  }
+
+  const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files`);
+  if (!response.ok) {
+    reciterAvailabilityCache.set(reciterId, new Set()); // Cache failure as empty set
+    throw new Error(`API check failed with status ${response.status}.`);
+  }
+
+  const data = await response.json();
+  const availableSuraIds = new Set();
+  
+  data.audio_files.forEach(file => {
+    availableSuraIds.add(file.chapter_id);
+    const audioUrl = `https://${file.audio_url.startsWith('//') ? file.audio_url.substring(2) : file.audio_url}`;
+    audioUrlCache.set(`${reciterId}-${file.chapter_id}`, audioUrl);
+  });
+  
+  reciterAvailabilityCache.set(reciterId, availableSuraIds);
+  console.log(`Cached ${availableSuraIds.size} available surahs for reciter ${reciterId}.`);
+}
+
+function validateQuranSelection() {
+  const suraId = parseInt(document.getElementById('sura-select').value, 10);
   const reciterId = document.getElementById('reciter-select').value;
   const availabilityStatus = document.getElementById('quran-availability');
   
-  updatePlayButtonUI(false, false); // Disable button initially
+  updatePlayButtonUI(false, false); // Always disable button first
+
   if (!suraId || !reciterId) {
     availabilityStatus.textContent = '';
     return;
   }
 
-  availabilityStatus.textContent = 'Checking availability...';
-  try {
-    await getAndCacheAudioUrl(suraId, reciterId);
+  const availableSurahs = reciterAvailabilityCache.get(reciterId);
+  
+  // If we haven't loaded this reciter's data yet, the status will be set by handleReciterChange
+  if (!availableSurahs) {
+    return;
+  }
+  
+  if (availableSurahs.has(suraId)) {
     availabilityStatus.textContent = '✅ Available';
-    updatePlayButtonUI(false, true); // Enable play
-  } catch (error) {
-    console.warn(error.message);
+    updatePlayButtonUI(false, true);
+  } else {
     availabilityStatus.textContent = '❌ Not available for this reciter.';
-    updatePlayButtonUI(false, false); // Keep disabled
   }
-}
-
-async function getAndCacheAudioUrl(suraId, reciterId) {
-  const cacheKey = `${reciterId}-${suraId}`;
-  if (audioUrlCache.has(cacheKey)) {
-    const url = audioUrlCache.get(cacheKey);
-    if (url) return url;
-    throw new Error('Combination previously determined to be unavailable.');
-  }
-
-  const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files?chapter_number=${suraId}`);
-  if (!response.ok) {
-    audioUrlCache.set(cacheKey, null);
-    throw new Error(`API check failed with status ${response.status}.`);
-  }
-
-  const data = await response.json();
-  const audioUrl = data.audio_files[0]?.audio_url;
-
-  if (!audioUrl) {
-    audioUrlCache.set(cacheKey, null);
-    throw new Error('No audio file found in API response.');
-  }
-
-  const correctedUrl = `https://${audioUrl.startsWith('//') ? audioUrl.substring(2) : audioUrl}`;
-  audioUrlCache.set(cacheKey, correctedUrl);
-  return correctedUrl;
 }
 
 async function playQuranAudio() {
@@ -212,7 +240,11 @@ async function playQuranAudio() {
   const reciterId = document.getElementById('reciter-select').value;
   
   try {
-    const audioUrl = await getAndCacheAudioUrl(suraId, reciterId);
+    const audioUrl = audioUrlCache.get(`${reciterId}-${suraId}`);
+    if (!audioUrl) {
+      throw new Error('Audio URL not found in cache. Validation might have failed.');
+    }
+
     const response = await chrome.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
@@ -316,10 +348,12 @@ function startProgressTracking() {
         updateProgressUI(response.state);
         
         // If audio finished playing, update button state
-        if (!response.state.isPlaying && response.state.currentTime >= response.state.duration) {
+        if (!response.state.isPlaying && response.state.currentTime >= response.state.duration && response.state.duration > 0) {
           updatePlayButtonUI(false, true);
           document.getElementById('play-quran').textContent = '▶ Play';
           document.getElementById('play-quran').dataset.action = 'play';
+          document.getElementById('progress-bar').value = 0;
+          document.getElementById('current-time').textContent = formatTime(0);
           clearInterval(progressTrackingInterval);
           progressTrackingInterval = null;
         } else if (!response.state.isPlaying) {
