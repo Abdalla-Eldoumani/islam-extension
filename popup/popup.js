@@ -75,12 +75,8 @@ async function loadDhikr() {
       { arabic: 'أَسْتَغْفِرُ اللَّهَ', english: 'I seek forgiveness from Allah (Astaghfirullah)' },
       { arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ', english: 'Glory be to Allah and praise be to Him (Subhan Allah wa bihamdihi)' },
       { arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ', english: 'Glory be to Allah the Magnificent (Subhan Allah al-Azeem)' },
+      { arabic: 'سبحان الله وبحمده, سبحان الله العظيم', english: 'Glory be to Allah and praise be to Him and Glory be to Allah the Magnificent' },
       { arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ', english: 'There is no power except with Allah (La hawla wa la quwwata illa billah)' },
-      { arabic: 'بِسْمِ اللَّهِ', english: 'In the name of Allah (Bismillah)' },
-      { arabic: 'تَوَكَّلْتُ عَلَى اللَّهِ', english: 'I rely upon Allah (Tawakkaltu ala Allah)' },
-      { arabic: 'مَا شَاءَ اللَّهُ', english: 'What Allah wills (Ma sha Allah)' },
-      { arabic: 'بَارَكَ اللَّهُ فِيكَ', english: 'May Allah bless you (Barakallahu feek)' },
-      { arabic: 'جَزَاكَ اللَّهُ خَيْرًا', english: 'May Allah reward you with good (Jazakallahu khayran)' },
       { arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ', english: 'Our Lord, give us good in this world and good in the next world, and save us from the punishment of the Fire' },
       { arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي', english: 'My Lord, expand my chest and ease my task for me' }
     ];
