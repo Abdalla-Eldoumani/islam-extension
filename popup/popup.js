@@ -40,14 +40,6 @@ function setupEventHandlers() {
   });
 }
 
-function validateQuranSelection() {
-  const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
-  const playButton = document.getElementById('play-quran');
-  // With this API, all combinations are considered valid. We just enable the button.
-  playButton.disabled = !suraId || !reciterId;
-}
-
 async function handlePlayPauseResume(event) {
   const action = event.target.dataset.action;
   switch (action) {
