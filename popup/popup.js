@@ -209,7 +209,7 @@ async function playQuranAudio() {
   const reciterId = document.getElementById('reciter-select').value; // e.g., "ar.alafasy"
   
   try {
-    const audioUrl = `https://cdn.islamic.network/quran/audio-surah/${reciterId}/${suraId}.mp3`;
+    const audioUrl = `https://cdn.islamic.network/quran/audio/128/${reciterId}/${suraId}.mp3`;
     console.log('Constructed audio URL:', audioUrl);
     
     const response = await chrome.runtime.sendMessage({
