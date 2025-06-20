@@ -1,7 +1,7 @@
 /**
  * Popup script for Qur'an & Sunnah Companion
  * Handles UI, API calls, and communication with the background script.
- * This version uses the Al-Quran.cloud API for audio.
+ * This version uses the Quran.com v4 API.
  */
 
 // --- STATE AND CACHE ---
@@ -33,7 +33,7 @@ function setupEventHandlers() {
   pauseButton.addEventListener('click', handlePlayPauseResume);
   
   suraSelect.addEventListener('change', validateQuranSelection);
-  reciterSelect.addEventListener('change', validateQuranSelection);
+  reciterSelect.addEventListener('change', handleReciterChange);
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
@@ -55,6 +55,26 @@ async function handlePlayPauseResume(event) {
   }
 }
 
+async function handleReciterChange() {
+  const reciterId = document.getElementById('reciter-select').value;
+  const availabilityStatus = document.getElementById('quran-availability');
+  updatePlayButtonUI(false, false);
+
+  if (!reciterId) {
+    availabilityStatus.textContent = '';
+    return;
+  }
+  
+  availabilityStatus.textContent = 'Loading reciter data...';
+  try {
+    await fetchAndCacheAvailableSurahs(reciterId);
+  } catch (error) {
+    console.error(`Failed to fetch data for reciter ${reciterId}:`, error);
+    availabilityStatus.textContent = '❌ Could not load reciter data.';
+  }
+  validateQuranSelection();
+}
+
 // --- DATA FETCHING & INITIALIZATION ---
 
 async function loadSavedAudioState() {
@@ -64,7 +84,7 @@ async function loadSavedAudioState() {
       document.getElementById('sura-select').value = audioState.suraId;
       document.getElementById('reciter-select').value = audioState.reciterKey;
       
-      validateQuranSelection();
+      await handleReciterChange();
 
       const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
       if (stateResponse?.success && stateResponse.state?.audioUrl) {
@@ -110,12 +130,12 @@ async function setupQuranSelectors() {
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
-    populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.number, text: `${s.number}. ${s.englishName}` }));
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.identifier, text: r.englishName }));
+    populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
+    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: r.reciter_name }));
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
-    suraSelect.innerHTML = '<option value="">Error loading Suras</option>';
-    reciterSelect.innerHTML = '<option value="">Error loading Reciters</option>';
+    suraSelect.innerHTML = '<option value="">Error</option>';
+    reciterSelect.innerHTML = '<option value="">Error</option>';
   }
 }
 
@@ -131,60 +151,49 @@ function populateSelect(selectEl, items, defaultOptionText, mapper) {
 }
 
 async function fetchSuras() {
-  const response = await fetch('https://api.alquran.cloud/v1/surah');
-  if (!response.ok) throw new Error('Failed to fetch suras from alquran.cloud');
-  const data = await response.json();
-  console.log(`Successfully fetched ${data.data.length} surahs.`);
-  return data.data;
+  const response = await fetch('https://api.quran.com/api/v4/chapters?language=en');
+  if (!response.ok) throw new Error('Failed to fetch suras');
+  const { chapters } = await response.json();
+  console.log(`Successfully fetched ${chapters.length} surahs.`);
+  return chapters;
 }
 
 async function fetchReciters() {
-  // Use keywords to robustly match preferred reciters from the API response.
-  const preferredReciterKeys = [
-    "afasy", "sudais", "shuraym", "muaiqly", "husary", "minshawi", 
-    "baleela", "turki", "dussary", "huthaify", "ayyub", "rifaat", "jaber",
-    "abdul-basit", "abdus-samad" // Covers different transliterations of Abdul Basit
+  const preferredReciterNames = [
+    "Mishari Rashid al-`Afasy", "Maher Al Muaiqly", "Mahmud Khalil Al-Husary",
+    "Mohamed Siddiq al-Minshawi", "Bandar Baleela", "Badr Al Turki",
+    "Yasser Ad-Dussary", "Ali Abdur-Rahman al-Huthaify", "Mohammad Ayyub",
+    "Mohamed Rifaat", "Abdel Basset Abdel Samad", "Abdur-Rahman as-Sudais"
   ];
-
-  const response = await fetch('https://api.alquran.cloud/v1/edition?format=audio&language=ar');
-  if (!response.ok) throw new Error('Failed to fetch reciters from alquran.cloud');
-  const data = await response.json();
-
-  const reciters = data.data.filter(reciter => {
-    // Check against the English name as it's more consistent for matching.
-    const apiNameLower = reciter.englishName.toLowerCase();
-    return preferredReciterKeys.some(key => apiNameLower.includes(key));
-  });
-
-  if (reciters.length === 0) {
-    console.warn("Found 0 matching reciters. The API might have changed or the matching keys are outdated.");
-  }
-  
-  console.log(`Found ${reciters.length} matching preferred reciters.`);
-  return reciters;
+  const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
+  if (!response.ok) throw new Error('Failed to fetch reciters');
+  const { recitations } = await response.json();
+  const filtered = recitations.filter(r => preferredReciterNames.some(name => r.reciter_name.includes(name)));
+  console.log(`Found ${filtered.length} matching preferred reciters.`);
+  return filtered;
 }
 
 // --- AUDIO LOGIC ---
 
-async function fetchAndCacheAvailableSurahsForReciter(reciterId) {
+async function fetchAndCacheAvailableSurahs(reciterId) {
   if (reciterAvailabilityCache.has(reciterId)) {
     console.log(`Using cached availability for reciter ${reciterId}.`);
     return; // Already fetched and cached
   }
 
-  const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files`);
+  const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files?file_type=surah`);
   if (!response.ok) {
     reciterAvailabilityCache.set(reciterId, new Set()); // Cache failure as empty set
     throw new Error(`API check failed with status ${response.status}.`);
   }
 
-  const data = await response.json();
+  const { audio_files } = await response.json();
   const availableSuraIds = new Set();
   
-  data.audio_files.forEach(file => {
+  audio_files.forEach(file => {
     availableSuraIds.add(file.chapter_id);
-    const audioUrl = `https://${file.audio_url.startsWith('//') ? file.audio_url.substring(2) : file.audio_url}`;
-    audioUrlCache.set(`${reciterId}-${file.chapter_id}`, audioUrl);
+    const url = file.audio_url.startsWith('//') ? `https://${file.audio_url.substring(2)}` : file.audio_url;
+    audioUrlCache.set(`${reciterId}-${file.chapter_id}`, url);
   });
   
   reciterAvailabilityCache.set(reciterId, availableSuraIds);
@@ -192,7 +201,7 @@ async function fetchAndCacheAvailableSurahsForReciter(reciterId) {
 }
 
 function validateQuranSelection() {
-  const suraId = document.getElementById('sura-select').value;
+  const suraId = parseInt(document.getElementById('sura-select').value, 10);
   const reciterId = document.getElementById('reciter-select').value;
   const playButton = document.getElementById('play-quran');
   const availabilityStatus = document.getElementById('quran-availability');
@@ -206,10 +215,11 @@ function validateQuranSelection() {
 async function playQuranAudio() {
   setUILoading(true);
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value; // e.g., "ar.alafasy"
+  const reciterId = document.getElementById('reciter-select').value;
   
   try {
-    const audioUrl = `https://cdn.islamic.network/quran/audio/128/${reciterId}/${suraId}.mp3`;
+    const audioUrl = audioUrlCache.get(`${reciterId}-${suraId}`);
+    if (!audioUrl) throw new Error('Audio URL not found in cache.');
     console.log('Constructed audio URL:', audioUrl);
     
     const response = await chrome.runtime.sendMessage({
@@ -227,7 +237,7 @@ async function playQuranAudio() {
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    alert(`Unable to play audio. The file may not be available on the CDN for this combination.`);
+    alert(`Unable to play audio: ${error.message}`);
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
