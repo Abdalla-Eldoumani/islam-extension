@@ -23,8 +23,8 @@
         </select>
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
-          <button class="card__button" id="play-quran" disabled>▶ Play</button>
-          <button class="card__button card__button--secondary" id="pause-quran" disabled>⏸ Pause</button>
+          <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
+          <button class="card__button card__button--secondary hidden" id="pause-quran" data-action="pause" disabled>⏸ Pause</button>
         </div>
         <div class="card__progress hidden" id="progress-container">
           <input type="range" id="progress-bar" min="0" max="100" value="0" class="card__progress-bar">
