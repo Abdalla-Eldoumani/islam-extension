@@ -10,9 +10,9 @@
   ],
   "host_permissions": [
     "https://api.hadith.gading.dev/*",
-    "https://api.quran.com/api/v4/chapters*",
-    "https://quranicaudio.com/api/*",
-    "https://*.mp3quran.net/*"
+    "https://api.quran.com/*",
+    "https://quranicaudio.com/*",
+    "https://*.quranicaudio.com/*"
   ],
   "background": {
     "service_worker": "background/background.js"
@@ -27,6 +27,6 @@
     "128": "assets/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; media-src https://*.mp3quran.net; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com/api/v4/chapters* https://quranicaudio.com/api/*; object-src 'none';"
+    "extension_pages": "default-src 'self'; media-src https://*.quranicaudio.com; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com https://quranicaudio.com; object-src 'none';"
   }
 } 
