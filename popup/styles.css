@@ -85,6 +85,15 @@
   display: block;
 }
 
+.card__availability-status {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #6c757d;
+  margin-top: 0.5rem;
+  min-height: 1.2em; /* Reserve space to prevent layout shift */
+  text-align: center;
+}
+
 .card__progress {
   margin-top: 0.75rem;
 }
