@@ -2,6 +2,9 @@
 let progressTrackingInterval = null;
 let cdnInfo = {}; // To store the available reciters and their bitrates
 
+// Keep a cache for the reciter-to-surah mapping
+let reciterAudioDataCache = new Map();
+
 document.addEventListener('DOMContentLoaded', async () => {
   await setupQuranSelectors();
   await Promise.all([loadHadith(), loadDhikr(), loadSavedAudioState()]);
@@ -88,56 +91,57 @@ async function loadDhikr() {
 }
 
 async function setupQuranSelectors() {
-  const suras = [
-    { id: 1, name: 'Al-Fatihah' }, { id: 2, name: 'Al-Baqarah' }, { id: 3, name: 'Ali \'Imran' },
-    { id: 18, name: 'Al-Kahf' }, { id: 36, name: 'Ya-Sin' }, { id: 55, name: 'Ar-Rahman' },
-    { id: 67, name: 'Al-Mulk' }, { id: 112, name: 'Al-Ikhlas' }, { id: 113, name: 'Al-Falaq' },
-    { id: 114, name: 'An-Nas' }
+  let suras = [];
+  try {
+    // This API is more reliable for metadata
+    const response = await fetch('https://api.quran.com/api/v4/chapters?language=en');
+    const data = await response.json();
+    suras = data.chapters.map(sura => ({
+      id: sura.id,
+      name: sura.name_simple
+    }));
+    console.log(`Successfully fetched ${suras.length} surahs from quran.com.`);
+  } catch (error) {
+    console.error('Failed to fetch surah list from quran.com, using fallback.', error);
+    // Fallback to a few surahs if API fails
+    suras = [ { id: 1, name: 'Al-Fatihah' } ];
+  }
+
+  // Your preferred list of reciters
+  const preferredReciterNames = [
+    "Mishari Rashid al-`Afasy", "Maher Al Muaiqly", "Mahmud Khalil Al-Husary",
+    "Mohamed Siddiq al-Minshawi", "Bandar Baleela", "Badr Al Turki", 
+    "Yasser Ad-Dussary", "Ali Abdur-Rahman al-Huthaify", "Mohammad Ayyub", 
+    "Mohamed Rifaat", "Abdel Basset Abdel Samad", "Abdur-Rahman as-Sudais"
   ];
-  
-  // Fetch reciters that have surah-by-surah audio from the CDN info file.
+
   let reciters = [];
   try {
-    console.log('Fetching available surah reciters from CDN info...');
-    const response = await fetch('https://raw.githubusercontent.com/islamic-network/cdn/master/info/cdn_surah_audio.json');
-    cdnInfo = await response.json(); // Store for later use
+    console.log('Fetching reciters from quran.com API...');
+    const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
+    const data = await response.json();
+
+    // Filter the API results to match your preferred list
+    reciters = data.recitations.filter(reciter => 
+      preferredReciterNames.some(name => reciter.reciter_name.includes(name))
+    );
     
-    reciters = Object.keys(cdnInfo).map(identifier => {
-      const reciterInfo = cdnInfo[identifier];
-      return {
-        id: identifier,
-        name: reciterInfo.englishName || reciterInfo.name
-      };
-    });
-    
-    console.log(`Found ${reciters.length} surah reciters.`);
+    console.log(`Found ${reciters.length} matching preferred reciters.`);
 
   } catch (error) {
-    console.error('Failed to fetch reciters from CDN info:', error);
+    console.error('Failed to fetch reciters from quran.com API:', error);
   }
   
-  // Fallback to known working reciters if API fails or returns no reciters
   if (reciters.length === 0) {
-    console.log('Using fallback reciters...');
-    reciters = [
-      { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy' },
-      { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit Abdul Samad' },
-      { id: 'ar.sudais', name: 'Abdurrahman As-Sudais' },
-      { id: 'ar.husarymuallim', name: 'Mahmoud Khalil Al-Hussary (Teaching)' }
-    ];
-    // Populate cdnInfo with fallback data if it's empty
-    if (Object.keys(cdnInfo).length === 0) {
-        cdnInfo = {
-            'ar.alafasy': { bitrates: ['128', '64'] },
-            'ar.abdulbasitmurattal': { bitrates: ['192', '128', '64'] },
-            'ar.sudais': { bitrates: ['128'] },
-            'ar.husarymuallim': { bitrates: ['128'] }
-        };
-    }
+    console.log('Using fallback reciter because API failed or no matches were found.');
+    reciters = [{ id: 7, reciter_name: 'Mishari Rashid al-`Afasy' }]; // Fallback to a known working one
   }
 
   const suraSelect = document.getElementById('sura-select');
   const reciterSelect = document.getElementById('reciter-select');
+  
+  suraSelect.innerHTML = '<option value="">Select Sura...</option>'; // Clear previous options
+  reciterSelect.innerHTML = '<option value="">Select Reciter...</option>'; // Clear previous options
   
   suras.forEach(sura => {
     const option = document.createElement('option');
@@ -149,7 +153,7 @@ async function setupQuranSelectors() {
   reciters.forEach(reciter => {
     const option = document.createElement('option');
     option.value = reciter.id;
-    option.textContent = reciter.name;
+    option.textContent = reciter.reciter_name;
     reciterSelect.appendChild(option);
   });
   
@@ -161,7 +165,7 @@ async function setupQuranSelectors() {
   });
 }
 
-async function playQuranAudio(suraId, reciterKey) {
+async function playQuranAudio(suraId, reciterId) {
   const loadingEl = document.getElementById('quran-loading');
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
@@ -169,57 +173,50 @@ async function playQuranAudio(suraId, reciterKey) {
   try {
     loadingEl.style.display = 'block';
     playButton.disabled = true;
-    
-    console.log(`Starting playback: Sura ${suraId}, Reciter ${reciterKey}`);
-    
-    let availableBitrates = [128, 64, 192];
-    if (cdnInfo[reciterKey] && cdnInfo[reciterKey].bitrates) {
-      availableBitrates = cdnInfo[reciterKey].bitrates.map(b => parseInt(b));
-      console.log(`Available bitrates for ${reciterKey} from cache:`, availableBitrates);
-    } else {
-      console.log(`Reciter ${reciterKey} not found in CDN info cache, using default bitrates.`);
-    }
-    
-    let audioUrl = null;
-    let workingBitrate = null;
-    
-    for (const bitrate of availableBitrates) {
-      const testUrl = `https://cdn.islamic.network/quran/audio-surah/${bitrate}/${reciterKey}/${suraId}.mp3`;
-      console.log(`Testing URL: ${testUrl}`);
-      
-      try {
-        const testResponse = await fetch(testUrl, { method: 'HEAD' });
-        console.log(`Response status for ${bitrate}kbps: ${testResponse.status}`);
-        
-        if (testResponse.ok) {
-          audioUrl = testUrl;
-          workingBitrate = bitrate;
-          console.log(`Found working audio URL: ${audioUrl}`);
-          break;
-        }
-      } catch (fetchError) {
-        console.log(`Failed to test ${bitrate}kbps: ${fetchError.message}`);
-      }
-    }
-    
+
+    console.log(`Requesting audio for Sura ${suraId}, Reciter ID ${reciterId}`);
+
+    // Check cache first
+    let audioUrl = reciterAudioDataCache.get(reciterId)?.get(suraId);
+
     if (!audioUrl) {
-      throw new Error(`The selected audio file is not available on the server (404). Please try a different reciter or sura.`);
+      console.log('Cache miss. Fetching audio data from API...');
+      const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/audio_files?chapter_number=${suraId}`);
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}. This sura may not be available for the selected reciter.`);
+      }
+      const data = await response.json();
+      audioUrl = data.audio_files[0]?.audio_url;
+
+      // Update cache
+      if (!reciterAudioDataCache.has(reciterId)) {
+        reciterAudioDataCache.set(reciterId, new Map());
+      }
+      reciterAudioDataCache.get(reciterId).set(suraId, audioUrl);
+    } else {
+      console.log('Cache hit. Using stored audio URL.');
     }
+
+    if (!audioUrl) {
+      throw new Error(`No audio file found for this reciter/sura combination.`);
+    }
+
+    // The API returns a full URL, which we need to adjust for the correct CDN
+    const correctedAudioUrl = `https://${audioUrl.startsWith('//') ? audioUrl.substring(2) : audioUrl}`;
+
+    console.log(`Playing from URL: ${correctedAudioUrl}`);
     
-    console.log(`Using ${workingBitrate}kbps audio: ${audioUrl}`);
-    
-    console.log('Sending "playAudio" message to background script...');
-    const response = await chrome.runtime.sendMessage({
+    const bgResponse = await chrome.runtime.sendMessage({
       action: 'playAudio',
-      audioUrl: audioUrl,
+      audioUrl: correctedAudioUrl,
       suraId: suraId,
-      reciterKey: reciterKey
+      reciterKey: reciterId // Using reciterId as the key now
     });
     
-    console.log('Response from background script:', response);
+    console.log('Response from background script:', bgResponse);
     
-    if (response && response.success) {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Give time for audio to start
+    if (bgResponse && bgResponse.success) {
+      await new Promise(resolve => setTimeout(resolve, 500)); 
       
       playButton.textContent = '⏸ Playing';
       playButton.disabled = false;
@@ -230,7 +227,7 @@ async function playQuranAudio(suraId, reciterKey) {
       startProgressTracking();
       console.log('Audio playback started successfully');
     } else {
-      throw new Error(`Failed to start audio playback: ${response?.error || 'Unknown error from background script'}`);
+      throw new Error(`Failed to start audio: ${bgResponse?.error || 'Unknown background error'}`);
     }
     
   } catch (error) {
@@ -343,10 +340,10 @@ function setupPlayButton() {
       await resumeQuranAudio();
     } else {
       const suraId = document.getElementById('sura-select').value;
-      const reciterKey = document.getElementById('reciter-select').value;
+      const reciterId = document.getElementById('reciter-select').value;
       
-      if (suraId && reciterKey) {
-        await playQuranAudio(suraId, reciterKey);
+      if (suraId && reciterId) {
+        await playQuranAudio(suraId, reciterId);
       }
     }
   });

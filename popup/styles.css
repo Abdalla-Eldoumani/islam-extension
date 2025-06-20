@@ -12,11 +12,13 @@
 }
 
 .popup {
-  width: 360px;
-  min-height: 480px;
+  width: 380px;
+  height: 500px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: var(--clr-bg);
   color: var(--clr-text);
+  display: flex;
+  flex-direction: column;
 }
 
 .popup__title {
@@ -29,6 +31,8 @@
   display: grid;
   gap: 1rem;
   padding: 1rem;
+  overflow-y: auto;
+  flex-grow: 1;
 }
 
 .card {

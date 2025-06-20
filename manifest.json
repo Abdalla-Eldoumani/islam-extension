@@ -9,11 +9,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://cdn.islamic.network/*",
-    "https://api.hadith.gading.dev/*",
-    "http://api.alquran.cloud/*",
-    "https://api.alquran.cloud/*",
-    "https://raw.githubusercontent.com/*"
+    "https://api.quran.com/*",
+    "https://download.quranicaudio.com/*"
   ],
   "background": {
     "service_worker": "background/background.js"
@@ -28,6 +25,6 @@
     "128": "assets/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; media-src https://*.islamic.network https://*.alquran.cloud https://cdn.islamic.network; connect-src 'self' https://api.hadith.gading.dev https://cdn.islamic.network https://*.islamic.network http://api.alquran.cloud https://api.alquran.cloud https://raw.githubusercontent.com; object-src 'none';"
+    "extension_pages": "default-src 'self'; media-src https://download.quranicaudio.com; connect-src 'self' https://api.quran.com; object-src 'none';"
   }
 } 
