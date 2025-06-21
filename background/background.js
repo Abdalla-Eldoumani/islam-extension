@@ -26,6 +26,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: false, error: 'The audio player is not available. Please try again.' });
         } else {
           console.log('Received response from offscreen:', response);
+          // Check if the response indicates an error
+          if (response && !response.success) {
+            console.error('Offscreen document returned error:', response.error);
+          }
           sendResponse(response);
         }
       });

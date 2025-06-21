@@ -90,6 +90,9 @@ async function playAudio(audioUrl, suraId, reciterKey) {
       
       const onError = (e) => {
         console.error('Offscreen: Audio load error:', e);
+        console.error('Offscreen: Audio player error details:', audioPlayer.error);
+        console.error('Offscreen: Audio player network state:', audioPlayer.networkState);
+        console.error('Offscreen: Audio player ready state:', audioPlayer.readyState);
         audioPlayer.removeEventListener('canplay', onCanPlay);
         audioPlayer.removeEventListener('error', onError);
         audioPlayer.removeEventListener('loadeddata', onLoadedData);
