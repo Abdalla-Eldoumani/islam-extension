@@ -14,10 +14,13 @@ let currentAudioState = {
 };
 
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  console.log('Offscreen: Received message:', message.action, message);
   try {
     switch (message.action) {
       case 'playAudio':
+        console.log('Offscreen: Starting playAudio with URL:', message.audioUrl);
         await playAudio(message.audioUrl, message.suraId, message.reciterKey);
+        console.log('Offscreen: playAudio completed successfully');
         sendResponse({ success: true });
         break;
       case 'pauseAudio':
@@ -69,10 +72,13 @@ async function playAudio(audioUrl, suraId, reciterKey) {
       }
     } catch (fetchError) {
       console.error('Offscreen: Audio URL fetch test failed:', fetchError);
-      throw new Error(`Cannot access audio URL: ${fetchError.message}`);
+      // Don't throw here - the HEAD request might fail even if audio works
+      console.log('Offscreen: Continuing despite HEAD request failure...');
     }
     
-    // Set up audio player
+    // Set up audio player with Chrome extension-friendly settings
+    audioPlayer.crossOrigin = 'anonymous'; // Handle CORS
+    audioPlayer.preload = 'auto'; // Preload the audio
     audioPlayer.src = audioUrl;
     audioPlayer.load(); // Force load the audio
     
@@ -87,18 +93,27 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     await new Promise((resolve, reject) => {
       const onCanPlay = () => {
         console.log('Offscreen: Audio can play');
-        audioPlayer.removeEventListener('canplay', onCanPlay);
-        audioPlayer.removeEventListener('error', onError);
-        audioPlayer.removeEventListener('loadeddata', onLoadedData);
+        cleanup();
         resolve();
       };
       
       const onLoadedData = () => {
         console.log('Offscreen: Audio data loaded');
-        audioPlayer.removeEventListener('canplay', onCanPlay);
-        audioPlayer.removeEventListener('error', onError);
-        audioPlayer.removeEventListener('loadeddata', onLoadedData);
+        cleanup();
         resolve();
+      };
+      
+      const onLoadedMetadata = () => {
+        console.log('Offscreen: Audio metadata loaded');
+        cleanup();
+        resolve();
+      };
+      
+      const cleanup = () => {
+        audioPlayer.removeEventListener('canplay', onCanPlay);
+        audioPlayer.removeEventListener('loadeddata', onLoadedData);
+        audioPlayer.removeEventListener('loadedmetadata', onLoadedMetadata);
+        audioPlayer.removeEventListener('error', onError);
       };
       
       const onError = (e) => {
@@ -120,21 +135,18 @@ async function playAudio(audioUrl, suraId, reciterKey) {
           }
         }
         
-        audioPlayer.removeEventListener('canplay', onCanPlay);
-        audioPlayer.removeEventListener('error', onError);
-        audioPlayer.removeEventListener('loadeddata', onLoadedData);
+        cleanup();
         reject(new Error(`Audio failed to load: ${errorMessage}`));
       };
       
       audioPlayer.addEventListener('canplay', onCanPlay);
       audioPlayer.addEventListener('loadeddata', onLoadedData);
+      audioPlayer.addEventListener('loadedmetadata', onLoadedMetadata);
       audioPlayer.addEventListener('error', onError);
       
       // Timeout after 15 seconds
       setTimeout(() => {
-        audioPlayer.removeEventListener('canplay', onCanPlay);
-        audioPlayer.removeEventListener('error', onError);
-        audioPlayer.removeEventListener('loadeddata', onLoadedData);
+        cleanup();
         reject(new Error('Audio load timeout after 15 seconds'));
       }, 15000);
     });
