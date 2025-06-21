@@ -34,6 +34,8 @@ function setupEventHandlers() {
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
   });
+  
+  document.getElementById('test-direct-audio').addEventListener('click', testDirectAudio);
 }
 
 async function handlePlayPauseResume(event) {
@@ -200,15 +202,33 @@ async function playQuranAudio() {
   const availabilityStatus = document.getElementById('quran-availability');
   
   try {
+    // First, test if background script is responsive
+    console.log('Popup: Testing background script connectivity...');
+    try {
+      const testResponse = await chrome.runtime.sendMessage({ action: 'ping' });
+      console.log('Popup: Background script ping response:', testResponse);
+    } catch (pingError) {
+      console.error('Popup: Background script ping failed:', pingError);
+      console.error('Popup: Chrome runtime lastError:', chrome.runtime.lastError);
+    }
+    
     const audioUrl = await getSuraAudioUrl(reciterId, suraId);
     console.log('Fetched audio URL:', audioUrl);
     
+    console.log('Popup: Sending message to background script...');
     const response = await chrome.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
       suraId: suraId,
       reciterKey: reciterId,
     });
+
+    console.log('Popup: Received response from background:', response);
+    
+    if (chrome.runtime.lastError) {
+      console.error('Popup: Chrome runtime error:', chrome.runtime.lastError);
+      throw new Error(`Chrome runtime error: ${chrome.runtime.lastError.message}`);
+    }
 
     if (!response?.success) {
       throw new Error(response?.error || 'Background script failed to play audio.');
@@ -395,4 +415,32 @@ function startProgressTracking() {
       progressTrackingInterval = null;
     }
   }, 1000);
+}
+
+async function testDirectAudio() {
+  console.log('Popup: Testing direct audio playback...');
+  const audioElement = document.getElementById('direct-audio');
+  const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
+  
+  try {
+    console.log('Popup: Setting audio source to:', testUrl);
+    audioElement.src = testUrl;
+    audioElement.load();
+    
+    console.log('Popup: Attempting to play audio directly...');
+    await audioElement.play();
+    console.log('Popup: Direct audio playback successful!');
+    
+    // Show audio controls for testing
+    audioElement.style.display = 'block';
+    
+    setTimeout(() => {
+      audioElement.style.display = 'none';
+      audioElement.pause();
+    }, 5000);
+    
+  } catch (error) {
+    console.error('Popup: Direct audio playback failed:', error);
+    alert(`Direct audio test failed: ${error.message}`);
+  }
 } 

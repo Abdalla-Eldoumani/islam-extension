@@ -25,6 +25,7 @@
         <div class="card__controls">
           <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
           <button class="card__button card__button--secondary hidden" id="pause-quran" data-action="pause" disabled>⏸ Pause</button>
+          <button class="card__button card__button--secondary" id="test-direct-audio">🔊 Test Direct</button>
         </div>
         <div class="card__progress hidden" id="progress-container">
           <input type="range" id="progress-bar" min="0" max="100" value="0" class="card__progress-bar">
@@ -33,6 +34,7 @@
           </div>
         </div>
         <div class="card__loading hidden" id="quran-loading">Loading...</div>
+        <audio id="direct-audio" style="display: none;" controls></audio>
       </article>
       
       <article class="card card--hadith">

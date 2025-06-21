@@ -4,6 +4,15 @@
  */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Background: Message received from:', sender.tab ? 'popup' : 'offscreen', message);
+  
+  // Handle ping messages immediately
+  if (message.action === 'ping') {
+    console.log('Background: Responding to ping');
+    sendResponse({ success: true, message: 'Background script is alive' });
+    return true;
+  }
+  
   // Ignore messages from the offscreen document itself, which will not have a tab property.
   if (!sender.tab) {
     return false;
