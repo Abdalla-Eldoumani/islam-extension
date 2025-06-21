@@ -29,8 +29,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           // Check if the response indicates an error
           if (response && !response.success) {
             console.error('Offscreen document returned error:', response.error);
+            sendResponse({ success: false, error: response.error || 'Audio playback failed' });
+          } else if (!response) {
+            console.error('No response received from offscreen document');
+            sendResponse({ success: false, error: 'No response from audio player' });
+          } else {
+            sendResponse(response);
           }
-          sendResponse(response);
         }
       });
     } catch (error) {

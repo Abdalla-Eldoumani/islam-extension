@@ -152,8 +152,23 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     });
     
     console.log('Offscreen: Starting audio playback...');
-    await audioPlayer.play();
-    currentAudioState.isPlaying = true;
+    try {
+      const playPromise = audioPlayer.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('Offscreen: Audio play promise resolved successfully');
+      }
+      currentAudioState.isPlaying = true;
+    } catch (playError) {
+      console.error('Offscreen: Audio play failed:', playError);
+      if (playError.name === 'NotAllowedError') {
+        throw new Error('Audio playback blocked by browser autoplay policy');
+      } else if (playError.name === 'NotSupportedError') {
+        throw new Error('Audio format not supported');
+      } else {
+        throw new Error(`Audio playback failed: ${playError.message}`);
+      }
+    }
     
     // Save state to storage
     await saveAudioState();
@@ -210,5 +225,29 @@ audioPlayer.addEventListener('ended', () => {
 chrome.storage.local.get('audioState').then(result => {
   if (result.audioState) {
     currentAudioState = { ...currentAudioState, ...result.audioState };
+  }
+});
+
+// Add test button for debugging
+document.getElementById('test-audio').addEventListener('click', async () => {
+  const debugInfo = document.getElementById('debug-info');
+  debugInfo.innerHTML = 'Testing audio...';
+  
+  try {
+    // Test with a simple audio URL
+    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/101.mp3';
+    audioPlayer.src = testUrl;
+    audioPlayer.load();
+    
+    await new Promise((resolve, reject) => {
+      audioPlayer.oncanplay = resolve;
+      audioPlayer.onerror = reject;
+      setTimeout(() => reject(new Error('Timeout')), 10000);
+    });
+    
+    await audioPlayer.play();
+    debugInfo.innerHTML = 'Audio test successful!';
+  } catch (error) {
+    debugInfo.innerHTML = `Audio test failed: ${error.message}`;
   }
 }); 
