@@ -159,15 +159,14 @@ async function fetchReciters() {
     if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
     const { recitations } = await response.json();
     
-    // Filter for preferred reciters as per project docs for a cleaner UI
-    const preferredReciterNames = [
-      "Mishary Rashid Alafasy", "AbdulBaset AbdulSamad", "Mahmoud Khalil Al-Hussary",
-      "Mohamed Siddiq El-Minshawi", "Maher Al Muaiqly", "Ali Jaber", "Mohammad Ayyub",
-      "Bandar Baleela", "Badr Al-Turki", "Muhammad Jibreel" // Muhammad Refat not available, substituted with Jibreel
+    // Use substrings for more robust matching against the preferred list
+    const preferredReciterSubstrings = [
+      "Alafasy", "AbdulBaset", "Al-Husary", "Minshawi", "Muaiqly", 
+      "Ali Jaber", "Ayyub", "Bandar Baleela", "Badr Al-Turki", "Jibreel"
     ];
     
     const filteredRecitations = recitations.filter(r => 
-        preferredReciterNames.includes(r.reciter_name) && r.style
+        r.style && preferredReciterSubstrings.some(name => r.reciter_name.includes(name))
     );
 
     console.log(`Found ${filteredRecitations.length} recitations from preferred reciters.`);
@@ -197,6 +196,7 @@ async function playQuranAudio() {
   setUILoading(true);
   const suraId = document.getElementById('sura-select').value;
   const reciterId = document.getElementById('reciter-select').value;
+  const availabilityStatus = document.getElementById('quran-availability');
   
   try {
     const audioUrl = await getSuraAudioUrl(reciterId, suraId);
@@ -213,11 +213,14 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
+    availabilityStatus.innerHTML = '&#x2705; Playing...';
+    availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true);
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    alert(`Unable to play audio: ${error.message}`);
+    availabilityStatus.innerHTML = '&#x274C; Audio not found for this selection.';
+    availabilityStatus.style.color = 'red';
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
