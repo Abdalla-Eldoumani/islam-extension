@@ -26,6 +26,6 @@
     "128": "assets/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; media-src https://verses.quran.com; connect-src 'self' https://hadithapi.com https://api.quran.com; object-src 'none';"
+    "extension_pages": "default-src 'self'; media-src https://verses.quran.com; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com; object-src 'none';"
   }
 } 
