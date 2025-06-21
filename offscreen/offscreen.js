@@ -13,16 +13,19 @@ let currentAudioState = {
   reciterKey: null
 };
 
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Offscreen: Received message:', message.action, message);
-  try {
-    switch (message.action) {
-      case 'playAudio':
-        console.log('Offscreen: Starting playAudio with URL:', message.audioUrl);
-        await playAudio(message.audioUrl, message.suraId, message.reciterKey);
-        console.log('Offscreen: playAudio completed successfully');
-        sendResponse({ success: true });
-        break;
+  
+  // Handle async operations properly
+  (async () => {
+    try {
+      switch (message.action) {
+        case 'playAudio':
+          console.log('Offscreen: Starting playAudio with URL:', message.audioUrl);
+          await playAudio(message.audioUrl, message.suraId, message.reciterKey);
+          console.log('Offscreen: playAudio completed successfully');
+          sendResponse({ success: true });
+          break;
       case 'pauseAudio':
         pauseAudio();
         sendResponse({ success: true });
@@ -45,6 +48,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     console.error('Offscreen message handling failed:', error);
     sendResponse({ success: false, error: error.message });
   }
+  })();
+  
   return true;
 });
 
@@ -235,19 +240,74 @@ document.getElementById('test-audio').addEventListener('click', async () => {
   
   try {
     // Test with a simple audio URL
-    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/101.mp3';
+    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
+    console.log('Offscreen: Test button clicked, testing URL:', testUrl);
+    
+    audioPlayer.crossOrigin = 'anonymous';
+    audioPlayer.preload = 'auto';
     audioPlayer.src = testUrl;
     audioPlayer.load();
     
+    console.log('Offscreen: Audio element configured, waiting for load...');
+    
     await new Promise((resolve, reject) => {
-      audioPlayer.oncanplay = resolve;
-      audioPlayer.onerror = reject;
-      setTimeout(() => reject(new Error('Timeout')), 10000);
+      const onCanPlay = () => {
+        console.log('Offscreen: Test audio can play');
+        cleanup();
+        resolve();
+      };
+      const onError = (e) => {
+        console.error('Offscreen: Test audio error:', e, audioPlayer.error);
+        cleanup();
+        reject(new Error(`Audio load failed: ${audioPlayer.error?.message || 'Unknown error'}`));
+      };
+      const cleanup = () => {
+        audioPlayer.removeEventListener('canplay', onCanPlay);
+        audioPlayer.removeEventListener('error', onError);
+      };
+      
+      audioPlayer.addEventListener('canplay', onCanPlay);
+      audioPlayer.addEventListener('error', onError);
+      setTimeout(() => {
+        cleanup();
+        reject(new Error('Timeout after 10 seconds'));
+      }, 10000);
     });
     
-    await audioPlayer.play();
-    debugInfo.innerHTML = 'Audio test successful!';
+    console.log('Offscreen: Attempting to play test audio...');
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+      await playPromise;
+    }
+    
+    console.log('Offscreen: Test audio playing successfully!');
+    debugInfo.innerHTML = 'Audio test successful! Check console for details.';
   } catch (error) {
+    console.error('Offscreen: Test audio failed:', error);
     debugInfo.innerHTML = `Audio test failed: ${error.message}`;
+  }
+});
+
+// Add network test button
+document.getElementById('test-network').addEventListener('click', async () => {
+  const debugInfo = document.getElementById('debug-info');
+  debugInfo.innerHTML = 'Testing network connectivity...';
+  
+  try {
+    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
+    console.log('Offscreen: Testing network connectivity to:', testUrl);
+    
+    // Test with fetch
+    const response = await fetch(testUrl, { method: 'HEAD' });
+    console.log('Offscreen: Network test response:', response.status, response.statusText);
+    
+    if (response.ok) {
+      debugInfo.innerHTML = `Network test successful! Status: ${response.status}`;
+    } else {
+      debugInfo.innerHTML = `Network test failed! Status: ${response.status} ${response.statusText}`;
+    }
+  } catch (error) {
+    console.error('Offscreen: Network test failed:', error);
+    debugInfo.innerHTML = `Network test failed: ${error.message}`;
   }
 }); 

@@ -11,11 +11,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Handle all other messages from the popup asynchronously.
   (async () => {
-    console.log(`Background received message: ${message.action}`);
+    console.log(`Background received message: ${message.action}`, message);
     
     try {
       // For any audio action, ensure the offscreen document exists.
+      console.log('Background: Creating offscreen document if needed...');
       await createOffscreenDocumentIfNeeded();
+      console.log('Background: Offscreen document ready');
       
       // Forward the message to the offscreen document.
       console.log('Forwarding message to offscreen document...');
