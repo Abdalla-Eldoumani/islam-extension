@@ -229,16 +229,44 @@ async function playQuranAudio() {
 }
 
 async function getSuraAudioUrl(reciterId, suraId) {
-    const response = await fetch(`https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`);
+    const url = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
+    console.log('Fetching audio from:', url);
+    
+    const response = await fetch(url);
     if (!response.ok) {
-        throw new Error('Could not fetch audio file information.');
+        throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
     }
-    const { audio_files } = await response.json();
-    if (!audio_files || audio_files.length === 0 || !audio_files[0].audio_url) {
+    
+    const data = await response.json();
+    console.log('API response data:', data);
+    
+    // Handle different possible response structures
+    let audioUrl = null;
+    
+    if (data.audio_files && data.audio_files.length > 0) {
+        // Structure: { audio_files: [{ audio_url: "..." }] }
+        audioUrl = data.audio_files[0].audio_url;
+    } else if (data.audio_file) {
+        // Structure: { audio_file: { audio_url: "..." } }
+        audioUrl = data.audio_file.audio_url;
+    } else if (data.audio_url) {
+        // Structure: { audio_url: "..." }
+        audioUrl = data.audio_url;
+    }
+    
+    if (!audioUrl) {
+        console.error('No audio URL found in response:', data);
         throw new Error('Audio URL not found in API response.');
     }
-    // The API returns a relative URL, so we prepend the host
-    return `https://verses.quran.com/${audio_files[0].audio_url}`;
+    
+    // Handle both absolute and relative URLs
+    if (audioUrl.startsWith('http')) {
+        return audioUrl;
+    } else {
+        // Remove leading slash if present to avoid double slashes
+        const cleanPath = audioUrl.startsWith('/') ? audioUrl.slice(1) : audioUrl;
+        return `https://verses.quran.com/${cleanPath}`;
+    }
 }
 
 async function pauseQuranAudio() {
