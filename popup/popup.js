@@ -229,44 +229,67 @@ async function playQuranAudio() {
 }
 
 async function getSuraAudioUrl(reciterId, suraId) {
-    const url = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
-    console.log('Fetching audio from:', url);
+    // Try to get full chapter audio first
+    const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
+    console.log('Fetching chapter audio from:', chapterUrl);
     
-    const response = await fetch(url);
+    try {
+        const chapterResponse = await fetch(chapterUrl);
+        if (chapterResponse.ok) {
+            const chapterData = await chapterResponse.json();
+            console.log('Chapter API response:', chapterData);
+            
+            if (chapterData.audio_file?.audio_url) {
+                const audioUrl = chapterData.audio_file.audio_url;
+                return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
+            }
+        }
+    } catch (error) {
+        console.log('Chapter audio not available, trying verse-by-verse approach:', error.message);
+    }
+    
+    // Fallback to verse-by-verse audio
+    const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
+    console.log('Fetching verse audio from:', versesUrl);
+    
+    const response = await fetch(versesUrl);
     if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log('API response data:', data);
+    console.log('Verses API response data:', data);
     
-    // Handle different possible response structures
-    let audioUrl = null;
-    
-    if (data.audio_files && data.audio_files.length > 0) {
-        // Structure: { audio_files: [{ audio_url: "..." }] }
-        console.log('First audio file object:', data.audio_files[0]);
-        audioUrl = data.audio_files[0].audio_url;
-    } else if (data.audio_file) {
-        // Structure: { audio_file: { audio_url: "..." } }
-        audioUrl = data.audio_file.audio_url;
-    } else if (data.audio_url) {
-        // Structure: { audio_url: "..." }
-        audioUrl = data.audio_url;
+    if (!data.audio_files || data.audio_files.length === 0) {
+        throw new Error('No audio files found in API response.');
     }
+    
+    // Get the first verse audio file
+    const firstAudio = data.audio_files[0];
+    console.log('First audio file object:', firstAudio);
+    
+    let audioUrl = firstAudio.url || firstAudio.audio_url;
     
     if (!audioUrl) {
         console.error('No audio URL found in response:', data);
         throw new Error('Audio URL not found in API response.');
     }
     
-    // Handle both absolute and relative URLs
-    if (audioUrl.startsWith('http')) {
+    // Handle different URL formats
+    if (audioUrl.startsWith('//')) {
+        // Protocol-relative URL
+        return `https:${audioUrl}`;
+    } else if (audioUrl.startsWith('http')) {
+        // Absolute URL
         return audioUrl;
     } else {
-        // Remove leading slash if present to avoid double slashes
-        const cleanPath = audioUrl.startsWith('/') ? audioUrl.slice(1) : audioUrl;
-        return `https://verses.quran.com/${cleanPath}`;
+        // Relative URL - need to determine the correct base
+        if (audioUrl.includes('quranicaudio.com') || audioUrl.includes('everyayah')) {
+            return `https://verses.quran.com/${audioUrl}`;
+        } else {
+            // Try different base URLs based on the reciter pattern
+            return `https://verses.quran.com/${audioUrl}`;
+        }
     }
 }
 
