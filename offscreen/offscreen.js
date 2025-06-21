@@ -59,6 +59,19 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     audioPlayer.src = '';
     audioPlayer.load();
     
+    // Test if the audio URL is accessible
+    console.log('Offscreen: Testing audio URL accessibility...');
+    try {
+      const testResponse = await fetch(audioUrl, { method: 'HEAD' });
+      console.log('Offscreen: Audio URL test response:', testResponse.status, testResponse.statusText);
+      if (!testResponse.ok) {
+        throw new Error(`Audio URL not accessible: ${testResponse.status} ${testResponse.statusText}`);
+      }
+    } catch (fetchError) {
+      console.error('Offscreen: Audio URL fetch test failed:', fetchError);
+      throw new Error(`Cannot access audio URL: ${fetchError.message}`);
+    }
+    
     // Set up audio player
     audioPlayer.src = audioUrl;
     audioPlayer.load(); // Force load the audio
@@ -93,10 +106,24 @@ async function playAudio(audioUrl, suraId, reciterKey) {
         console.error('Offscreen: Audio player error details:', audioPlayer.error);
         console.error('Offscreen: Audio player network state:', audioPlayer.networkState);
         console.error('Offscreen: Audio player ready state:', audioPlayer.readyState);
+        console.error('Offscreen: Audio src:', audioPlayer.src);
+        console.error('Offscreen: Audio currentSrc:', audioPlayer.currentSrc);
+        
+        let errorMessage = 'Unknown audio error';
+        if (audioPlayer.error) {
+          switch (audioPlayer.error.code) {
+            case 1: errorMessage = 'MEDIA_ERR_ABORTED: Audio loading was aborted'; break;
+            case 2: errorMessage = 'MEDIA_ERR_NETWORK: Network error occurred'; break;
+            case 3: errorMessage = 'MEDIA_ERR_DECODE: Audio decoding failed'; break;
+            case 4: errorMessage = 'MEDIA_ERR_SRC_NOT_SUPPORTED: Audio format not supported'; break;
+            default: errorMessage = audioPlayer.error.message || 'Unknown media error';
+          }
+        }
+        
         audioPlayer.removeEventListener('canplay', onCanPlay);
         audioPlayer.removeEventListener('error', onError);
         audioPlayer.removeEventListener('loadeddata', onLoadedData);
-        reject(new Error('Audio failed to load: ' + (audioPlayer.error ? audioPlayer.error.message : 'Unknown error')));
+        reject(new Error(`Audio failed to load: ${errorMessage}`));
       };
       
       audioPlayer.addEventListener('canplay', onCanPlay);
