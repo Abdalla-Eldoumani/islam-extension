@@ -100,7 +100,7 @@ async function loadSavedAudioState() {
 async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
-    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
+    const response = await fetch('https://hadithapi.com/api/bukhari/random');
     if (!response.ok) throw new Error('Network response was not ok.');
     const data = await response.json();
     hadithEl.textContent = data.data?.hadith_arabic || 'Error loading Hadith.';

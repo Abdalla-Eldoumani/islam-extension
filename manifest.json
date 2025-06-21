@@ -11,8 +11,7 @@
   "host_permissions": [
     "https://hadithapi.com/*",
     "https://api.quran.com/*",
-    "https://quranicaudio.com/*",
-    "https://*.quranicaudio.com/*"
+    "https://verses.quran.com/*"
   ],
   "background": {
     "service_worker": "background/background.js"
