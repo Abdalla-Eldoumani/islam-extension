@@ -245,6 +245,7 @@ async function getSuraAudioUrl(reciterId, suraId) {
     
     if (data.audio_files && data.audio_files.length > 0) {
         // Structure: { audio_files: [{ audio_url: "..." }] }
+        console.log('First audio file object:', data.audio_files[0]);
         audioUrl = data.audio_files[0].audio_url;
     } else if (data.audio_file) {
         // Structure: { audio_file: { audio_url: "..." } }
