@@ -202,6 +202,7 @@ function seekAudio(time) {
   audioPlayer.currentTime = time;
   currentAudioState.currentTime = time;
   saveAudioState();
+  console.log('Offscreen: Seeked to time:', time);
 }
 
 async function saveAudioState() {

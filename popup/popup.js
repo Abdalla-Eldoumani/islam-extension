@@ -28,8 +28,14 @@ function setupEventHandlers() {
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
   
-  suraSelect.addEventListener('change', validateQuranSelection);
-  reciterSelect.addEventListener('change', validateQuranSelection);
+  suraSelect.addEventListener('change', () => {
+    validateQuranSelection();
+    saveUserSelections();
+  });
+  reciterSelect.addEventListener('change', () => {
+    validateQuranSelection();
+    saveUserSelections();
+  });
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
@@ -53,12 +59,38 @@ async function handlePlayPauseResume(event) {
 
 // --- DATA FETCHING & INITIALIZATION ---
 
+async function saveUserSelections() {
+  try {
+    const suraId = document.getElementById('sura-select').value;
+    const reciterKey = document.getElementById('reciter-select').value;
+    
+    const userSelections = {
+      suraId: suraId || null,
+      reciterKey: reciterKey || null,
+      timestamp: Date.now()
+    };
+    
+    await chrome.storage.local.set({ userSelections });
+    console.log('Saved user selections:', userSelections);
+  } catch (error) {
+    console.error('Failed to save user selections:', error);
+  }
+}
+
 async function loadSavedAudioState() {
   try {
-    const { audioState } = await chrome.storage.local.get('audioState');
-    if (audioState?.suraId && audioState?.reciterKey) {
-      document.getElementById('sura-select').value = audioState.suraId;
+    // Load both user selections and audio state
+    const { audioState, userSelections } = await chrome.storage.local.get(['audioState', 'userSelections']);
+    
+    // First, restore user selections (even if no audio is playing)
+    if (userSelections?.suraId || userSelections?.reciterKey) {
+      console.log('Restoring user selections:', userSelections);
+      
+      if (userSelections.suraId) {
+        document.getElementById('sura-select').value = userSelections.suraId;
+      }
 
+      // Wait for reciters to load before setting reciter selection
       const waitForReciters = new Promise(resolve => {
         const reciterSelect = document.getElementById('reciter-select');
         if (reciterSelect.options.length > 1) { // Already populated
@@ -77,16 +109,29 @@ async function loadSavedAudioState() {
 
       await waitForReciters;
       
-      if (Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === audioState.reciterKey)) {
-        document.getElementById('reciter-select').value = audioState.reciterKey;
+      if (userSelections.reciterKey && Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === userSelections.reciterKey)) {
+        document.getElementById('reciter-select').value = userSelections.reciterKey;
       }
       
       validateQuranSelection();
+    }
 
+    // Then, restore audio state if it matches current selections
+    if (audioState?.suraId && audioState?.reciterKey) {
+      const currentSuraId = document.getElementById('sura-select').value;
+      const currentReciterKey = document.getElementById('reciter-select').value;
+      
+      console.log('Checking audio state:', { audioState, currentSuraId, currentReciterKey });
+      
       const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-      if (stateResponse?.success && stateResponse.state?.audioUrl && stateResponse.state.reciterKey === audioState.reciterKey && stateResponse.state.suraId === audioState.suraId) {
+      if (stateResponse?.success && stateResponse.state?.audioUrl && 
+          stateResponse.state.reciterKey === currentReciterKey && 
+          stateResponse.state.suraId === currentSuraId) {
+        
+        console.log('Restoring audio playback state:', stateResponse.state);
         updateProgressUI(stateResponse.state);
-        updatePlayButtonUI(stateResponse.state.isPlaying, true);
+        updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
+        
         if (stateResponse.state.isPlaying) {
           startProgressTracking();
         }
@@ -234,7 +279,7 @@ async function playQuranAudio() {
     
     // availabilityStatus.innerHTML = '&#x2705; Playing...';
     // availabilityStatus.style.color = 'green';
-    updatePlayButtonUI(true, true);
+    updatePlayButtonUI(true, true, 0);
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
@@ -312,8 +357,23 @@ async function getSuraAudioUrl(reciterId, suraId) {
 }
 
 async function pauseQuranAudio() {
-  await chrome.runtime.sendMessage({ action: 'pauseAudio' });
-  updatePlayButtonUI(false, true);
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'pauseAudio' });
+    if (response?.success) {
+      // Get current state to update UI with correct progress
+      const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      if (stateResponse?.success) {
+        updatePlayButtonUI(false, true, stateResponse.state.currentTime);
+        updateProgressUI(stateResponse.state);
+      } else {
+        updatePlayButtonUI(false, true);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to pause audio:', error);
+    updatePlayButtonUI(false, true);
+  }
+  
   if (progressTrackingInterval) {
     clearInterval(progressTrackingInterval);
     progressTrackingInterval = null;
@@ -321,9 +381,19 @@ async function pauseQuranAudio() {
 }
 
 async function resumeQuranAudio() {
-  await chrome.runtime.sendMessage({ action: 'resumeAudio' });
-  updatePlayButtonUI(true, true);
-  startProgressTracking();
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'resumeAudio' });
+    if (response?.success) {
+      updatePlayButtonUI(true, true);
+      startProgressTracking();
+    } else {
+      console.error('Failed to resume audio:', response?.error);
+      updatePlayButtonUI(false, true);
+    }
+  } catch (error) {
+    console.error('Failed to resume audio:', error);
+    updatePlayButtonUI(false, true);
+  }
 }
 
 async function seekAudio(percentage) {
@@ -346,18 +416,19 @@ function setUILoading(isLoading) {
   document.getElementById('pause-quran').disabled = isLoading;
 }
 
-function updatePlayButtonUI(isPlaying, isEnabled) {
+function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
 
   playButton.disabled = !isEnabled;
   pauseButton.disabled = !isEnabled;
   
-  const hasProgress = document.getElementById('progress-bar').value > 0;
+  const hasProgress = currentTime > 0 || document.getElementById('progress-bar').value > 0;
   
   if (isPlaying) {
     playButton.classList.add('hidden');
     pauseButton.classList.remove('hidden');
+    pauseButton.textContent = '⏸ Pause';
   } else {
     playButton.textContent = hasProgress ? '▶ Resume' : '▶ Play';
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
@@ -392,7 +463,8 @@ function startProgressTracking() {
         updateProgressUI(response.state);
         
         if (!response.state.isPlaying && response.state.currentTime >= response.state.duration && response.state.duration > 0) {
-          updatePlayButtonUI(false, true);
+          // Audio finished playing
+          updatePlayButtonUI(false, true, 0);
           document.getElementById('play-quran').textContent = '▶ Play';
           document.getElementById('play-quran').dataset.action = 'play';
           document.getElementById('progress-bar').value = 0;
@@ -400,7 +472,8 @@ function startProgressTracking() {
           clearInterval(progressTrackingInterval);
           progressTrackingInterval = null;
         } else if (!response.state.isPlaying) {
-          updatePlayButtonUI(false, true);
+          // Audio paused
+          updatePlayButtonUI(false, true, response.state.currentTime);
           clearInterval(progressTrackingInterval);
           progressTrackingInterval = null;
         }
