@@ -323,8 +323,8 @@ async function playQuranAudio() {
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    availabilityStatus.innerHTML = '&#x274C; Audio not found for this selection.';
-    availabilityStatus.style.color = 'red';
+    // availabilityStatus.innerHTML = '&#x274C; Audio not found for this selection.';
+    // availabilityStatus.style.color = 'red';
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
