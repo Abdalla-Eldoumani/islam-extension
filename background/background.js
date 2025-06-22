@@ -99,6 +99,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
       
+      if (message.action === 'diagnoseNotifications') {
+        const result = await diagnoseNotifications();
+        sendResponse(result);
+        return;
+      }
+      
       // For any audio action, ensure the offscreen document exists.
       console.log('Background: Creating offscreen document if needed...');
       await createOffscreenDocumentIfNeeded();
@@ -245,6 +251,60 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// Add comprehensive notification diagnostics
+async function diagnoseNotifications() {
+  console.log('=== NOTIFICATION DIAGNOSTICS ===');
+  
+  try {
+    // Check permission level
+    const permissionLevel = await chrome.notifications.getPermissionLevel();
+    console.log('1. Permission Level:', permissionLevel);
+    
+    // Get all current notifications
+    const allNotifications = await chrome.notifications.getAll();
+    console.log('2. Current Notifications:', allNotifications);
+    console.log('3. Number of active notifications:', Object.keys(allNotifications).length);
+    
+    // Test basic notification
+    console.log('4. Creating test notification...');
+    const testId = await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('assets/icon48.png'),
+      title: 'DIAGNOSTIC TEST',
+      message: 'If you see this, notifications are working!',
+      priority: 2,
+      requireInteraction: true
+    });
+    console.log('5. Test notification ID:', testId);
+    
+    // Also try alternative notification settings
+    console.log('8. Creating alternative test notification...');
+    const altTestId = await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('assets/icon48.png'),
+      title: 'ALT TEST - Chrome Extension',
+      message: 'Alternative notification test',
+      priority: 0,
+      requireInteraction: false,
+      silent: false
+    });
+    console.log('9. Alternative test notification ID:', altTestId);
+    
+    // Wait and check if it exists
+    setTimeout(async () => {
+      const testNotifications = await chrome.notifications.getAll();
+      console.log('6. Notifications after test:', testNotifications);
+      console.log('7. Test notification exists:', testId in testNotifications);
+    }, 1000);
+    
+    return { success: true, permissionLevel, activeCount: Object.keys(allNotifications).length };
+    
+  } catch (error) {
+    console.error('Diagnostic failed:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 async function showDhikrNotification(isTest = false) {
   try {
     // Check permission level before showing notification
@@ -262,37 +322,111 @@ async function showDhikrNotification(isTest = false) {
     const iconUrl = chrome.runtime.getURL('assets/icon48.png');
     console.log('Background: Using icon URL:', iconUrl);
     
-    const notificationOptions = {
-      type: 'basic',
-      iconUrl: iconUrl,
-      title: isTest ? 'Dhikr Notifications Enabled! 🤲' : 'Dhikr Reminder 🤲',
-      message: `${dhikr.arabic}\n${dhikr.english}`,
-      contextMessage: `Reward: ${dhikr.reward}`,
-      priority: 1,
-      requireInteraction: false,
-      silent: false
-    };
+    // Try multiple notification approaches for Windows compatibility
+    const notificationApproaches = [
+      // Approach 1: Minimal notification (most compatible with Windows)
+      {
+        type: 'basic',
+        iconUrl: iconUrl,
+        title: isTest ? '🤲 Test Notification' : '🤲 Dhikr Reminder',
+        message: dhikr.arabic,
+        priority: 1,
+        requireInteraction: false,
+        silent: false
+      },
+      // Approach 2: Windows-optimized notification
+      {
+        type: 'basic',
+        iconUrl: iconUrl,
+        title: 'Qur\'an & Sunnah Companion',
+        message: `${dhikr.arabic}\n${dhikr.english}`,
+        priority: 0,
+        requireInteraction: false,
+        silent: false
+      },
+      // Approach 3: High priority notification
+      {
+        type: 'basic',
+        iconUrl: iconUrl,
+        title: isTest ? 'EXTENSION TEST' : 'Dhikr Time',
+        message: dhikr.english,
+        priority: 2,
+        requireInteraction: true,
+        silent: false
+      }
+    ];
     
-    console.log('Background: Creating notification with options:', notificationOptions);
+    console.log('Background: Trying multiple notification approaches...');
     
-    const notificationId = await chrome.notifications.create(notificationOptions);
-    console.log('Background: Notification created with ID:', notificationId);
-    
-    if (isTest) {
-      console.log('Background: Test Dhikr notification shown:', dhikr.arabic);
-    } else {
-      console.log('Background: Dhikr notification shown:', dhikr.arabic);
+    // Try each approach
+    for (let i = 0; i < notificationApproaches.length; i++) {
+      const options = notificationApproaches[i];
+      console.log(`Background: Trying approach ${i + 1}:`, options);
+      
+      try {
+        const notificationId = await chrome.notifications.create(`dhikr-${Date.now()}-${i}`, options);
+        console.log(`Background: Approach ${i + 1} notification created with ID:`, notificationId);
+        
+        // Wait a moment between attempts
+        if (i < notificationApproaches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`Background: Approach ${i + 1} failed:`, error);
+      }
     }
     
-    // Auto-clear notification after 10 seconds to avoid clutter
-    setTimeout(async () => {
-      try {
-        await chrome.notifications.clear(notificationId);
-        console.log('Background: Auto-cleared notification:', notificationId);
-      } catch (clearError) {
-        console.log('Background: Could not clear notification (may have been dismissed):', clearError.message);
+    // Also try creating a notification without any advanced options
+    console.log('Background: Trying basic fallback notification...');
+    try {
+      const basicNotificationId = await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: iconUrl,
+        title: 'Dhikr Reminder',
+        message: dhikr.english
+      });
+      console.log('Background: Basic fallback notification created:', basicNotificationId);
+    } catch (basicError) {
+      console.error('Background: Basic fallback notification failed:', basicError);
+    }
+    
+    // Immediately check if any notifications exist
+    const allNotifications = await chrome.notifications.getAll();
+    console.log('Background: All notifications after creation attempts:', Object.keys(allNotifications).length);
+    
+    // Also try browser notification as fallback
+    console.log('Background: Trying browser notification fallback...');
+    try {
+      await createOffscreenDocumentIfNeeded();
+      const browserNotificationResponse = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          action: 'showBrowserNotification',
+          title: isTest ? '🤲 Test Browser Notification' : '🤲 Dhikr Reminder',
+          body: `${dhikr.arabic}\n${dhikr.english}`,
+          icon: iconUrl
+        }, response => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(response);
+          }
+        });
+      });
+      
+      if (browserNotificationResponse?.success) {
+        console.log('Background: Browser notification fallback succeeded');
+      } else {
+        console.log('Background: Browser notification fallback failed:', browserNotificationResponse?.error);
       }
-    }, 10000);
+    } catch (browserError) {
+      console.error('Background: Browser notification fallback error:', browserError);
+    }
+    
+    if (isTest) {
+      console.log('Background: Test Dhikr notification attempts completed:', dhikr.arabic);
+    } else {
+      console.log('Background: Dhikr notification attempts completed:', dhikr.arabic);
+    }
     
   } catch (error) {
     console.error('Background: Failed to show Dhikr notification:', error);

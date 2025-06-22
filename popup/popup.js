@@ -66,9 +66,17 @@ function setupEventHandlers() {
   testButton.style.fontSize = '0.8rem';
   testButton.addEventListener('click', testNotification);
   
-  // Insert test button after the toggle button
+  // Add diagnostic button
+  const diagnosticButton = document.createElement('button');
+  diagnosticButton.textContent = '🔍 Diagnose Notifications';
+  diagnosticButton.className = 'card__button card__button--secondary';
+  diagnosticButton.style.fontSize = '0.8rem';
+  diagnosticButton.addEventListener('click', diagnoseNotifications);
+  
+  // Insert buttons after the toggle button
   const toggleButton = document.getElementById('toggle-notifications');
   toggleButton.parentNode.insertBefore(testButton, toggleButton.nextSibling);
+  toggleButton.parentNode.insertBefore(diagnosticButton, testButton.nextSibling);
 }
 
 async function handlePlayPauseResume(event) {
@@ -979,6 +987,30 @@ async function testNotification() {
     } else {
       showNotificationMessage(`Test failed: ${error.message}`, 'error');
     }
+  }
+}
+
+async function diagnoseNotifications() {
+  try {
+    showNotificationMessage('Running comprehensive notification diagnostics...', 'info');
+    
+    // Run diagnostic function
+    const response = await chrome.runtime.sendMessage({
+      action: 'diagnoseNotifications'
+    });
+    
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to run diagnostics');
+    }
+    
+    showNotificationMessage(
+      `Diagnostics complete! Permission: ${response.permissionLevel}, Active notifications: ${response.activeCount}. Check console for details.`,
+      'success'
+    );
+    
+  } catch (error) {
+    console.error('Notification diagnosis failed:', error);
+    showNotificationMessage(`Diagnosis failed: ${error.message}`, 'error');
   }
 }
 

@@ -26,28 +26,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           console.log('Offscreen: playAudio completed successfully');
           sendResponse({ success: true });
           break;
-      case 'pauseAudio':
-        pauseAudio();
-        sendResponse({ success: true });
-        break;
-      case 'resumeAudio':
-        await resumeAudio();
-        sendResponse({ success: true });
-        break;
-      case 'seekAudio':
-        seekAudio(message.time);
-        sendResponse({ success: true });
-        break;
-      case 'getAudioState':
-        sendResponse({ success: true, state: currentAudioState });
-        break;
-      default:
-        sendResponse({ success: false, error: 'Unknown action' });
+        case 'pauseAudio':
+          pauseAudio();
+          sendResponse({ success: true });
+          break;
+        case 'resumeAudio':
+          await resumeAudio();
+          sendResponse({ success: true });
+          break;
+        case 'seekAudio':
+          seekAudio(message.time);
+          sendResponse({ success: true });
+          break;
+        case 'getAudioState':
+          sendResponse({ success: true, state: currentAudioState });
+          break;
+        case 'showBrowserNotification':
+          await showBrowserNotification(message.title, message.body, message.icon);
+          sendResponse({ success: true });
+          break;
+        default:
+          sendResponse({ success: false, error: 'Unknown action' });
+      }
+    } catch (error) {
+      console.error('Offscreen message handling failed:', error);
+      sendResponse({ success: false, error: error.message });
     }
-  } catch (error) {
-    console.error('Offscreen message handling failed:', error);
-    sendResponse({ success: false, error: error.message });
-  }
   })();
   
   return true;
@@ -321,4 +325,47 @@ document.getElementById('test-network').addEventListener('click', async () => {
     console.error('Offscreen: Network test failed:', error);
     debugInfo.innerHTML = `Network test failed: ${error.message}`;
   }
-}); 
+});
+
+// Add browser notification fallback
+async function showBrowserNotification(title, body, icon) {
+  try {
+    console.log('Offscreen: Attempting browser notification...');
+    
+    // Check if browser notifications are supported and permitted
+    if (!('Notification' in window)) {
+      throw new Error('Browser notifications not supported');
+    }
+    
+    let permission = Notification.permission;
+    console.log('Offscreen: Browser notification permission:', permission);
+    
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+      console.log('Offscreen: Requested permission, result:', permission);
+    }
+    
+    if (permission === 'granted') {
+      const notification = new Notification(title, {
+        body: body,
+        icon: icon,
+        requireInteraction: false,
+        silent: false
+      });
+      
+      console.log('Offscreen: Browser notification created:', notification);
+      
+      // Auto-close after 5 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+      
+      return true;
+    } else {
+      throw new Error(`Browser notification permission denied: ${permission}`);
+    }
+  } catch (error) {
+    console.error('Offscreen: Browser notification failed:', error);
+    throw error;
+  }
+} 
