@@ -163,7 +163,7 @@ async function fetchReciters() {
     // Use substrings for more robust matching against the preferred list
     const preferredReciterSubstrings = [
       "Alafasy", "AbdulBaset", "Al-Husary", "Minshawi", "Muaiqly", 
-      "Ali Jaber", "Ayyub", "Bandar Baleela", "Badr Al-Turki", "Jibreel"
+      "Ali Jaber", "Ayyub", "Bandar Baleela", "Badr Al-Turki", "Jibreel", "al-Afasy"
     ];
     
     const filteredRecitations = recitations.filter(r => 
