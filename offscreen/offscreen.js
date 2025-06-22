@@ -328,9 +328,12 @@ document.getElementById('test-network').addEventListener('click', async () => {
 });
 
 // Add browser notification fallback
-async function showBrowserNotification(title, body, icon) {
+async function showBrowserNotification(title, body, icon, requireInteraction = false) {
   try {
     console.log('Offscreen: Attempting browser notification...');
+    console.log('Offscreen: Title:', title);
+    console.log('Offscreen: Body:', body);
+    console.log('Offscreen: Icon:', icon);
     
     // Check if browser notifications are supported and permitted
     if (!('Notification' in window)) {
@@ -346,19 +349,53 @@ async function showBrowserNotification(title, body, icon) {
     }
     
     if (permission === 'granted') {
-      const notification = new Notification(title, {
+      const notificationOptions = {
         body: body,
         icon: icon,
-        requireInteraction: false,
-        silent: false
-      });
+        requireInteraction: requireInteraction || false,
+        silent: false,
+        tag: 'dhikr-reminder', // This prevents duplicate notifications
+        timestamp: Date.now(),
+        vibrate: [200, 100, 200] // Vibration pattern for mobile devices
+      };
+      
+      console.log('Offscreen: Creating notification with options:', notificationOptions);
+      
+      const notification = new Notification(title, notificationOptions);
       
       console.log('Offscreen: Browser notification created:', notification);
       
-      // Auto-close after 5 seconds
-      setTimeout(() => {
+      // Add event listeners
+      notification.onclick = () => {
+        console.log('Offscreen: Notification clicked');
         notification.close();
-      }, 5000);
+        // Focus the extension window if possible
+        try {
+          window.focus();
+        } catch (e) {
+          console.log('Offscreen: Could not focus window:', e);
+        }
+      };
+      
+      notification.onshow = () => {
+        console.log('Offscreen: Notification shown successfully');
+      };
+      
+      notification.onerror = (error) => {
+        console.error('Offscreen: Notification error:', error);
+      };
+      
+      notification.onclose = () => {
+        console.log('Offscreen: Notification closed');
+      };
+      
+      // Auto-close after 15 seconds if requireInteraction is false
+      if (!requireInteraction) {
+        setTimeout(() => {
+          notification.close();
+          console.log('Offscreen: Auto-closed notification after 15 seconds');
+        }, 15000);
+      }
       
       return true;
     } else {

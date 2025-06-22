@@ -8,7 +8,8 @@
     "storage",
     "tabs",
     "alarms",
-    "notifications"
+    "notifications",
+    "windows"
   ],
   "host_permissions": [
     "https://api.hadith.gading.dev/*",
