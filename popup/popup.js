@@ -58,25 +58,6 @@ function setupEventHandlers() {
       saveDhikrSettings();
     });
   });
-  
-  // Add test notification button (for debugging)
-  const testButton = document.createElement('button');
-  testButton.textContent = '🧪 Test Notification';
-  testButton.className = 'card__button card__button--secondary';
-  testButton.style.fontSize = '0.8rem';
-  testButton.addEventListener('click', testNotification);
-  
-  // Add diagnostic button
-  const diagnosticButton = document.createElement('button');
-  diagnosticButton.textContent = '🔍 Diagnose Notifications';
-  diagnosticButton.className = 'card__button card__button--secondary';
-  diagnosticButton.style.fontSize = '0.8rem';
-  diagnosticButton.addEventListener('click', diagnoseNotifications);
-  
-  // Insert buttons after the toggle button
-  const toggleButton = document.getElementById('toggle-notifications');
-  toggleButton.parentNode.insertBefore(testButton, toggleButton.nextSibling);
-  toggleButton.parentNode.insertBefore(diagnosticButton, testButton.nextSibling);
 }
 
 async function handlePlayPauseResume(event) {
@@ -948,70 +929,6 @@ function updatePresetButtons(currentInterval) {
       button.classList.remove('active');
     }
   });
-}
-
-async function testNotification() {
-  try {
-    showNotificationMessage('Testing notification system...', 'info');
-    
-    // Test notification permission first
-    const response = await chrome.runtime.sendMessage({
-      action: 'startDhikrNotifications',
-      interval: 5 // Very short interval for test
-    });
-    
-    if (!response?.success) {
-      throw new Error(response?.error || 'Failed to test notifications');
-    }
-    
-    showNotificationMessage('Test notification sent! Check your system notifications.', 'success');
-    
-    // Stop the test notifications after 10 seconds
-    setTimeout(async () => {
-      try {
-        await chrome.runtime.sendMessage({ action: 'stopDhikrNotifications' });
-        console.log('Test notifications stopped');
-      } catch (error) {
-        console.error('Failed to stop test notifications:', error);
-      }
-    }, 10000);
-    
-  } catch (error) {
-    console.error('Test notification failed:', error);
-    
-    if (error.message.includes('disabled') || error.message.includes('denied')) {
-      showNotificationMessage(
-        'Notifications are blocked! Please enable notifications for this extension in Chrome settings.',
-        'error'
-      );
-    } else {
-      showNotificationMessage(`Test failed: ${error.message}`, 'error');
-    }
-  }
-}
-
-async function diagnoseNotifications() {
-  try {
-    showNotificationMessage('Running comprehensive notification diagnostics...', 'info');
-    
-    // Run diagnostic function
-    const response = await chrome.runtime.sendMessage({
-      action: 'diagnoseNotifications'
-    });
-    
-    if (!response?.success) {
-      throw new Error(response?.error || 'Failed to run diagnostics');
-    }
-    
-    showNotificationMessage(
-      `Diagnostics complete! Permission: ${response.permissionLevel}, Active notifications: ${response.activeCount}. Check console for details.`,
-      'success'
-    );
-    
-  } catch (error) {
-    console.error('Notification diagnosis failed:', error);
-    showNotificationMessage(`Diagnosis failed: ${error.message}`, 'error');
-  }
 }
 
  

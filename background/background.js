@@ -92,12 +92,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
       
-      if (message.action === 'diagnoseNotifications') {
-        const result = await diagnoseNotifications();
-        sendResponse(result);
-        return;
-      }
-      
       // For any audio action, ensure the offscreen document exists.
       console.log('Background: Creating offscreen document if needed...');
       await createOffscreenDocumentIfNeeded();
@@ -243,60 +237,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     showDhikrNotification();
   }
 });
-
-// Add comprehensive notification diagnostics
-async function diagnoseNotifications() {
-  console.log('=== NOTIFICATION DIAGNOSTICS ===');
-  
-  try {
-    // Check permission level
-    const permissionLevel = await chrome.notifications.getPermissionLevel();
-    console.log('1. Permission Level:', permissionLevel);
-    
-    // Get all current notifications
-    const allNotifications = await chrome.notifications.getAll();
-    console.log('2. Current Notifications:', allNotifications);
-    console.log('3. Number of active notifications:', Object.keys(allNotifications).length);
-    
-    // Clear all existing notifications first
-    console.log('4. Clearing all existing notifications...');
-    for (const notificationId of Object.keys(allNotifications)) {
-      try {
-        await chrome.notifications.clear(notificationId);
-        console.log('Cleared notification:', notificationId);
-      } catch (clearError) {
-        console.error('Failed to clear notification:', notificationId, clearError);
-      }
-    }
-    
-    // Wait a moment for clearing to complete
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Test simple notification - Windows-optimized approach
-    console.log('5. Creating Windows-optimized test notification...');
-    const testId = await chrome.notifications.create({
-      type: 'basic',
-      iconUrl: chrome.runtime.getURL('assets/icon48.png'),
-      title: 'Extension Test',
-      message: 'If you see this, notifications work!',
-      silent: false
-    });
-    console.log('6. Test notification ID:', testId);
-    
-    // Check if it exists after creation
-    setTimeout(async () => {
-      const testNotifications = await chrome.notifications.getAll();
-      console.log('7. Notifications after test:', Object.keys(testNotifications).length);
-      console.log('8. Test notification exists:', testId in testNotifications);
-    }, 1000);
-    
-    return { success: true, permissionLevel, activeCount: Object.keys(allNotifications).length };
-    
-  } catch (error) {
-    console.error('Diagnostic failed:', error);
-    return { success: false, error: error.message };
-  }
-}
 
 async function showDhikrNotification(isTest = false) {
   try {
