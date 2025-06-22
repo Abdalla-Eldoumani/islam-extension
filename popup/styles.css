@@ -85,6 +85,7 @@
 .card__button:disabled {
   background: #ccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .card__button:not(:disabled) {

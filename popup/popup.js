@@ -788,16 +788,30 @@ function startProgressTracking() {
 
 // --- DHIKR FUNCTIONALITY ---
 
+// Add debouncing for notification toggle
+let notificationToggleInProgress = false;
+
 function nextDhikr() {
   currentDhikrIndex = (currentDhikrIndex + 1) % dhikrCollection.length;
   displayCurrentDhikr();
 }
 
 async function toggleDhikrNotifications() {
+  // Prevent multiple simultaneous calls
+  if (notificationToggleInProgress) {
+    console.log('Notification toggle already in progress, ignoring click');
+    return;
+  }
+  
+  notificationToggleInProgress = true;
+  
   const button = document.getElementById('toggle-notifications');
   const settingsPanel = document.getElementById('notification-settings');
   const currentState = button.dataset.enabled === 'true';
   const newState = !currentState;
+  
+  // Disable button during operation
+  button.disabled = true;
   
   try {
     if (newState) {
@@ -806,11 +820,14 @@ async function toggleDhikrNotifications() {
       const interval = parseInt(document.getElementById('dhikr-interval').value);
       updatePresetButtons(interval);
       
+      console.log('Sending startDhikrNotifications message...');
       // Start notifications
       const response = await chrome.runtime.sendMessage({
         action: 'startDhikrNotifications',
         interval: interval
       });
+      
+      console.log('Received response:', response);
       
       if (!response?.success) {
         throw new Error(response?.error || 'Failed to start notifications');
@@ -826,10 +843,13 @@ async function toggleDhikrNotifications() {
       // Stopping notifications
       settingsPanel.classList.add('hidden');
       
+      console.log('Sending stopDhikrNotifications message...');
       // Stop notifications
       const response = await chrome.runtime.sendMessage({
         action: 'stopDhikrNotifications'
       });
+      
+      console.log('Received response:', response);
       
       if (!response?.success) {
         throw new Error(response?.error || 'Failed to stop notifications');
@@ -865,6 +885,10 @@ async function toggleDhikrNotifications() {
     } else {
       showNotificationMessage(`Error: ${error.message}`, 'error');
     }
+  } finally {
+    // Re-enable button and reset flag
+    button.disabled = false;
+    notificationToggleInProgress = false;
   }
 }
 

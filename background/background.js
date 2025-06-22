@@ -72,7 +72,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log(`Background received message: ${message.action}`, message);
     
     try {
-      // Handle Dhikr notification actions
+      // Handle Dhikr notification actions first (before offscreen document creation)
       if (message.action === 'startDhikrNotifications') {
         await startDhikrNotifications(message.interval);
         sendResponse({ success: true });
