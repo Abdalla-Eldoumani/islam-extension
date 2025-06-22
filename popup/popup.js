@@ -815,6 +815,7 @@ async function toggleDhikrNotifications() {
   
   try {
     let response;
+    const messageTimeout = 8000; // 8 second timeout
     
     if (newState) {
       // Starting notifications
@@ -824,25 +825,24 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending startDhikrNotifications message...');
       
-      // Send message with timeout and single attempt
-      response = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Request timed out after 10 seconds'));
-        }, 10000);
-        
-        chrome.runtime.sendMessage({
-          action: 'startDhikrNotifications',
-          interval: interval
-        }, (response) => {
-          clearTimeout(timeout);
-          
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
-        });
-      });
+      // Send message with robust timeout handling
+      response = await Promise.race([
+        new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({
+            action: 'startDhikrNotifications',
+            interval: interval
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
+        }),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), messageTimeout);
+        })
+      ]);
       
     } else {
       // Stopping notifications
@@ -850,31 +850,34 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending stopDhikrNotifications message...');
       
-      // Send message with timeout and single attempt
-      response = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Request timed out after 10 seconds'));
-        }, 10000);
-        
-        chrome.runtime.sendMessage({
-          action: 'stopDhikrNotifications'
-        }, (response) => {
-          clearTimeout(timeout);
-          
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
-        });
-      });
+      // Send message with robust timeout handling
+      response = await Promise.race([
+        new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({
+            action: 'stopDhikrNotifications'
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
+        }),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), messageTimeout);
+        })
+      ]);
     }
     
     console.log('Received response:', response);
     
-    // Check response validity
+    // Validate response
     if (!response) {
       throw new Error('No response received from background script');
+    }
+    
+    if (typeof response !== 'object') {
+      throw new Error(`Invalid response format: expected object, got ${typeof response}`);
     }
     
     if (!response.success) {
@@ -907,17 +910,22 @@ async function toggleDhikrNotifications() {
       settingsPanel.classList.add('hidden');
     }
     
-    // Show error message
+    // Show appropriate error message
+    let errorMessage = 'An error occurred. Please try again.';
+    
     if (error.message.includes('disabled') || error.message.includes('denied')) {
-      showNotificationMessage(
-        'Notifications are blocked. Please enable notifications for this extension in Chrome settings (chrome://settings/content/notifications).',
-        'error'
-      );
-    } else if (error.message.includes('timeout')) {
-      showNotificationMessage('Request timed out. Please try again.', 'error');
-    } else {
-      showNotificationMessage(`Error: ${error.message}`, 'error');
+      errorMessage = 'Notifications are blocked. Please enable notifications for this extension in Chrome settings.';
+    } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
+      errorMessage = 'Request timed out. The extension might be restarting. Please wait a moment and try again.';
+    } else if (error.message.includes('Extension context invalidated')) {
+      errorMessage = 'Extension was reloaded. Please close and reopen the popup.';
+    } else if (error.message.includes('runtime.lastError')) {
+      errorMessage = 'Chrome extension error. Please try reloading the extension.';
+    } else if (error.message.length > 0 && error.message.length < 100) {
+      errorMessage = `Error: ${error.message}`;
     }
+    
+    showNotificationMessage(errorMessage, 'error');
   } finally {
     // Re-enable button and reset flag
     button.disabled = false;

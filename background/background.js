@@ -54,101 +54,122 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Message received from:', sender.tab ? 'content script' : (sender.url?.includes('popup') ? 'popup' : 'offscreen'), message);
   console.log('Background: Sender details:', { tab: sender.tab, url: sender.url, origin: sender.origin });
   
-  // Handle ping messages immediately
-  if (message.action === 'ping') {
-    console.log('Background: Responding to ping');
-    sendResponse({ success: true, message: 'Background script is alive' });
-    return false; // Synchronous response, no need to keep channel open
-  }
+  // Single message router - prevents multiple handlers from processing the same message
+  handleMessage(message, sender, sendResponse);
   
-  // Ignore messages from the offscreen document itself to prevent loops
-  if (!sender.tab && sender.url && sender.url.includes('offscreen.html')) {
-    console.log('Background: Ignoring message from offscreen document to prevent loops');
-    return false;
-  }
-
-  // Handle dhikr notification actions EXCLUSIVELY - these should NOT continue to audio handler
-  if (message.action === 'startDhikrNotifications' || 
-      message.action === 'stopDhikrNotifications' || 
-      message.action === 'updateDhikrInterval') {
-    
-    console.log(`Background received message: ${message.action}`, message);
-    
-    // Handle dhikr actions asynchronously but EXCLUSIVELY
-    (async () => {
-      try {
-        if (message.action === 'startDhikrNotifications') {
-          await startDhikrNotifications(message.interval);
-          console.log('Background: startDhikrNotifications completed successfully');
-          sendResponse({ success: true });
-        } else if (message.action === 'stopDhikrNotifications') {
-          await stopDhikrNotifications();
-          console.log('Background: stopDhikrNotifications completed successfully');
-          sendResponse({ success: true });
-        } else if (message.action === 'updateDhikrInterval') {
-          await updateDhikrInterval(message.interval);
-          console.log('Background: updateDhikrInterval completed successfully');
-          sendResponse({ success: true });
-        }
-      } catch (error) {
-        console.error(`Background: ${message.action} failed:`, error);
-        sendResponse({ success: false, error: error.message });
-      }
-    })();
-    
-    return true; // Keep message channel open for async response
-  }
-
-  // Handle all OTHER messages (audio-related) asynchronously
-  console.log(`Background received message: ${message.action}`, message);
-  
-  (async () => {
-    try {
-      // For any audio action, ensure the offscreen document exists.
-      console.log('Background: Creating offscreen document if needed...');
-      await createOffscreenDocumentIfNeeded();
-      console.log('Background: Offscreen document ready');
-      
-      // Forward the message to the offscreen document.
-      console.log('Background: Forwarding message to offscreen document...');
-      
-      // Use a Promise to properly handle the async message passing
-      const offscreenResponse = await new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(message, response => {
-          if (chrome.runtime.lastError) {
-            console.error('Background: Error forwarding to offscreen:', chrome.runtime.lastError.message);
-            reject(new Error(`Offscreen communication failed: ${chrome.runtime.lastError.message}`));
-          } else {
-            console.log('Background: Received response from offscreen:', response);
-            resolve(response);
-          }
-        });
-      });
-      
-      // Check the response from offscreen document
-      if (!offscreenResponse) {
-        console.error('Background: No response received from offscreen document');
-        sendResponse({ success: false, error: 'No response from audio player' });
-      } else if (!offscreenResponse.success) {
-        console.error('Background: Offscreen document returned error:', offscreenResponse.error);
-        sendResponse({ success: false, error: offscreenResponse.error || 'Audio playback failed' });
-      } else {
-        console.log('Background: Sending successful response to popup');
-        sendResponse(offscreenResponse);
-      }
-      
-    } catch (error) {
-      console.error('Background: Error in background script:', error);
-      sendResponse({ success: false, error: error.message });
-    }
-  })().catch(error => {
-    console.error('Background: Unhandled error in async handler:', error);
-    sendResponse({ success: false, error: 'Background script error: ' + error.message });
-  });
-  
-  // Return true to indicate that sendResponse will be called asynchronously.
+  // Always return true to keep the message channel open for async responses
   return true;
 });
+
+async function handleMessage(message, sender, sendResponse) {
+  try {
+    // Handle ping messages immediately (synchronous)
+    if (message.action === 'ping') {
+      console.log('Background: Responding to ping');
+      sendResponse({ success: true, message: 'Background script is alive' });
+      return;
+    }
+    
+    // Ignore messages from the offscreen document itself to prevent loops
+    if (!sender.tab && sender.url && sender.url.includes('offscreen.html')) {
+      console.log('Background: Ignoring message from offscreen document to prevent loops');
+      sendResponse({ success: false, error: 'Message from offscreen document ignored' });
+      return;
+    }
+
+    // Route dhikr notification messages
+    if (message.action === 'startDhikrNotifications' || 
+        message.action === 'stopDhikrNotifications' || 
+        message.action === 'updateDhikrInterval') {
+      
+      console.log(`Background received message: ${message.action}`, message);
+      await handleDhikrMessage(message, sendResponse);
+      return;
+    }
+
+    // Route audio messages
+    if (message.action === 'playAudio' || 
+        message.action === 'pauseAudio' || 
+        message.action === 'resumeAudio' || 
+        message.action === 'seekAudio' || 
+        message.action === 'getAudioState') {
+      
+      console.log(`Background received message: ${message.action}`, message);
+      await handleAudioMessage(message, sendResponse);
+      return;
+    }
+
+    // Handle unknown actions
+    console.error('Background: Unknown action received:', message.action);
+    sendResponse({ success: false, error: `Unknown action: ${message.action}` });
+    
+  } catch (error) {
+    console.error('Background: Error in handleMessage:', error);
+    sendResponse({ success: false, error: `Message handling failed: ${error.message}` });
+  }
+}
+
+async function handleDhikrMessage(message, sendResponse) {
+  try {
+    if (message.action === 'startDhikrNotifications') {
+      await startDhikrNotifications(message.interval);
+      console.log('Background: startDhikrNotifications completed successfully');
+      sendResponse({ success: true });
+    } else if (message.action === 'stopDhikrNotifications') {
+      await stopDhikrNotifications();
+      console.log('Background: stopDhikrNotifications completed successfully');
+      sendResponse({ success: true });
+    } else if (message.action === 'updateDhikrInterval') {
+      await updateDhikrInterval(message.interval);
+      console.log('Background: updateDhikrInterval completed successfully');
+      sendResponse({ success: true });
+    }
+  } catch (error) {
+    console.error(`Background: ${message.action} failed:`, error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleAudioMessage(message, sendResponse) {
+  try {
+    // For any audio action, ensure the offscreen document exists.
+    console.log('Background: Creating offscreen document if needed...');
+    await createOffscreenDocumentIfNeeded();
+    console.log('Background: Offscreen document ready');
+    
+    // Forward the message to the offscreen document.
+    console.log('Background: Forwarding message to offscreen document...');
+    
+    // Use a Promise to properly handle the async message passing
+    const offscreenResponse = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, response => {
+        if (chrome.runtime.lastError) {
+          console.error('Background: Error forwarding to offscreen:', chrome.runtime.lastError.message);
+          reject(new Error(`Offscreen communication failed: ${chrome.runtime.lastError.message}`));
+        } else {
+          console.log('Background: Received response from offscreen:', response);
+          resolve(response);
+        }
+      });
+    });
+    
+    // Check the response from offscreen document
+    if (!offscreenResponse) {
+      console.error('Background: No response received from offscreen document');
+      sendResponse({ success: false, error: 'No response from audio player' });
+    } else if (!offscreenResponse.success) {
+      console.error('Background: Offscreen document returned error:', offscreenResponse.error);
+      sendResponse({ success: false, error: offscreenResponse.error || 'Audio playback failed' });
+    } else {
+      console.log('Background: Sending successful response to popup');
+      sendResponse(offscreenResponse);
+    }
+    
+  } catch (error) {
+    console.error('Background: Error in handleAudioMessage:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
 
 async function createOffscreenDocumentIfNeeded() {
   try {
