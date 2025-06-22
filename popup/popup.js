@@ -34,8 +34,6 @@ function setupEventHandlers() {
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
   });
-  
-  document.getElementById('test-direct-audio').addEventListener('click', testDirectAudio);
 }
 
 async function handlePlayPauseResume(event) {
@@ -417,30 +415,4 @@ function startProgressTracking() {
   }, 1000);
 }
 
-async function testDirectAudio() {
-  console.log('Popup: Testing direct audio playback...');
-  const audioElement = document.getElementById('direct-audio');
-  const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
-  
-  try {
-    console.log('Popup: Setting audio source to:', testUrl);
-    audioElement.src = testUrl;
-    audioElement.load();
-    
-    console.log('Popup: Attempting to play audio directly...');
-    await audioElement.play();
-    console.log('Popup: Direct audio playback successful!');
-    
-    // Show audio controls for testing
-    audioElement.style.display = 'block';
-    
-    setTimeout(() => {
-      audioElement.style.display = 'none';
-      audioElement.pause();
-    }, 5000);
-    
-  } catch (error) {
-    console.error('Popup: Direct audio playback failed:', error);
-    alert(`Direct audio test failed: ${error.message}`);
-  }
-} 
+ 
