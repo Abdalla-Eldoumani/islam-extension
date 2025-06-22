@@ -22,11 +22,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupEventHandlers() {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
+  const autoplayButton = document.getElementById('autoplay-toggle');
   const suraSelect = document.getElementById('sura-select');
   const reciterSelect = document.getElementById('reciter-select');
 
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
+  autoplayButton.addEventListener('click', toggleAutoplay);
   
   suraSelect.addEventListener('change', () => {
     validateQuranSelection();
@@ -63,10 +65,12 @@ async function saveUserSelections() {
   try {
     const suraId = document.getElementById('sura-select').value;
     const reciterKey = document.getElementById('reciter-select').value;
+    const autoplayEnabled = document.getElementById('autoplay-toggle').dataset.autoplay === 'true';
     
     const userSelections = {
       suraId: suraId || null,
       reciterKey: reciterKey || null,
+      autoplayEnabled: autoplayEnabled,
       timestamp: Date.now()
     };
     
@@ -111,6 +115,11 @@ async function loadSavedAudioState() {
       
       if (userSelections.reciterKey && Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === userSelections.reciterKey)) {
         document.getElementById('reciter-select').value = userSelections.reciterKey;
+      }
+      
+      // Restore autoplay setting
+      if (typeof userSelections.autoplayEnabled === 'boolean') {
+        updateAutoplayButton(userSelections.autoplayEnabled);
       }
       
       validateQuranSelection();
@@ -254,10 +263,12 @@ function validateQuranSelection() {
   const suraId = document.getElementById('sura-select').value;
   const reciterId = document.getElementById('reciter-select').value;
   const playButton = document.getElementById('play-quran');
+  const autoplayButton = document.getElementById('autoplay-toggle');
   const availabilityStatus = document.getElementById('quran-availability');
   
   const isEnabled = !!suraId && !!reciterId;
   playButton.disabled = !isEnabled;
+  autoplayButton.disabled = !isEnabled;
   
   // if (isEnabled) {
   //     availabilityStatus.innerHTML = '&#x2705; Ready to play';
@@ -444,6 +455,49 @@ async function seekAudio(percentage) {
   }
 }
 
+async function toggleAutoplay() {
+  const autoplayButton = document.getElementById('autoplay-toggle');
+  const currentState = autoplayButton.dataset.autoplay === 'true';
+  const newState = !currentState;
+  
+  updateAutoplayButton(newState);
+  await saveUserSelections();
+  
+  console.log('Autoplay toggled:', newState ? 'ON' : 'OFF');
+}
+
+function updateAutoplayButton(isEnabled) {
+  const autoplayButton = document.getElementById('autoplay-toggle');
+  autoplayButton.dataset.autoplay = isEnabled.toString();
+  autoplayButton.textContent = isEnabled ? '🔄 Autoplay: ON' : '🔄 Autoplay: OFF';
+}
+
+function getNextSuraId(currentSuraId) {
+  const currentId = parseInt(currentSuraId);
+  // Surahs are numbered 1-114, so wrap around to 1 after 114
+  return currentId >= 114 ? '1' : (currentId + 1).toString();
+}
+
+async function playNextSura() {
+  const currentSuraId = document.getElementById('sura-select').value;
+  const reciterKey = document.getElementById('reciter-select').value;
+  
+  if (!currentSuraId || !reciterKey) {
+    console.log('Cannot play next sura: missing current selection');
+    return;
+  }
+  
+  const nextSuraId = getNextSuraId(currentSuraId);
+  console.log(`Autoplay: Moving from Sura ${currentSuraId} to Sura ${nextSuraId}`);
+  
+  // Update the selection
+  document.getElementById('sura-select').value = nextSuraId;
+  await saveUserSelections();
+  
+  // Start playing the next sura
+  await playQuranAudio();
+}
+
 // --- UI HELPERS ---
 
 function setUILoading(isLoading) {
@@ -508,13 +562,25 @@ function startProgressTracking() {
         
         if (!response.state.isPlaying && response.state.currentTime >= response.state.duration && response.state.duration > 0) {
           // Audio finished playing
-          updatePlayButtonUI(false, true, 0);
-          document.getElementById('play-quran').textContent = '▶ Play';
-          document.getElementById('play-quran').dataset.action = 'play';
-          document.getElementById('progress-bar').value = 0;
-          document.getElementById('current-time').textContent = formatTime(0);
           clearInterval(progressTrackingInterval);
           progressTrackingInterval = null;
+          
+          const autoplayEnabled = document.getElementById('autoplay-toggle').dataset.autoplay === 'true';
+          
+          if (autoplayEnabled) {
+            console.log('Sura finished, autoplay is enabled - playing next sura');
+            // Small delay before playing next to ensure clean transition
+            setTimeout(() => {
+              playNextSura();
+            }, 1000);
+          } else {
+            console.log('Sura finished, autoplay is disabled - stopping playback');
+            updatePlayButtonUI(false, true, 0);
+            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').dataset.action = 'play';
+            document.getElementById('progress-bar').value = 0;
+            document.getElementById('current-time').textContent = formatTime(0);
+          }
         } else if (!response.state.isPlaying) {
           // Audio paused - but don't clear the interval immediately
           // This allows us to detect when it resumes
