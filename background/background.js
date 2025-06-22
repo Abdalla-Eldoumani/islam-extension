@@ -3,7 +3,6 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
-// Dhikr collection (same as in popup)
 const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
