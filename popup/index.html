@@ -44,6 +44,24 @@
       <article class="card card--dhikr">
         <h2 class="card__title">Dhikr</h2>
         <p class="card__content" id="dhikr-text">Loading...</p>
+        <div class="card__dhikr-info" id="dhikr-info"></div>
+        <div class="card__controls">
+          <button class="card__button" id="next-dhikr">🔄 Next Dhikr</button>
+          <button class="card__button card__button--secondary" id="toggle-notifications" data-enabled="false">🔔 Notifications: OFF</button>
+        </div>
+        <div class="card__notification-settings hidden" id="notification-settings">
+          <label class="card__label">
+            Reminder Interval (seconds):
+            <input type="number" id="dhikr-interval" min="5" max="3600" value="60" class="card__input">
+          </label>
+          <div class="card__interval-presets">
+            <button class="card__preset" data-seconds="30">30s</button>
+            <button class="card__preset" data-seconds="60">1m</button>
+            <button class="card__preset" data-seconds="300">5m</button>
+            <button class="card__preset" data-seconds="900">15m</button>
+          </div>
+          <div class="card__validation-message hidden" id="interval-validation"></div>
+        </div>
       </article>
     </section>
   </main>

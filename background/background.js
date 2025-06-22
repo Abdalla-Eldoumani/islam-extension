@@ -1,7 +1,55 @@
 /**
  * Background service worker for Qur'an & Sunnah Companion
- * Handles offscreen document creation and message forwarding for audio playback.
+ * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
+
+// Dhikr collection (same as in popup)
+const dhikrCollection = [
+  {
+    arabic: 'سُبْحَانَ اللَّهِ',
+    english: 'Glory be to Allah',
+    transliteration: 'Subhan Allah',
+    reward: 'Each recitation equals a tree planted in Paradise'
+  },
+  {
+    arabic: 'الْحَمْدُ لِلَّهِ',
+    english: 'Praise be to Allah',
+    transliteration: 'Alhamdulillah',
+    reward: 'Fills the scales of good deeds'
+  },
+  {
+    arabic: 'اللَّهُ أَكْبَرُ',
+    english: 'Allah is the Greatest',
+    transliteration: 'Allahu Akbar',
+    reward: 'Fills what is between heaven and earth'
+  },
+  {
+    arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
+    english: 'There is no god but Allah',
+    transliteration: 'La ilaha illa Allah',
+    reward: 'The best of remembrance, heaviest on the scales'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+    english: 'Glory be to Allah and praise be to Him',
+    transliteration: 'Subhan Allahi wa bihamdihi',
+    reward: '100 sins erased, even if like foam on the sea'
+  },
+  {
+    arabic: 'أَسْتَغْفِرُ اللَّهَ',
+    english: 'I seek forgiveness from Allah',
+    transliteration: 'Astaghfirullah',
+    reward: 'Opens doors of mercy and provision'
+  },
+  {
+    arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
+    english: 'There is no power except with Allah',
+    transliteration: 'La hawla wa la quwwata illa billah',
+    reward: 'A treasure from the treasures of Paradise'
+  }
+];
+
+let dhikrAlarmName = 'dhikr-reminder';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Message received from:', sender.tab ? 'popup' : 'offscreen', message);
@@ -27,11 +75,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Handle all other messages from the popup asynchronously.
+  // Handle all messages from the popup asynchronously.
   (async () => {
     console.log(`Background received message: ${message.action}`, message);
     
     try {
+      // Handle Dhikr notification actions
+      if (message.action === 'startDhikrNotifications') {
+        await startDhikrNotifications(message.interval);
+        sendResponse({ success: true });
+        return;
+      }
+      
+      if (message.action === 'stopDhikrNotifications') {
+        await stopDhikrNotifications();
+        sendResponse({ success: true });
+        return;
+      }
+      
+      if (message.action === 'updateDhikrInterval') {
+        await updateDhikrInterval(message.interval);
+        sendResponse({ success: true });
+        return;
+      }
+      
       // For any audio action, ensure the offscreen document exists.
       console.log('Background: Creating offscreen document if needed...');
       await createOffscreenDocumentIfNeeded();
@@ -101,4 +168,110 @@ async function createOffscreenDocumentIfNeeded() {
     console.error('Background: Failed to create offscreen document:', error);
     throw new Error(`Failed to create audio player: ${error.message}`);
   }
-} 
+}
+
+// --- DHIKR NOTIFICATION FUNCTIONS ---
+
+async function startDhikrNotifications(intervalSeconds) {
+  try {
+    console.log('Background: Starting Dhikr notifications with interval:', intervalSeconds, 'seconds');
+    
+    // Clear any existing alarm
+    await chrome.alarms.clear(dhikrAlarmName);
+    
+    // Create new alarm
+    await chrome.alarms.create(dhikrAlarmName, {
+      delayInMinutes: intervalSeconds / 60,
+      periodInMinutes: intervalSeconds / 60
+    });
+    
+    console.log('Background: Dhikr alarm created successfully');
+  } catch (error) {
+    console.error('Background: Failed to start Dhikr notifications:', error);
+    throw error;
+  }
+}
+
+async function stopDhikrNotifications() {
+  try {
+    console.log('Background: Stopping Dhikr notifications');
+    await chrome.alarms.clear(dhikrAlarmName);
+    console.log('Background: Dhikr alarm cleared successfully');
+  } catch (error) {
+    console.error('Background: Failed to stop Dhikr notifications:', error);
+    throw error;
+  }
+}
+
+async function updateDhikrInterval(intervalSeconds) {
+  try {
+    console.log('Background: Updating Dhikr interval to:', intervalSeconds, 'seconds');
+    
+    // Check if alarm exists
+    const alarm = await chrome.alarms.get(dhikrAlarmName);
+    if (alarm) {
+      // Restart with new interval
+      await startDhikrNotifications(intervalSeconds);
+    }
+  } catch (error) {
+    console.error('Background: Failed to update Dhikr interval:', error);
+    throw error;
+  }
+}
+
+function getRandomDhikr() {
+  return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
+}
+
+// Handle alarms
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === dhikrAlarmName) {
+    console.log('Background: Dhikr alarm triggered');
+    showDhikrNotification();
+  }
+});
+
+async function showDhikrNotification() {
+  try {
+    const dhikr = getRandomDhikr();
+    
+    await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'assets/icon48.png',
+      title: 'Dhikr Reminder 🤲',
+      message: `${dhikr.arabic}\n${dhikr.english}`,
+      contextMessage: `Reward: ${dhikr.reward}`,
+      priority: 1
+    });
+    
+    console.log('Background: Dhikr notification shown:', dhikr.arabic);
+  } catch (error) {
+    console.error('Background: Failed to show Dhikr notification:', error);
+  }
+}
+
+// Initialize Dhikr notifications on startup if enabled
+chrome.runtime.onStartup.addListener(async () => {
+  try {
+    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    if (dhikrSettings?.notificationsEnabled) {
+      console.log('Background: Restoring Dhikr notifications on startup');
+      await startDhikrNotifications(dhikrSettings.interval || 60);
+    }
+  } catch (error) {
+    console.error('Background: Failed to restore Dhikr notifications on startup:', error);
+  }
+});
+
+// Also handle installation/update
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    if (dhikrSettings?.notificationsEnabled) {
+      console.log('Background: Restoring Dhikr notifications after install/update');
+      await startDhikrNotifications(dhikrSettings.interval || 60);
+    }
+  } catch (error) {
+    console.error('Background: Failed to restore Dhikr notifications after install/update:', error);
+  }
+}); 

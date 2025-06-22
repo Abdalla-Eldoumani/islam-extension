@@ -42,6 +42,22 @@ function setupEventHandlers() {
   document.getElementById('progress-bar').addEventListener('change', (e) => {
     seekAudio(e.target.value);
   });
+
+  // Dhikr event handlers
+  document.getElementById('next-dhikr').addEventListener('click', nextDhikr);
+  document.getElementById('toggle-notifications').addEventListener('click', toggleDhikrNotifications);
+  document.getElementById('dhikr-interval').addEventListener('input', validateInterval);
+  
+  // Preset buttons
+  document.querySelectorAll('.card__preset').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const seconds = parseInt(e.target.dataset.seconds);
+      document.getElementById('dhikr-interval').value = seconds;
+      updatePresetButtons(seconds);
+      validateInterval();
+      saveDhikrSettings();
+    });
+  });
 }
 
 async function handlePlayPauseResume(event) {
@@ -194,14 +210,184 @@ async function loadHadith() {
   }
 }
 
+// Comprehensive collection of authentic Dhikr with their rewards
+const dhikrCollection = [
+  {
+    arabic: 'سُبْحَانَ اللَّهِ',
+    english: 'Glory be to Allah',
+    transliteration: 'Subhan Allah',
+    reward: 'Each recitation equals a tree planted in Paradise'
+  },
+  {
+    arabic: 'الْحَمْدُ لِلَّهِ',
+    english: 'Praise be to Allah',
+    transliteration: 'Alhamdulillah',
+    reward: 'Fills the scales of good deeds'
+  },
+  {
+    arabic: 'اللَّهُ أَكْبَرُ',
+    english: 'Allah is the Greatest',
+    transliteration: 'Allahu Akbar',
+    reward: 'Fills what is between heaven and earth'
+  },
+  {
+    arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
+    english: 'There is no god but Allah',
+    transliteration: 'La ilaha illa Allah',
+    reward: 'The best of remembrance, heaviest on the scales'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+    english: 'Glory be to Allah and praise be to Him',
+    transliteration: 'Subhan Allahi wa bihamdihi',
+    reward: '100 sins erased, even if like foam on the sea'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ',
+    english: 'Glory be to Allah the Magnificent and praise be to Him',
+    transliteration: 'Subhan Allahil-Azeem wa bihamdihi',
+    reward: 'Beloved to Allah, light on the tongue, heavy on the scales'
+  },
+  {
+    arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
+    english: 'There is no power except with Allah',
+    transliteration: 'La hawla wa la quwwata illa billah',
+    reward: 'A treasure from the treasures of Paradise'
+  },
+  {
+    arabic: 'أَسْتَغْفِرُ اللَّهَ',
+    english: 'I seek forgiveness from Allah',
+    transliteration: 'Astaghfirullah',
+    reward: 'Opens doors of mercy and provision'
+  },
+  {
+    arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ',
+    english: 'O Allah, send blessings upon Muhammad',
+    transliteration: 'Allahumma salli ala Muhammad',
+    reward: 'Allah sends 10 blessings for each one sent'
+  },
+  {
+    arabic: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+    english: 'In the name of Allah, the Most Gracious, the Most Merciful',
+    transliteration: 'Bismillahir-Rahmanir-Raheem',
+    reward: 'Protection and blessings in all affairs'
+  },
+  {
+    arabic: 'رَبِّ اغْفِرْ لِي',
+    english: 'My Lord, forgive me',
+    transliteration: 'Rabbighfir li',
+    reward: 'Direct supplication for forgiveness'
+  },
+  {
+    arabic: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
+    english: 'O Allah, help me to remember You, thank You, and worship You excellently',
+    transliteration: 'Allahumma a\'inni ala dhikrika wa shukrika wa husni ibadatik',
+    reward: 'Comprehensive dua for spiritual improvement'
+  },
+  {
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+    english: 'Allah is sufficient for us and He is the best Guardian',
+    transliteration: 'Hasbunallahu wa ni\'mal-wakeel',
+    reward: 'Protection from all harms and anxieties'
+  },
+  {
+    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+    english: 'Our Lord, give us good in this world and good in the next world and save us from the punishment of the Fire',
+    transliteration: 'Rabbana atina fi\'d-dunya hasanatan wa fi\'l-akhirati hasanatan wa qina adhab an-nar',
+    reward: 'The most comprehensive dua for both worlds'
+  },
+  {
+    arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
+    english: 'O Allah, I ask You for guidance, piety, chastity and contentment',
+    transliteration: 'Allahumma inni as\'aluka\'l-huda wa\'t-tuqa wa\'l-\'afafa wa\'l-ghina',
+    reward: 'Dua for the four pillars of a good life'
+  },
+  {
+    arabic: 'رَضِيتُ بِاللَّهِ رَبًّا وَبِالْإِسْلَامِ دِينًا وَبِمُحَمَّدٍ رَسُولًا',
+    english: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad as my Messenger',
+    transliteration: 'Radeetu billahi rabban wa bil-Islami deenan wa bi Muhammadin rasoolan',
+    reward: 'Guarantees Paradise for the one who says it with conviction'
+  },
+  {
+    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ',
+    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
+    transliteration: 'Allahumma anta rabbi la ilaha illa anta khalaqtani wa ana \'abduk',
+    reward: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness'
+  },
+  {
+    arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
+    english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
+    transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
+    reward: 'Powerful dua for seeking Allah\'s help and mercy'
+  },
+  {
+    arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
+    english: 'O Allah, guide me among those You have guided',
+    transliteration: 'Allahumma\'hdini fiman hadayt',
+    reward: 'Dua for guidance and righteousness'
+  },
+  {
+    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ',
+    english: 'My Lord, inspire me to be grateful for Your blessing',
+    transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
+    reward: 'Dua for gratitude and righteous deeds'
+  }
+];
+
+let currentDhikrIndex = 0;
+
 async function loadDhikr() {
-  const dhikrCollection = [
-    { arabic: 'سُبْحَانَ اللَّهِ', english: 'Glory be to Allah' },
-    { arabic: 'الْحَمْدُ لِلَّهِ', english: 'Praise be to Allah' },
-    { arabic: 'اللَّهُ أَكْبَرُ', english: 'Allah is the Greatest' },
-  ];
-  const randomDhikr = dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
-  document.getElementById('dhikr-text').textContent = `${randomDhikr.arabic} - ${randomDhikr.english}`;
+  displayCurrentDhikr();
+  await loadDhikrSettings();
+}
+
+function displayCurrentDhikr() {
+  const dhikr = dhikrCollection[currentDhikrIndex];
+  document.getElementById('dhikr-text').textContent = `${dhikr.arabic} - ${dhikr.english}`;
+  document.getElementById('dhikr-info').textContent = `Reward: ${dhikr.reward}`;
+}
+
+function getRandomDhikr() {
+  return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
+}
+
+async function loadDhikrSettings() {
+  try {
+    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    if (dhikrSettings) {
+      const notificationsEnabled = dhikrSettings.notificationsEnabled || false;
+      const interval = dhikrSettings.interval || 60;
+      
+      document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
+      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+      document.getElementById('dhikr-interval').value = interval;
+      
+      if (notificationsEnabled) {
+        document.getElementById('notification-settings').classList.remove('hidden');
+        updatePresetButtons(interval);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load dhikr settings:', error);
+  }
+}
+
+async function saveDhikrSettings() {
+  try {
+    const notificationsEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
+    const interval = parseInt(document.getElementById('dhikr-interval').value);
+    
+    const dhikrSettings = {
+      notificationsEnabled,
+      interval,
+      timestamp: Date.now()
+    };
+    
+    await chrome.storage.local.set({ dhikrSettings });
+    console.log('Saved dhikr settings:', dhikrSettings);
+  } catch (error) {
+    console.error('Failed to save dhikr settings:', error);
+  }
 }
 
 async function setupQuranSelectors() {
@@ -598,6 +784,84 @@ function startProgressTracking() {
       progressTrackingInterval = null;
     }
   }, 1000);
+}
+
+// --- DHIKR FUNCTIONALITY ---
+
+function nextDhikr() {
+  currentDhikrIndex = (currentDhikrIndex + 1) % dhikrCollection.length;
+  displayCurrentDhikr();
+}
+
+async function toggleDhikrNotifications() {
+  const button = document.getElementById('toggle-notifications');
+  const settingsPanel = document.getElementById('notification-settings');
+  const currentState = button.dataset.enabled === 'true';
+  const newState = !currentState;
+  
+  button.dataset.enabled = newState.toString();
+  button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+  
+  if (newState) {
+    settingsPanel.classList.remove('hidden');
+    const interval = parseInt(document.getElementById('dhikr-interval').value);
+    updatePresetButtons(interval);
+    
+    // Start notifications
+    await chrome.runtime.sendMessage({
+      action: 'startDhikrNotifications',
+      interval: interval
+    });
+  } else {
+    settingsPanel.classList.add('hidden');
+    
+    // Stop notifications
+    await chrome.runtime.sendMessage({
+      action: 'stopDhikrNotifications'
+    });
+  }
+  
+  await saveDhikrSettings();
+}
+
+function validateInterval() {
+  const input = document.getElementById('dhikr-interval');
+  const validationMessage = document.getElementById('interval-validation');
+  const value = parseInt(input.value);
+  
+  if (isNaN(value) || value < 5 || value > 3600) {
+    input.setCustomValidity('Interval must be between 5 seconds and 1 hour (3600 seconds)');
+    validationMessage.textContent = 'Please enter a valid interval between 5 seconds and 1 hour';
+    validationMessage.classList.remove('hidden');
+    return false;
+  } else {
+    input.setCustomValidity('');
+    validationMessage.classList.add('hidden');
+    updatePresetButtons(value);
+    saveDhikrSettings();
+    
+    // Update notifications if they're enabled
+    const notificationsEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
+    if (notificationsEnabled) {
+      chrome.runtime.sendMessage({
+        action: 'updateDhikrInterval',
+        interval: value
+      });
+    }
+    
+    return true;
+  }
+}
+
+function updatePresetButtons(currentInterval) {
+  document.querySelectorAll('.card__preset').forEach(button => {
+    const buttonSeconds = parseInt(button.dataset.seconds);
+    if (buttonSeconds === currentInterval) {
+      button.classList.add('active');
+    } else {
+      button.classList.remove('active');
+    }
+  });
 }
 
  

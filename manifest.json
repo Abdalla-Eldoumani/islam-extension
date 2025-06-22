@@ -6,7 +6,9 @@
   "permissions": [
     "offscreen",
     "storage",
-    "tabs"
+    "tabs",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "https://api.hadith.gading.dev/*",
