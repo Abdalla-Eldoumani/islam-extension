@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
         break;
       case 'resumeAudio':
-        resumeAudio();
+        await resumeAudio();
         sendResponse({ success: true });
         break;
       case 'seekAudio':
@@ -192,10 +192,20 @@ function pauseAudio() {
   saveAudioState();
 }
 
-function resumeAudio() {
-  audioPlayer.play();
-  currentAudioState.isPlaying = true;
-  saveAudioState();
+async function resumeAudio() {
+  try {
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+      await playPromise;
+    }
+    currentAudioState.isPlaying = true;
+    await saveAudioState();
+    console.log('Offscreen: Audio resumed successfully');
+  } catch (error) {
+    console.error('Offscreen: Resume failed:', error);
+    currentAudioState.isPlaying = false;
+    throw error;
+  }
 }
 
 function seekAudio(time) {

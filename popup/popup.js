@@ -116,16 +116,22 @@ async function loadSavedAudioState() {
       validateQuranSelection();
     }
 
-    // Then, restore audio state if it matches current selections
-    if (audioState?.suraId && audioState?.reciterKey) {
+    // Then, restore audio state - check if there's any active audio session
+    const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+    if (stateResponse?.success && stateResponse.state?.audioUrl) {
       const currentSuraId = document.getElementById('sura-select').value;
       const currentReciterKey = document.getElementById('reciter-select').value;
       
-      console.log('Checking audio state:', { audioState, currentSuraId, currentReciterKey });
+      console.log('Checking audio state:', { 
+        audioState: stateResponse.state, 
+        currentSuraId, 
+        currentReciterKey,
+        stateSuraId: stateResponse.state.suraId,
+        stateReciterKey: stateResponse.state.reciterKey
+      });
       
-      const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-      if (stateResponse?.success && stateResponse.state?.audioUrl && 
-          stateResponse.state.reciterKey === currentReciterKey && 
+      // If the audio state matches current selections, restore the playback UI
+      if (stateResponse.state.reciterKey === currentReciterKey && 
           stateResponse.state.suraId === currentSuraId) {
         
         console.log('Restoring audio playback state:', stateResponse.state);
@@ -135,6 +141,29 @@ async function loadSavedAudioState() {
         if (stateResponse.state.isPlaying) {
           startProgressTracking();
         }
+      } else if (stateResponse.state.reciterKey && stateResponse.state.suraId) {
+        // If there's an active audio session but it doesn't match current selections,
+        // update the selections to match the active session
+        console.log('Updating selections to match active audio session');
+        
+        if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === stateResponse.state.suraId)) {
+          document.getElementById('sura-select').value = stateResponse.state.suraId;
+        }
+        
+        if (Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === stateResponse.state.reciterKey)) {
+          document.getElementById('reciter-select').value = stateResponse.state.reciterKey;
+        }
+        
+        validateQuranSelection();
+        updateProgressUI(stateResponse.state);
+        updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
+        
+        if (stateResponse.state.isPlaying) {
+          startProgressTracking();
+        }
+        
+        // Save these as the new user selections
+        await saveUserSelections();
       }
     }
   } catch (error) {
@@ -384,7 +413,14 @@ async function resumeQuranAudio() {
   try {
     const response = await chrome.runtime.sendMessage({ action: 'resumeAudio' });
     if (response?.success) {
-      updatePlayButtonUI(true, true);
+      // Get the current state after resuming to update UI properly
+      const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      if (stateResponse?.success) {
+        updatePlayButtonUI(true, true, stateResponse.state.currentTime);
+        updateProgressUI(stateResponse.state);
+      } else {
+        updatePlayButtonUI(true, true);
+      }
       startProgressTracking();
     } else {
       console.error('Failed to resume audio:', response?.error);
@@ -438,11 +474,19 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
 }
 
 function updateProgressUI({ currentTime, duration }) {
-  if (duration > 0) {
+  // Show progress container if we have valid audio data
+  if (duration > 0 || currentTime > 0) {
     document.getElementById('progress-container').classList.remove('hidden');
-    document.getElementById('progress-bar').value = (currentTime / duration) * 100;
-    document.getElementById('current-time').textContent = formatTime(currentTime);
-    document.getElementById('total-time').textContent = formatTime(duration);
+    
+    if (duration > 0) {
+      document.getElementById('progress-bar').value = (currentTime / duration) * 100;
+      document.getElementById('progress-bar').max = 100;
+    } else {
+      document.getElementById('progress-bar').value = 0;
+    }
+    
+    document.getElementById('current-time').textContent = formatTime(currentTime || 0);
+    document.getElementById('total-time').textContent = formatTime(duration || 0);
   }
 }
 
@@ -472,10 +516,12 @@ function startProgressTracking() {
           clearInterval(progressTrackingInterval);
           progressTrackingInterval = null;
         } else if (!response.state.isPlaying) {
-          // Audio paused
+          // Audio paused - but don't clear the interval immediately
+          // This allows us to detect when it resumes
           updatePlayButtonUI(false, true, response.state.currentTime);
-          clearInterval(progressTrackingInterval);
-          progressTrackingInterval = null;
+        } else if (response.state.isPlaying) {
+          // Audio is playing - make sure UI reflects this
+          updatePlayButtonUI(true, true, response.state.currentTime);
         }
       } else {
         throw new Error('Failed to get audio state.');
