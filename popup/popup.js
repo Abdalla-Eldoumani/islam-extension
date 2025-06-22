@@ -58,6 +58,17 @@ function setupEventHandlers() {
       saveDhikrSettings();
     });
   });
+  
+  // Add test notification button (for debugging)
+  const testButton = document.createElement('button');
+  testButton.textContent = '🧪 Test Notification';
+  testButton.className = 'card__button card__button--secondary';
+  testButton.style.fontSize = '0.8rem';
+  testButton.addEventListener('click', testNotification);
+  
+  // Insert test button after the toggle button
+  const toggleButton = document.getElementById('toggle-notifications');
+  toggleButton.parentNode.insertBefore(testButton, toggleButton.nextSibling);
 }
 
 async function handlePlayPauseResume(event) {
@@ -799,29 +810,96 @@ async function toggleDhikrNotifications() {
   const currentState = button.dataset.enabled === 'true';
   const newState = !currentState;
   
-  button.dataset.enabled = newState.toString();
-  button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
-  
-  if (newState) {
-    settingsPanel.classList.remove('hidden');
-    const interval = parseInt(document.getElementById('dhikr-interval').value);
-    updatePresetButtons(interval);
+  try {
+    if (newState) {
+      // Starting notifications
+      settingsPanel.classList.remove('hidden');
+      const interval = parseInt(document.getElementById('dhikr-interval').value);
+      updatePresetButtons(interval);
+      
+      // Start notifications
+      const response = await chrome.runtime.sendMessage({
+        action: 'startDhikrNotifications',
+        interval: interval
+      });
+      
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to start notifications');
+      }
+      
+      button.dataset.enabled = 'true';
+      button.textContent = '🔔 Notifications: ON';
+      
+      // Show success message temporarily
+      showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
+      
+    } else {
+      // Stopping notifications
+      settingsPanel.classList.add('hidden');
+      
+      // Stop notifications
+      const response = await chrome.runtime.sendMessage({
+        action: 'stopDhikrNotifications'
+      });
+      
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to stop notifications');
+      }
+      
+      button.dataset.enabled = 'false';
+      button.textContent = '🔔 Notifications: OFF';
+      
+      showNotificationMessage('Dhikr notifications disabled.', 'info');
+    }
     
-    // Start notifications
-    await chrome.runtime.sendMessage({
-      action: 'startDhikrNotifications',
-      interval: interval
-    });
-  } else {
-    settingsPanel.classList.add('hidden');
+    await saveDhikrSettings();
     
-    // Stop notifications
-    await chrome.runtime.sendMessage({
-      action: 'stopDhikrNotifications'
-    });
+  } catch (error) {
+    console.error('Failed to toggle notifications:', error);
+    
+    // Reset button state on error
+    button.dataset.enabled = currentState.toString();
+    button.textContent = currentState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+    
+    if (currentState) {
+      settingsPanel.classList.remove('hidden');
+    } else {
+      settingsPanel.classList.add('hidden');
+    }
+    
+    // Show error message
+    if (error.message.includes('disabled') || error.message.includes('denied')) {
+      showNotificationMessage(
+        'Notifications are blocked. Please enable notifications for this extension in Chrome settings (chrome://settings/content/notifications).',
+        'error'
+      );
+    } else {
+      showNotificationMessage(`Error: ${error.message}`, 'error');
+    }
+  }
+}
+
+function showNotificationMessage(message, type = 'info') {
+  // Create or update message element
+  let messageEl = document.getElementById('notification-message');
+  if (!messageEl) {
+    messageEl = document.createElement('div');
+    messageEl.id = 'notification-message';
+    messageEl.className = 'card__notification-message';
+    
+    // Insert after the toggle button
+    const toggleButton = document.getElementById('toggle-notifications');
+    toggleButton.parentNode.insertBefore(messageEl, toggleButton.nextSibling);
   }
   
-  await saveDhikrSettings();
+  messageEl.textContent = message;
+  messageEl.className = `card__notification-message card__notification-message--${type}`;
+  messageEl.classList.remove('hidden');
+  
+  // Auto-hide after 8 seconds
+  setTimeout(() => {
+    messageEl.classList.add('hidden');
+  }, 8000);
 }
 
 function validateInterval() {
@@ -862,6 +940,46 @@ function updatePresetButtons(currentInterval) {
       button.classList.remove('active');
     }
   });
+}
+
+async function testNotification() {
+  try {
+    showNotificationMessage('Testing notification system...', 'info');
+    
+    // Test notification permission first
+    const response = await chrome.runtime.sendMessage({
+      action: 'startDhikrNotifications',
+      interval: 5 // Very short interval for test
+    });
+    
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to test notifications');
+    }
+    
+    showNotificationMessage('Test notification sent! Check your system notifications.', 'success');
+    
+    // Stop the test notifications after 10 seconds
+    setTimeout(async () => {
+      try {
+        await chrome.runtime.sendMessage({ action: 'stopDhikrNotifications' });
+        console.log('Test notifications stopped');
+      } catch (error) {
+        console.error('Failed to stop test notifications:', error);
+      }
+    }, 10000);
+    
+  } catch (error) {
+    console.error('Test notification failed:', error);
+    
+    if (error.message.includes('disabled') || error.message.includes('denied')) {
+      showNotificationMessage(
+        'Notifications are blocked! Please enable notifications for this extension in Chrome settings.',
+        'error'
+      );
+    } else {
+      showNotificationMessage(`Test failed: ${error.message}`, 'error');
+    }
+  }
 }
 
  

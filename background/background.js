@@ -176,6 +176,14 @@ async function startDhikrNotifications(intervalSeconds) {
   try {
     console.log('Background: Starting Dhikr notifications with interval:', intervalSeconds, 'seconds');
     
+    // Check notification permission level first
+    const permissionLevel = await chrome.notifications.getPermissionLevel();
+    console.log('Background: Notification permission level:', permissionLevel);
+    
+    if (permissionLevel === 'denied') {
+      throw new Error('Notifications are disabled. Please enable notifications for this extension in Chrome settings.');
+    }
+    
     // Clear any existing alarm
     await chrome.alarms.clear(dhikrAlarmName);
     
@@ -186,6 +194,12 @@ async function startDhikrNotifications(intervalSeconds) {
     });
     
     console.log('Background: Dhikr alarm created successfully');
+    
+    // Show a test notification immediately to confirm it's working
+    setTimeout(() => {
+      showDhikrNotification(true);
+    }, 2000);
+    
   } catch (error) {
     console.error('Background: Failed to start Dhikr notifications:', error);
     throw error;
@@ -231,22 +245,62 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-async function showDhikrNotification() {
+async function showDhikrNotification(isTest = false) {
   try {
+    // Check permission level before showing notification
+    const permissionLevel = await chrome.notifications.getPermissionLevel();
+    console.log('Background: Current notification permission level:', permissionLevel);
+    
+    if (permissionLevel === 'denied') {
+      console.error('Background: Notifications are denied, cannot show notification');
+      return;
+    }
+    
     const dhikr = getRandomDhikr();
     
-    await chrome.notifications.create({
+    // Use chrome.runtime.getURL to get the proper path to the icon
+    const iconUrl = chrome.runtime.getURL('assets/icon48.png');
+    console.log('Background: Using icon URL:', iconUrl);
+    
+    const notificationOptions = {
       type: 'basic',
-      iconUrl: 'assets/icon48.png',
-      title: 'Dhikr Reminder 🤲',
+      iconUrl: iconUrl,
+      title: isTest ? 'Dhikr Notifications Enabled! 🤲' : 'Dhikr Reminder 🤲',
       message: `${dhikr.arabic}\n${dhikr.english}`,
       contextMessage: `Reward: ${dhikr.reward}`,
-      priority: 1
-    });
+      priority: 1,
+      requireInteraction: false,
+      silent: false
+    };
     
-    console.log('Background: Dhikr notification shown:', dhikr.arabic);
+    console.log('Background: Creating notification with options:', notificationOptions);
+    
+    const notificationId = await chrome.notifications.create(notificationOptions);
+    console.log('Background: Notification created with ID:', notificationId);
+    
+    if (isTest) {
+      console.log('Background: Test Dhikr notification shown:', dhikr.arabic);
+    } else {
+      console.log('Background: Dhikr notification shown:', dhikr.arabic);
+    }
+    
+    // Auto-clear notification after 10 seconds to avoid clutter
+    setTimeout(async () => {
+      try {
+        await chrome.notifications.clear(notificationId);
+        console.log('Background: Auto-cleared notification:', notificationId);
+      } catch (clearError) {
+        console.log('Background: Could not clear notification (may have been dismissed):', clearError.message);
+      }
+    }, 10000);
+    
   } catch (error) {
     console.error('Background: Failed to show Dhikr notification:', error);
+    console.error('Background: Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
   }
 }
 
