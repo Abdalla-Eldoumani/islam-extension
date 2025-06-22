@@ -67,7 +67,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Handle dhikr notification actions synchronously first
+  // Handle dhikr notification actions synchronously first and RETURN to prevent further processing
   if (message.action === 'startDhikrNotifications') {
     console.log(`Background received message: ${message.action}`, message);
     startDhikrNotifications(message.interval)
@@ -79,7 +79,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('Background: startDhikrNotifications failed:', error);
         sendResponse({ success: false, error: error.message });
       });
-    return true; // Keep the message channel open for async response
+    return true; // Keep the message channel open for async response and STOP further processing
   }
   
   if (message.action === 'stopDhikrNotifications') {
@@ -93,7 +93,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('Background: stopDhikrNotifications failed:', error);
         sendResponse({ success: false, error: error.message });
       });
-    return true; // Keep the message channel open for async response
+    return true; // Keep the message channel open for async response and STOP further processing
   }
   
   if (message.action === 'updateDhikrInterval') {
@@ -107,7 +107,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('Background: updateDhikrInterval failed:', error);
         sendResponse({ success: false, error: error.message });
       });
-    return true; // Keep the message channel open for async response
+    return true; // Keep the message channel open for async response and STOP further processing
   }
 
   // Handle all other messages (audio-related) asynchronously.
