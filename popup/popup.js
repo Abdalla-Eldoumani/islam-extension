@@ -814,6 +814,8 @@ async function toggleDhikrNotifications() {
   button.disabled = true;
   
   try {
+    let response;
+    
     if (newState) {
       // Starting notifications
       settingsPanel.classList.remove('hidden');
@@ -822,50 +824,25 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending startDhikrNotifications message...');
       
-      // Add retry logic for better reliability
-      let retryCount = 0;
-      const maxRetries = 3;
-      let response;
-      
-      while (retryCount < maxRetries) {
-        try {
-          response = await chrome.runtime.sendMessage({
-            action: 'startDhikrNotifications',
-            interval: interval
-          });
+      // Send message with timeout and single attempt
+      response = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Request timed out after 10 seconds'));
+        }, 10000);
+        
+        chrome.runtime.sendMessage({
+          action: 'startDhikrNotifications',
+          interval: interval
+        }, (response) => {
+          clearTimeout(timeout);
           
-          console.log('Received response:', response);
-          
-          if (response?.success) {
-            break; // Success, exit retry loop
-          } else if (response?.error) {
-            throw new Error(response.error);
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
           } else {
-            throw new Error('No response from background script');
+            resolve(response);
           }
-          
-        } catch (sendError) {
-          retryCount++;
-          console.warn(`Attempt ${retryCount} failed:`, sendError);
-          
-          if (retryCount >= maxRetries) {
-            throw sendError;
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
-        }
-      }
-      
-      if (!response?.success) {
-        throw new Error(response?.error || 'Failed to start notifications');
-      }
-      
-      button.dataset.enabled = 'true';
-      button.textContent = '🔔 Notifications: ON';
-      
-      // Show success message temporarily
-      showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
+        });
+      });
       
     } else {
       // Stopping notifications
@@ -873,47 +850,45 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending stopDhikrNotifications message...');
       
-      // Add retry logic for better reliability
-      let retryCount = 0;
-      const maxRetries = 3;
-      let response;
-      
-      while (retryCount < maxRetries) {
-        try {
-          response = await chrome.runtime.sendMessage({
-            action: 'stopDhikrNotifications'
-          });
+      // Send message with timeout and single attempt
+      response = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Request timed out after 10 seconds'));
+        }, 10000);
+        
+        chrome.runtime.sendMessage({
+          action: 'stopDhikrNotifications'
+        }, (response) => {
+          clearTimeout(timeout);
           
-          console.log('Received response:', response);
-          
-          if (response?.success) {
-            break; // Success, exit retry loop
-          } else if (response?.error) {
-            throw new Error(response.error);
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
           } else {
-            throw new Error('No response from background script');
+            resolve(response);
           }
-          
-        } catch (sendError) {
-          retryCount++;
-          console.warn(`Attempt ${retryCount} failed:`, sendError);
-          
-          if (retryCount >= maxRetries) {
-            throw sendError;
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
-        }
-      }
-      
-      if (!response?.success) {
-        throw new Error(response?.error || 'Failed to stop notifications');
-      }
-      
-      button.dataset.enabled = 'false';
-      button.textContent = '🔔 Notifications: OFF';
-      
+        });
+      });
+    }
+    
+    console.log('Received response:', response);
+    
+    // Check response validity
+    if (!response) {
+      throw new Error('No response received from background script');
+    }
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Background script returned failure');
+    }
+    
+    // Update UI only after successful response
+    button.dataset.enabled = newState.toString();
+    button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+    
+    // Show success message
+    if (newState) {
+      showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
+    } else {
       showNotificationMessage('Dhikr notifications disabled.', 'info');
     }
     
@@ -938,6 +913,8 @@ async function toggleDhikrNotifications() {
         'Notifications are blocked. Please enable notifications for this extension in Chrome settings (chrome://settings/content/notifications).',
         'error'
       );
+    } else if (error.message.includes('timeout')) {
+      showNotificationMessage('Request timed out. Please try again.', 'error');
     } else {
       showNotificationMessage(`Error: ${error.message}`, 'error');
     }

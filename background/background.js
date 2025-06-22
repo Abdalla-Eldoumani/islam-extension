@@ -58,7 +58,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'ping') {
     console.log('Background: Responding to ping');
     sendResponse({ success: true, message: 'Background script is alive' });
-    return true;
+    return false; // Synchronous response, no need to keep channel open
   }
   
   // Ignore messages from the offscreen document itself to prevent loops
@@ -67,53 +67,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Handle dhikr notification actions synchronously first and RETURN to prevent further processing
-  if (message.action === 'startDhikrNotifications') {
-    console.log(`Background received message: ${message.action}`, message);
-    startDhikrNotifications(message.interval)
-      .then(() => {
-        console.log('Background: startDhikrNotifications completed successfully');
-        sendResponse({ success: true });
-      })
-      .catch(error => {
-        console.error('Background: startDhikrNotifications failed:', error);
-        sendResponse({ success: false, error: error.message });
-      });
-    return true; // Keep the message channel open for async response and STOP further processing
-  }
-  
-  if (message.action === 'stopDhikrNotifications') {
-    console.log(`Background received message: ${message.action}`, message);
-    stopDhikrNotifications()
-      .then(() => {
-        console.log('Background: stopDhikrNotifications completed successfully');
-        sendResponse({ success: true });
-      })
-      .catch(error => {
-        console.error('Background: stopDhikrNotifications failed:', error);
-        sendResponse({ success: false, error: error.message });
-      });
-    return true; // Keep the message channel open for async response and STOP further processing
-  }
-  
-  if (message.action === 'updateDhikrInterval') {
-    console.log(`Background received message: ${message.action}`, message);
-    updateDhikrInterval(message.interval)
-      .then(() => {
-        console.log('Background: updateDhikrInterval completed successfully');
-        sendResponse({ success: true });
-      })
-      .catch(error => {
-        console.error('Background: updateDhikrInterval failed:', error);
-        sendResponse({ success: false, error: error.message });
-      });
-    return true; // Keep the message channel open for async response and STOP further processing
-  }
-
-  // Handle all other messages (audio-related) asynchronously.
-  (async () => {
+  // Handle dhikr notification actions EXCLUSIVELY - these should NOT continue to audio handler
+  if (message.action === 'startDhikrNotifications' || 
+      message.action === 'stopDhikrNotifications' || 
+      message.action === 'updateDhikrInterval') {
+    
     console.log(`Background received message: ${message.action}`, message);
     
+    // Handle dhikr actions asynchronously but EXCLUSIVELY
+    (async () => {
+      try {
+        if (message.action === 'startDhikrNotifications') {
+          await startDhikrNotifications(message.interval);
+          console.log('Background: startDhikrNotifications completed successfully');
+          sendResponse({ success: true });
+        } else if (message.action === 'stopDhikrNotifications') {
+          await stopDhikrNotifications();
+          console.log('Background: stopDhikrNotifications completed successfully');
+          sendResponse({ success: true });
+        } else if (message.action === 'updateDhikrInterval') {
+          await updateDhikrInterval(message.interval);
+          console.log('Background: updateDhikrInterval completed successfully');
+          sendResponse({ success: true });
+        }
+      } catch (error) {
+        console.error(`Background: ${message.action} failed:`, error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    
+    return true; // Keep message channel open for async response
+  }
+
+  // Handle all OTHER messages (audio-related) asynchronously
+  console.log(`Background received message: ${message.action}`, message);
+  
+  (async () => {
     try {
       // For any audio action, ensure the offscreen document exists.
       console.log('Background: Creating offscreen document if needed...');
