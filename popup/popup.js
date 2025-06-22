@@ -888,12 +888,12 @@ async function toggleDhikrNotifications() {
     button.dataset.enabled = newState.toString();
     button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
     
-    // Show success message
-    if (newState) {
-      showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
-    } else {
-      showNotificationMessage('Dhikr notifications disabled.', 'info');
-    }
+    // // Show success message
+    // if (newState) {
+    //   showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
+    // } else {
+    //   showNotificationMessage('Dhikr notifications disabled.', 'info');
+    // }
     
     await saveDhikrSettings();
     
