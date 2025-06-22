@@ -352,11 +352,14 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
       const notificationOptions = {
         body: body,
         icon: icon,
-        requireInteraction: requireInteraction || false,
+        requireInteraction: true, // Force user interaction to make it more prominent
         silent: false,
         tag: 'dhikr-reminder', // This prevents duplicate notifications
         timestamp: Date.now(),
-        vibrate: [200, 100, 200] // Vibration pattern for mobile devices
+        vibrate: [200, 100, 200], // Vibration pattern for mobile devices
+        actions: [
+          { action: 'close', title: 'Close' }
+        ]
       };
       
       console.log('Offscreen: Creating notification with options:', notificationOptions);

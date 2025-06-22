@@ -52,7 +52,7 @@ const dhikrCollection = [
 let dhikrAlarmName = 'dhikr-reminder';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Background: Message received from:', sender.tab ? 'popup' : 'offscreen', message);
+  console.log('Background: Message received from:', sender.tab ? 'content script' : (sender.url?.includes('popup') ? 'popup' : 'offscreen'), message);
   console.log('Background: Sender details:', { tab: sender.tab, url: sender.url, origin: sender.origin });
   
   // Handle ping messages immediately
@@ -62,16 +62,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  // Ignore messages from the offscreen document itself
-  // Check for offscreen document URL pattern
+  // Ignore messages from the offscreen document itself to prevent loops
   if (!sender.tab && sender.url && sender.url.includes('offscreen.html')) {
-    console.log('Background: Ignoring message from offscreen document');
-    return false;
-  }
-  
-  // Also ignore if no tab and no URL (this shouldn't happen but just in case)
-  if (!sender.tab && !sender.url) {
-    console.log('Background: Ignoring message with no sender context');
+    console.log('Background: Ignoring message from offscreen document to prevent loops');
     return false;
   }
 
@@ -322,38 +315,61 @@ async function showDhikrNotification(isTest = false) {
     const iconUrl = chrome.runtime.getURL('assets/icon48.png');
     console.log('Background: Using icon URL:', iconUrl);
     
-    // Try browser notification first (more reliable on Windows)
-    console.log('Background: Trying browser notification first...');
-    let browserNotificationWorked = false;
+    // Try Chrome extension notification first (more reliable for popups)
+    console.log('Background: Trying Chrome extension notification first...');
+    let chromeNotificationWorked = false;
     
     try {
-      await createOffscreenDocumentIfNeeded();
-      const browserNotificationResponse = await new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
-          action: 'showBrowserNotification',
-          title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
-          body: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
-          icon: iconUrl,
-          requireInteraction: true
-        }, response => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
-        });
+      const chromeNotificationId = await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: iconUrl,
+        title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+        message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
+        priority: 2, // High priority
+        requireInteraction: true, // Stay visible until user interacts
+        silent: false
       });
       
-      if (browserNotificationResponse?.success) {
-        console.log('Background: Browser notification succeeded');
-        browserNotificationWorked = true;
+      if (chromeNotificationId) {
+        console.log('Background: Chrome extension notification created:', chromeNotificationId);
+        chromeNotificationWorked = true;
       }
-    } catch (browserError) {
-      console.error('Background: Browser notification failed:', browserError);
+    } catch (chromeError) {
+      console.error('Background: Chrome extension notification failed:', chromeError);
+    }
+    
+    // Fallback to browser notification if Chrome notification failed
+    if (!chromeNotificationWorked) {
+      console.log('Background: Trying browser notification as fallback...');
+      try {
+        await createOffscreenDocumentIfNeeded();
+        const browserNotificationResponse = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({
+            action: 'showBrowserNotification',
+            title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+            body: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
+            icon: iconUrl,
+            requireInteraction: true
+          }, response => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
+        });
+        
+        if (browserNotificationResponse?.success) {
+          console.log('Background: Browser notification succeeded');
+          chromeNotificationWorked = true;
+        }
+      } catch (browserError) {
+        console.error('Background: Browser notification failed:', browserError);
+      }
     }
     
     // If neither worked, try creating a popup window as last resort
-    if (!browserNotificationWorked && isTest) {
+    if (!chromeNotificationWorked && isTest) {
       console.log('Background: Trying popup window as last resort for test...');
       try {
         await chrome.windows.create({
@@ -370,7 +386,7 @@ async function showDhikrNotification(isTest = false) {
     }
     
     // As a final fallback, try audio notification
-    if (!browserNotificationWorked && !isTest) {
+    if (!chromeNotificationWorked && !isTest) {
       console.log('Background: Trying audio notification fallback...');
       try {
         await createOffscreenDocumentIfNeeded();
