@@ -185,12 +185,12 @@ function validateQuranSelection() {
   const isEnabled = !!suraId && !!reciterId;
   playButton.disabled = !isEnabled;
   
-  if (isEnabled) {
-      availabilityStatus.innerHTML = '&#x2705; Ready to play';
-      availabilityStatus.style.color = 'green';
-  } else {
-      availabilityStatus.textContent = '';
-  }
+  // if (isEnabled) {
+  //     availabilityStatus.innerHTML = '&#x2705; Ready to play';
+  //     availabilityStatus.style.color = 'green';
+  // } else {
+  //     availabilityStatus.textContent = '';
+  // }
 }
 
 async function playQuranAudio() {
@@ -232,8 +232,8 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
-    availabilityStatus.innerHTML = '&#x2705; Playing...';
-    availabilityStatus.style.color = 'green';
+    // availabilityStatus.innerHTML = '&#x2705; Playing...';
+    // availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true);
     startProgressTracking();
   } catch (error) {
