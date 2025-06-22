@@ -67,30 +67,54 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Handle all messages from the popup asynchronously.
+  // Handle dhikr notification actions synchronously first
+  if (message.action === 'startDhikrNotifications') {
+    console.log(`Background received message: ${message.action}`, message);
+    startDhikrNotifications(message.interval)
+      .then(() => {
+        console.log('Background: startDhikrNotifications completed successfully');
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error('Background: startDhikrNotifications failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'stopDhikrNotifications') {
+    console.log(`Background received message: ${message.action}`, message);
+    stopDhikrNotifications()
+      .then(() => {
+        console.log('Background: stopDhikrNotifications completed successfully');
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error('Background: stopDhikrNotifications failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'updateDhikrInterval') {
+    console.log(`Background received message: ${message.action}`, message);
+    updateDhikrInterval(message.interval)
+      .then(() => {
+        console.log('Background: updateDhikrInterval completed successfully');
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error('Background: updateDhikrInterval failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep the message channel open for async response
+  }
+
+  // Handle all other messages (audio-related) asynchronously.
   (async () => {
     console.log(`Background received message: ${message.action}`, message);
     
     try {
-      // Handle Dhikr notification actions first (before offscreen document creation)
-      if (message.action === 'startDhikrNotifications') {
-        await startDhikrNotifications(message.interval);
-        sendResponse({ success: true });
-        return;
-      }
-      
-      if (message.action === 'stopDhikrNotifications') {
-        await stopDhikrNotifications();
-        sendResponse({ success: true });
-        return;
-      }
-      
-      if (message.action === 'updateDhikrInterval') {
-        await updateDhikrInterval(message.interval);
-        sendResponse({ success: true });
-        return;
-      }
-      
       // For any audio action, ensure the offscreen document exists.
       console.log('Background: Creating offscreen document if needed...');
       await createOffscreenDocumentIfNeeded();

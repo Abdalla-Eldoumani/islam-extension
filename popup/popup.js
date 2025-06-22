@@ -821,13 +821,41 @@ async function toggleDhikrNotifications() {
       updatePresetButtons(interval);
       
       console.log('Sending startDhikrNotifications message...');
-      // Start notifications
-      const response = await chrome.runtime.sendMessage({
-        action: 'startDhikrNotifications',
-        interval: interval
-      });
       
-      console.log('Received response:', response);
+      // Add retry logic for better reliability
+      let retryCount = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (retryCount < maxRetries) {
+        try {
+          response = await chrome.runtime.sendMessage({
+            action: 'startDhikrNotifications',
+            interval: interval
+          });
+          
+          console.log('Received response:', response);
+          
+          if (response?.success) {
+            break; // Success, exit retry loop
+          } else if (response?.error) {
+            throw new Error(response.error);
+          } else {
+            throw new Error('No response from background script');
+          }
+          
+        } catch (sendError) {
+          retryCount++;
+          console.warn(`Attempt ${retryCount} failed:`, sendError);
+          
+          if (retryCount >= maxRetries) {
+            throw sendError;
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        }
+      }
       
       if (!response?.success) {
         throw new Error(response?.error || 'Failed to start notifications');
@@ -844,12 +872,40 @@ async function toggleDhikrNotifications() {
       settingsPanel.classList.add('hidden');
       
       console.log('Sending stopDhikrNotifications message...');
-      // Stop notifications
-      const response = await chrome.runtime.sendMessage({
-        action: 'stopDhikrNotifications'
-      });
       
-      console.log('Received response:', response);
+      // Add retry logic for better reliability
+      let retryCount = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (retryCount < maxRetries) {
+        try {
+          response = await chrome.runtime.sendMessage({
+            action: 'stopDhikrNotifications'
+          });
+          
+          console.log('Received response:', response);
+          
+          if (response?.success) {
+            break; // Success, exit retry loop
+          } else if (response?.error) {
+            throw new Error(response.error);
+          } else {
+            throw new Error('No response from background script');
+          }
+          
+        } catch (sendError) {
+          retryCount++;
+          console.warn(`Attempt ${retryCount} failed:`, sendError);
+          
+          if (retryCount >= maxRetries) {
+            throw sendError;
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        }
+      }
       
       if (!response?.success) {
         throw new Error(response?.error || 'Failed to stop notifications');
