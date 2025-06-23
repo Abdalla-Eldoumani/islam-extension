@@ -62,7 +62,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Track ongoing operations to prevent race conditions
-const ongoingOperations = new Set();
+const ongoingOperations = new Map();
 
 async function handleMessage(message, sender, sendResponse) {
   try {
@@ -85,21 +85,27 @@ async function handleMessage(message, sender, sendResponse) {
         message.action === 'stopDhikrNotifications' || 
         message.action === 'updateDhikrInterval') {
       
-      // Prevent duplicate operations
+      // Prevent duplicate operations with timestamp tracking
       const operationKey = `dhikr-${message.action}`;
-      if (ongoingOperations.has(operationKey)) {
-        console.log(`Background: Operation ${operationKey} already in progress, rejecting duplicate`);
-        sendResponse({ success: false, error: 'Operation already in progress' });
+      const now = Date.now();
+      const lastOperationTime = ongoingOperations.get(operationKey);
+      
+      if (lastOperationTime && (now - lastOperationTime) < 2000) {
+        console.log(`Background: Operation ${operationKey} called too recently (${now - lastOperationTime}ms ago), rejecting duplicate`);
+        sendResponse({ success: false, error: 'Operation called too frequently, please wait' });
         return;
       }
       
-      ongoingOperations.add(operationKey);
+      ongoingOperations.set(operationKey, now);
       console.log(`Background received message: ${message.action}`, message);
       
       try {
         await handleDhikrMessage(message, sendResponse);
       } finally {
-        ongoingOperations.delete(operationKey);
+        // Keep the timestamp for a short while to prevent rapid calls
+        setTimeout(() => {
+          ongoingOperations.delete(operationKey);
+        }, 1000);
       }
       return;
     }
@@ -203,6 +209,12 @@ async function handleAudioMessage(message, sendResponse) {
       sendResponse({ success: false, error: offscreenResponse.error || 'Audio playback failed' });
     } else {
       console.log('Background: Sending successful response to popup');
+      
+      // Start audio monitoring for autoplay when audio starts playing
+      if (message.action === 'playAudio') {
+        startAudioMonitoring();
+      }
+      
       sendResponse(offscreenResponse);
     }
     
@@ -454,4 +466,170 @@ chrome.runtime.onInstalled.addListener(async () => {
   } catch (error) {
     console.error('Background: Failed to restore Dhikr notifications after install/update:', error);
   }
-}); 
+});
+
+// --- AUDIO MONITORING FOR AUTOPLAY ---
+
+let audioMonitoringInterval = null;
+
+async function startAudioMonitoring() {
+  if (audioMonitoringInterval) {
+    clearInterval(audioMonitoringInterval);
+  }
+  
+  console.log('Background: Starting audio monitoring for autoplay');
+  
+  audioMonitoringInterval = setInterval(async () => {
+    try {
+      // Check if offscreen document exists
+      const hasDocument = await chrome.offscreen.hasDocument();
+      if (!hasDocument) {
+        console.log('Background: No offscreen document, stopping audio monitoring');
+        stopAudioMonitoring();
+        return;
+      }
+      
+      // Get current audio state
+      const response = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      if (!response?.success || !response.state?.audioUrl) {
+        // No active audio, stop monitoring
+        stopAudioMonitoring();
+        return;
+      }
+      
+      const state = response.state;
+      
+      // Check if audio finished (not playing, current time >= duration, and duration > 0)
+      if (!state.isPlaying && 
+          state.currentTime >= state.duration && 
+          state.duration > 0 && 
+          state.currentTime > 0) {
+        
+        console.log('Background: Audio finished, checking autoplay settings');
+        
+        // Get user settings to check if autoplay is enabled
+        const { userSelections } = await chrome.storage.local.get('userSelections');
+        
+        if (userSelections?.autoplayEnabled) {
+          console.log('Background: Autoplay enabled, triggering next sura');
+          await handleAutoplayNext(state.suraId, state.reciterKey);
+        } else {
+          console.log('Background: Autoplay disabled, stopping monitoring');
+          stopAudioMonitoring();
+        }
+      }
+      
+    } catch (error) {
+      console.error('Background: Audio monitoring error:', error);
+      // Don't stop monitoring on errors, just log them
+    }
+  }, 2000); // Check every 2 seconds (less frequent than popup)
+}
+
+function stopAudioMonitoring() {
+  if (audioMonitoringInterval) {
+    clearInterval(audioMonitoringInterval);
+    audioMonitoringInterval = null;
+    console.log('Background: Stopped audio monitoring');
+  }
+}
+
+async function handleAutoplayNext(currentSuraId, reciterKey) {
+  try {
+    console.log(`Background: Autoplay moving from Sura ${currentSuraId} to next`);
+    
+    // Calculate next sura ID
+    const currentId = parseInt(currentSuraId);
+    const nextSuraId = currentId >= 114 ? '1' : (currentId + 1).toString();
+    
+    console.log(`Background: Playing next sura: ${nextSuraId} with reciter: ${reciterKey}`);
+    
+    // Get the audio URL for the next sura
+    const audioUrl = await getNextSuraAudioUrl(reciterKey, nextSuraId);
+    
+    // Play the next sura
+    const playResponse = await chrome.runtime.sendMessage({
+      action: 'playAudio',
+      audioUrl: audioUrl,
+      suraId: nextSuraId,
+      reciterKey: reciterKey,
+    });
+    
+    if (playResponse?.success) {
+      // Update user selections to reflect the new sura
+      const { userSelections } = await chrome.storage.local.get('userSelections');
+      if (userSelections) {
+        userSelections.suraId = nextSuraId;
+        userSelections.timestamp = Date.now();
+        await chrome.storage.local.set({ userSelections });
+        console.log('Background: Updated user selections for autoplay');
+      }
+      
+      console.log('Background: Autoplay successful, continuing monitoring');
+    } else {
+      console.error('Background: Autoplay failed:', playResponse?.error);
+      stopAudioMonitoring();
+    }
+    
+  } catch (error) {
+    console.error('Background: Autoplay error:', error);
+    stopAudioMonitoring();
+  }
+}
+
+async function getNextSuraAudioUrl(reciterId, suraId) {
+  // Try to get full chapter audio first
+  const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
+  console.log('Background: Fetching chapter audio from:', chapterUrl);
+  
+  try {
+    const chapterResponse = await fetch(chapterUrl);
+    if (chapterResponse.ok) {
+      const chapterData = await chapterResponse.json();
+      console.log('Background: Chapter API response:', chapterData);
+      
+      if (chapterData.audio_file?.audio_url) {
+        const audioUrl = chapterData.audio_file.audio_url;
+        return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
+      }
+    }
+  } catch (error) {
+    console.log('Background: Chapter audio not available, trying verse-by-verse approach:', error.message);
+  }
+  
+  // Fallback to verse-by-verse audio
+  const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
+  console.log('Background: Fetching verse audio from:', versesUrl);
+  
+  const response = await fetch(versesUrl);
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  console.log('Background: Verses API response data:', data);
+  
+  if (!data.audio_files || data.audio_files.length === 0) {
+    throw new Error('No audio files found in API response.');
+  }
+  
+  // Get the first verse audio file
+  const firstAudio = data.audio_files[0];
+  console.log('Background: First audio file object:', firstAudio);
+  
+  let audioUrl = firstAudio.url || firstAudio.audio_url;
+  
+  if (!audioUrl) {
+    console.error('Background: No audio URL found in response:', data);
+    throw new Error('Audio URL not found in API response.');
+  }
+  
+  // Handle different URL formats
+  if (audioUrl.startsWith('//')) {
+    return `https:${audioUrl}`;
+  } else if (audioUrl.startsWith('http')) {
+    return audioUrl;
+  } else {
+    return `https://verses.quran.com/${audioUrl}`;
+  }
+} 

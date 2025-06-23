@@ -45,7 +45,14 @@ function setupEventHandlers() {
 
   // Dhikr event handlers
   document.getElementById('next-dhikr').addEventListener('click', nextDhikr);
-  document.getElementById('toggle-notifications').addEventListener('click', toggleDhikrNotifications);
+  
+  // Add single event listener for notifications toggle with debouncing
+  const notificationToggle = document.getElementById('toggle-notifications');
+  if (notificationToggle && !notificationToggle.hasAttribute('data-listener-added')) {
+    notificationToggle.addEventListener('click', toggleDhikrNotifications);
+    notificationToggle.setAttribute('data-listener-added', 'true');
+  }
+  
   document.getElementById('dhikr-interval').addEventListener('input', validateInterval);
   
   // Preset buttons
@@ -802,6 +809,7 @@ function startProgressTracking() {
 
 // Add debouncing for notification toggle
 let notificationToggleInProgress = false;
+let lastToggleTime = 0;
 
 function nextDhikr() {
   currentDhikrIndex = (currentDhikrIndex + 1) % dhikrCollection.length;
@@ -809,12 +817,14 @@ function nextDhikr() {
 }
 
 async function toggleDhikrNotifications() {
-  // Prevent multiple simultaneous calls
-  if (notificationToggleInProgress) {
-    console.log('Notification toggle already in progress, ignoring click');
+  // Prevent multiple simultaneous calls and rapid clicking
+  const now = Date.now();
+  if (notificationToggleInProgress || (now - lastToggleTime) < 1000) {
+    console.log('Notification toggle already in progress or too soon, ignoring click');
     return;
   }
   
+  lastToggleTime = now;
   notificationToggleInProgress = true;
   
   const button = document.getElementById('toggle-notifications');
