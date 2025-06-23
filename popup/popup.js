@@ -680,6 +680,11 @@ async function playNextSura() {
   document.getElementById('sura-select').value = nextSuraId;
   await saveUserSelections();
   
+  // Ensure UI is in clean state before starting new sura
+  updatePlayButtonUI(false, true, 0);
+  document.getElementById('play-quran').textContent = '▶ Play';
+  document.getElementById('play-quran').dataset.action = 'play';
+  
   // Start playing the next sura
   await playQuranAudio();
 }
@@ -755,6 +760,13 @@ function startProgressTracking() {
           
           if (autoplayEnabled) {
             console.log('Sura finished, autoplay is enabled - playing next sura');
+            // Reset UI to fresh state before autoplay
+            updatePlayButtonUI(false, true, 0);
+            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').dataset.action = 'play';
+            document.getElementById('progress-bar').value = 0;
+            document.getElementById('current-time').textContent = formatTime(0);
+            
             // Small delay before playing next to ensure clean transition
             setTimeout(() => {
               playNextSura();
@@ -810,8 +822,10 @@ async function toggleDhikrNotifications() {
   const currentState = button.dataset.enabled === 'true';
   const newState = !currentState;
   
-  // Disable button during operation
+  // Disable button during operation and show loading state
   button.disabled = true;
+  const originalText = button.textContent;
+  button.textContent = newState ? '🔄 Enabling...' : '🔄 Disabling...';
   
   try {
     let response;
@@ -897,12 +911,15 @@ async function toggleDhikrNotifications() {
     
     await saveDhikrSettings();
     
+    // Small delay to prevent rapid re-clicking
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
   } catch (error) {
     console.error('Failed to toggle notifications:', error);
     
     // Reset button state on error
     button.dataset.enabled = currentState.toString();
-    button.textContent = currentState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+    button.textContent = originalText;
     
     if (currentState) {
       settingsPanel.classList.remove('hidden');
@@ -921,6 +938,10 @@ async function toggleDhikrNotifications() {
       errorMessage = 'Extension was reloaded. Please close and reopen the popup.';
     } else if (error.message.includes('runtime.lastError')) {
       errorMessage = 'Chrome extension error. Please try reloading the extension.';
+    } else if (error.message.includes('already in progress')) {
+      errorMessage = 'Operation already in progress. Please wait and try again.';
+    } else if (error.message.includes('Invalid interval')) {
+      errorMessage = 'Invalid notification interval. Please check your settings.';
     } else if (error.message.length > 0 && error.message.length < 100) {
       errorMessage = `Error: ${error.message}`;
     }

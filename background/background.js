@@ -61,6 +61,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// Track ongoing operations to prevent race conditions
+const ongoingOperations = new Set();
+
 async function handleMessage(message, sender, sendResponse) {
   try {
     // Handle ping messages immediately (synchronous)
@@ -82,8 +85,22 @@ async function handleMessage(message, sender, sendResponse) {
         message.action === 'stopDhikrNotifications' || 
         message.action === 'updateDhikrInterval') {
       
+      // Prevent duplicate operations
+      const operationKey = `dhikr-${message.action}`;
+      if (ongoingOperations.has(operationKey)) {
+        console.log(`Background: Operation ${operationKey} already in progress, rejecting duplicate`);
+        sendResponse({ success: false, error: 'Operation already in progress' });
+        return;
+      }
+      
+      ongoingOperations.add(operationKey);
       console.log(`Background received message: ${message.action}`, message);
-      await handleDhikrMessage(message, sendResponse);
+      
+      try {
+        await handleDhikrMessage(message, sendResponse);
+      } finally {
+        ongoingOperations.delete(operationKey);
+      }
       return;
     }
 
@@ -111,22 +128,46 @@ async function handleMessage(message, sender, sendResponse) {
 
 async function handleDhikrMessage(message, sendResponse) {
   try {
+    // Validate message structure
+    if (!message || typeof message.action !== 'string') {
+      throw new Error('Invalid message format');
+    }
+
     if (message.action === 'startDhikrNotifications') {
+      // Validate interval parameter
+      if (typeof message.interval !== 'number' || message.interval < 5 || message.interval > 3600) {
+        throw new Error('Invalid interval: must be a number between 5 and 3600 seconds');
+      }
+      
       await startDhikrNotifications(message.interval);
       console.log('Background: startDhikrNotifications completed successfully');
-      sendResponse({ success: true });
+      sendResponse({ success: true, message: 'Notifications started successfully' });
+      
     } else if (message.action === 'stopDhikrNotifications') {
       await stopDhikrNotifications();
       console.log('Background: stopDhikrNotifications completed successfully');
-      sendResponse({ success: true });
+      sendResponse({ success: true, message: 'Notifications stopped successfully' });
+      
     } else if (message.action === 'updateDhikrInterval') {
+      // Validate interval parameter
+      if (typeof message.interval !== 'number' || message.interval < 5 || message.interval > 3600) {
+        throw new Error('Invalid interval: must be a number between 5 and 3600 seconds');
+      }
+      
       await updateDhikrInterval(message.interval);
       console.log('Background: updateDhikrInterval completed successfully');
-      sendResponse({ success: true });
+      sendResponse({ success: true, message: 'Interval updated successfully' });
+      
+    } else {
+      throw new Error(`Unknown dhikr action: ${message.action}`);
     }
   } catch (error) {
     console.error(`Background: ${message.action} failed:`, error);
-    sendResponse({ success: false, error: error.message });
+    sendResponse({ 
+      success: false, 
+      error: error.message || 'Unknown error occurred',
+      action: message.action 
+    });
   }
 }
 
