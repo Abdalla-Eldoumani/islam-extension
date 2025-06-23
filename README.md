@@ -219,6 +219,7 @@ SOFTWARE.
 
 ## 🙏 Acknowledgments
 
+- **First and formost all praise is due to Allah (SWT)**
 - **Quran.com** for providing the excellent API
 - **All the reciters** whose beautiful recitations make this possible
 - **The Muslim developer community** for inspiration and feedback
