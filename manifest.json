@@ -6,7 +6,6 @@
   "permissions": [
     "offscreen",
     "storage",
-    "tabs",
     "alarms",
     "notifications",
     "windows"
