@@ -39,8 +39,9 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 
 ## 🚀 Quick Start
 
-### Option 1: Chrome Web Store (Coming Soon)
-*The extension is currently under review for the Chrome Web Store. Once approved, you'll be able to install it with one click.*
+### Option 1: Chrome Web Store
+- With a simple click add it to your extensions now!
+- [Chrome Extension](https://chromewebstore.google.com/detail/quran-sunnah-companion/okkohadnmodfaienacdlfaledjblcbka?hl=en-US&utm_source=ext_sidebar)
 
 ### Option 2: Install Manually (Available Now)
 
