@@ -841,6 +841,13 @@ async function toggleDhikrNotifications() {
     let response;
     const messageTimeout = 8000; // 8 second timeout
     
+    if (newState && !validateInterval()) {
+      // Invalid interval – show feedback and abort the toggle attempt gracefully.
+      button.disabled = false;
+      notificationToggleInProgress = false;
+      return;
+    }
+    
     if (newState) {
       // Starting notifications
       settingsPanel.classList.remove('hidden');

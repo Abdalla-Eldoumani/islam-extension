@@ -50,6 +50,43 @@ const dhikrCollection = [
 
 let dhikrAlarmName = 'dhikr-reminder';
 
+// ---- HELPER PROMISE WRAPPERS -------------------------------------------------
+/**
+ * Chrome's notifications.getPermissionLevel historically supported only the
+ * callback form.  In newer Chrome versions a promise form is available, but we
+ * still need to support both to avoid runtime errors that can silently break
+ * the start/stop logic.  This helper normalises the API into a Promise that
+ * always resolves with the permission string (`granted`, `denied`, `default`).
+ * @returns {Promise<'granted'|'denied'|'default'>}
+ */
+function getNotificationPermissionLevel() {
+  // Newer Chrome releases (>=116) return a promise when no callback is
+  // supplied.  Detect this by checking the function length (expected
+  // callback-arity of 1 in the classic API).
+  try {
+    if (chrome.notifications.getPermissionLevel.length === 0) {
+      // Promise variant available.
+      return chrome.notifications.getPermissionLevel();
+    }
+  } catch (_) {
+    // Fall back to callback style below.
+  }
+
+  // Fallback for older Chrome versions – wrap the callback style.
+  return new Promise((resolve) => {
+    try {
+      chrome.notifications.getPermissionLevel((level) => {
+        // In very old versions the callback can be undefined; treat it as
+        // 'denied' so we fail gracefully.
+        resolve(level || 'denied');
+      });
+    } catch (err) {
+      console.error('getPermissionLevel callback form failed:', err);
+      resolve('denied');
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Message received from:', sender.tab ? 'content script' : (sender.url?.includes('popup') ? 'popup' : 'offscreen'), message);
   console.log('Background: Sender details:', { tab: sender.tab, url: sender.url, origin: sender.origin });
@@ -255,8 +292,8 @@ async function startDhikrNotifications(intervalSeconds) {
   try {
     console.log('Background: Starting Dhikr notifications with interval:', intervalSeconds, 'seconds');
     
-    // Check notification permission level first
-    const permissionLevel = await chrome.notifications.getPermissionLevel();
+    // Check notification permission level first (robust polyfill)
+    const permissionLevel = await getNotificationPermissionLevel();
     console.log('Background: Notification permission level:', permissionLevel);
     
     if (permissionLevel === 'denied') {
@@ -266,10 +303,14 @@ async function startDhikrNotifications(intervalSeconds) {
     // Clear any existing alarm
     await chrome.alarms.clear(dhikrAlarmName);
     
-    // Create new alarm
+    // Chrome clamps periodInMinutes < 1 to 1 and may even throw on very small
+    // values.  We explicitly clamp to 1 minute to avoid intermittent errors
+    // when the user selects 30 s, 45 s etc.
+    const periodMinutes = Math.max(intervalSeconds / 60, 1);
+
     await chrome.alarms.create(dhikrAlarmName, {
-      delayInMinutes: intervalSeconds / 60,
-      periodInMinutes: intervalSeconds / 60
+      delayInMinutes: periodMinutes,
+      periodInMinutes: periodMinutes,
     });
     
     console.log('Background: Dhikr alarm created successfully');
@@ -326,8 +367,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 async function showDhikrNotification(isTest = false) {
   try {
-    // Check permission level before showing notification
-    const permissionLevel = await chrome.notifications.getPermissionLevel();
+    // Check notification permission level first (robust polyfill)
+    const permissionLevel = await getNotificationPermissionLevel();
     console.log('Background: Current notification permission level:', permissionLevel);
     
     if (permissionLevel === 'denied') {
