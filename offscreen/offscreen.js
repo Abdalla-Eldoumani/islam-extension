@@ -46,7 +46,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: true });
           break;
         default:
-          sendResponse({ success: false, error: 'Unknown action' });
+          console.warn('Offscreen: Ignoring unknown action – likely meant for another context:', message.action);
+          return;
       }
     } catch (error) {
       console.error('Offscreen message handling failed:', error);
