@@ -4,6 +4,9 @@
  * This version uses the Quran.com v4 API for Surah names, reciters, and audio.
  */
 
+// ===== Cross-browser compatibility shim =====================================
+const chrome = (typeof browser !== 'undefined') ? browser : globalThis.chrome;
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval

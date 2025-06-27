@@ -3,6 +3,14 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
+// ===== Cross-browser compatibility shim =====================================
+// In Firefox the promise-based API lives under `browser`, while `chrome` only
+// offers the callback style.  Re-alias `chrome` to `browser` inside this
+// module so the rest of the code (which uses `await chrome.*`) continues to
+// work without changes.
+// (Chrome will ignore this because `browser` is undefined there.)
+const chrome = (typeof browser !== 'undefined') ? browser : globalThis.chrome;
+
 const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
@@ -266,6 +274,14 @@ async function handleAudioMessage(message, sendResponse) {
 
 async function createOffscreenDocumentIfNeeded() {
   try {
+    // Firefox does not support the Offscreen API – simply return if it is
+    // unavailable.  Audio will stop when the popup closes, but the extension
+    // will continue to function.
+    if (!chrome.offscreen || typeof chrome.offscreen.createDocument !== 'function') {
+      console.warn('Offscreen API not available in this browser – skipping offscreen document creation.');
+      return;
+    }
+
     const hasDocument = await chrome.offscreen.hasDocument();
     if (hasDocument) {
       console.log('Background: Offscreen document already exists.');
