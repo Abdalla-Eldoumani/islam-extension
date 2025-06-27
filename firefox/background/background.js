@@ -61,6 +61,9 @@ let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
 
+// Fallback audio window ID for browsers without Offscreen API
+let audioWindowId = null;
+
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
  * Chrome's notifications.getPermissionLevel historically supported only the
@@ -278,7 +281,28 @@ async function createOffscreenDocumentIfNeeded() {
     // unavailable.  Audio will stop when the popup closes, but the extension
     // will continue to function.
     if (!chrome.offscreen || typeof chrome.offscreen.createDocument !== 'function') {
-      console.warn('Offscreen API not available in this browser – skipping offscreen document creation.');
+      console.warn('Offscreen API not available – using hidden popup window for audio persistence.');
+      if (audioWindowId !== null) {
+        // Already created
+        try {
+          await chrome.windows.get(audioWindowId);
+          return;
+        } catch (_) {
+          audioWindowId = null; // window was closed
+        }
+      }
+
+      const win = await chrome.windows.create({
+        url: chrome.runtime.getURL('offscreen/offscreen.html'),
+        type: 'popup',
+        left: 30000,
+        top: 0,
+        width: 1,
+        height: 1,
+        focused: false
+      });
+      audioWindowId = win.id;
+      console.log('Background: Hidden audio window created with id', audioWindowId);
       return;
     }
 
@@ -371,6 +395,13 @@ async function stopDhikrNotifications() {
       clearTimeout(dhikrTimeoutId);
       dhikrTimeoutId = null;
       console.log('Background: Dhikr timeout cleared successfully');
+    }
+    
+    if (audioWindowId !== null) {
+      try {
+        chrome.windows.remove(audioWindowId);
+      } catch (_) {}
+      audioWindowId = null;
     }
     
   } catch (error) {
@@ -562,10 +593,25 @@ async function startAudioMonitoring() {
   
   audioMonitoringInterval = setInterval(async () => {
     try {
-      // Check if offscreen document exists
-      const hasDocument = await chrome.offscreen.hasDocument();
-      if (!hasDocument) {
-        console.log('Background: No offscreen document, stopping audio monitoring');
+      let audioContextExists = true;
+      if (chrome.offscreen && chrome.offscreen.hasDocument) {
+        audioContextExists = await chrome.offscreen.hasDocument();
+      } else {
+        // Verify hidden window still open
+        if (audioWindowId === null) {
+          audioContextExists = false;
+        } else {
+          try {
+            await chrome.windows.get(audioWindowId);
+          } catch (_) {
+            audioContextExists = false;
+            audioWindowId = null;
+          }
+        }
+      }
+
+      if (!audioContextExists) {
+        console.log('Background: No audio context, stopping audio monitoring');
         stopAudioMonitoring();
         return;
       }
@@ -612,6 +658,13 @@ function stopAudioMonitoring() {
     clearInterval(audioMonitoringInterval);
     audioMonitoringInterval = null;
     console.log('Background: Stopped audio monitoring');
+  }
+  
+  if (audioWindowId !== null) {
+    try {
+      chrome.windows.remove(audioWindowId);
+    } catch (_) {}
+    audioWindowId = null;
   }
 }
 
