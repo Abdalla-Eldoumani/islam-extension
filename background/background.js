@@ -49,6 +49,9 @@ const dhikrCollection = [
 ];
 
 let dhikrAlarmName = 'dhikr-reminder';
+let dhikrTimeoutId = null;
+let dhikrIntervalSeconds = 60;
+let dhikrNotificationsActive = false;
 
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
@@ -300,20 +303,29 @@ async function startDhikrNotifications(intervalSeconds) {
       throw new Error('Notifications are disabled. Please enable notifications for this extension in Chrome settings.');
     }
     
-    // Clear any existing alarm
-    await chrome.alarms.clear(dhikrAlarmName);
+    // Stop any existing notifications first
+    await stopDhikrNotifications();
     
-    // Chrome clamps periodInMinutes < 1 to 1 and may even throw on very small
-    // values.  We explicitly clamp to 1 minute to avoid intermittent errors
-    // when the user selects 30 s, 45 s etc.
-    const periodMinutes = Math.max(intervalSeconds / 60, 1);
-
-    await chrome.alarms.create(dhikrAlarmName, {
-      delayInMinutes: periodMinutes,
-      periodInMinutes: periodMinutes,
-    });
+    // Store the interval and mark as active
+    dhikrIntervalSeconds = intervalSeconds;
+    dhikrNotificationsActive = true;
     
-    console.log('Background: Dhikr alarm created successfully');
+    if (intervalSeconds >= 60) {
+      // Use chrome.alarms for intervals >= 1 minute
+      const periodMinutes = intervalSeconds / 60;
+      console.log('Background: Using chrome.alarms with period:', periodMinutes, 'minutes');
+      
+      await chrome.alarms.create(dhikrAlarmName, {
+        delayInMinutes: periodMinutes,
+        periodInMinutes: periodMinutes,
+      });
+      
+      console.log('Background: Dhikr alarm created successfully');
+    } else {
+      // Use setTimeout for intervals < 1 minute
+      console.log('Background: Using setTimeout for sub-minute interval:', intervalSeconds, 'seconds');
+      scheduleNextDhikrTimeout();
+    }
     
     // Show a test notification immediately to confirm it's working
     setTimeout(() => {
@@ -322,6 +334,7 @@ async function startDhikrNotifications(intervalSeconds) {
     
   } catch (error) {
     console.error('Background: Failed to start Dhikr notifications:', error);
+    dhikrNotificationsActive = false;
     throw error;
   }
 }
@@ -329,8 +342,21 @@ async function startDhikrNotifications(intervalSeconds) {
 async function stopDhikrNotifications() {
   try {
     console.log('Background: Stopping Dhikr notifications');
+    
+    // Mark as inactive first
+    dhikrNotificationsActive = false;
+    
+    // Clear chrome.alarms
     await chrome.alarms.clear(dhikrAlarmName);
     console.log('Background: Dhikr alarm cleared successfully');
+    
+    // Clear setTimeout
+    if (dhikrTimeoutId) {
+      clearTimeout(dhikrTimeoutId);
+      dhikrTimeoutId = null;
+      console.log('Background: Dhikr timeout cleared successfully');
+    }
+    
   } catch (error) {
     console.error('Background: Failed to stop Dhikr notifications:', error);
     throw error;
@@ -341,9 +367,7 @@ async function updateDhikrInterval(intervalSeconds) {
   try {
     console.log('Background: Updating Dhikr interval to:', intervalSeconds, 'seconds');
     
-    // Check if alarm exists
-    const alarm = await chrome.alarms.get(dhikrAlarmName);
-    if (alarm) {
+    if (dhikrNotificationsActive) {
       // Restart with new interval
       await startDhikrNotifications(intervalSeconds);
     }
@@ -488,7 +512,7 @@ chrome.runtime.onStartup.addListener(async () => {
   try {
     const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
-      console.log('Background: Restoring Dhikr notifications on startup');
+      console.log('Background: Restoring Dhikr notifications on startup with interval:', dhikrSettings.interval || 60);
       await startDhikrNotifications(dhikrSettings.interval || 60);
     }
   } catch (error) {
@@ -501,7 +525,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   try {
     const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
-      console.log('Background: Restoring Dhikr notifications after install/update');
+      console.log('Background: Restoring Dhikr notifications after install/update with interval:', dhikrSettings.interval || 60);
       await startDhikrNotifications(dhikrSettings.interval || 60);
     }
   } catch (error) {
@@ -673,4 +697,23 @@ async function getNextSuraAudioUrl(reciterId, suraId) {
   } else {
     return `https://verses.quran.com/${audioUrl}`;
   }
+}
+
+// Add new function to handle setTimeout-based notifications
+function scheduleNextDhikrTimeout() {
+  if (!dhikrNotificationsActive) {
+    console.log('Background: Dhikr notifications are not active, stopping timeout scheduling');
+    return;
+  }
+  
+  console.log('Background: Scheduling next dhikr notification in', dhikrIntervalSeconds, 'seconds');
+  
+  dhikrTimeoutId = setTimeout(() => {
+    if (dhikrNotificationsActive) {
+      console.log('Background: Timeout triggered, showing dhikr notification');
+      showDhikrNotification(false);
+      // Schedule the next one
+      scheduleNextDhikrTimeout();
+    }
+  }, dhikrIntervalSeconds * 1000);
 } 
