@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Qur'an & Sunnah Companion",
+  "version": "1.1.0",
+  "description": "Your pocket-size īmān boost in every tab",
+  "permissions": [
+    "offscreen",
+    "storage",
+    "alarms",
+    "notifications",
+    "windows"
+  ],
+  "host_permissions": [
+    "https://api.hadith.gading.dev/*",
+    "https://api.quran.com/*",
+    "https://verses.quran.com/*",
+    "https://mirrors.quranicaudio.com/*",
+    "https://download.quranicaudio.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Qur'an & Sunnah Companion"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; media-src https://verses.quran.com https://mirrors.quranicaudio.com https://download.quranicaudio.com; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com; object-src 'none';"
+  }
+} 

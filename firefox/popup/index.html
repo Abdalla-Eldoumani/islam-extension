@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qur'an & Sunnah Companion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="popup">
+    <header class="popup__header">
+      <h1 class="popup__title">Qur'an & Sunnah Companion</h1>
+    </header>
+    
+    <section class="cards">
+      <article class="card card--quran">
+        <h2 class="card__title">Qur'an</h2>
+        <select class="card__select" id="sura-select">
+          <option value="">Select Sura...</option>
+        </select>
+        <select class="card__select" id="reciter-select">
+          <option value="">Select Reciter...</option>
+        </select>
+        <div class="card__availability-status" id="quran-availability"></div>
+        <div class="card__controls">
+          <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
+          <button class="card__button card__button--secondary hidden" id="pause-quran" data-action="pause" disabled>⏸ Pause</button>
+          <button class="card__button card__button--secondary" id="autoplay-toggle" data-autoplay="false" disabled>🔄 Autoplay: OFF</button>
+        </div>
+        <div class="card__progress hidden" id="progress-container">
+          <input type="range" id="progress-bar" min="0" max="100" value="0" class="card__progress-bar">
+          <div class="card__time">
+            <span id="current-time">0:00</span> - <span id="total-time">0:00</span>
+          </div>
+        </div>
+        <div class="card__loading hidden" id="quran-loading">Loading...</div>
+      </article>
+      
+      <article class="card card--hadith">
+        <h2 class="card__title">Hadith</h2>
+        <p class="card__content" id="hadith-text">Loading...</p>
+      </article>
+      
+      <article class="card card--dhikr">
+        <h2 class="card__title">Dhikr</h2>
+        <p class="card__content" id="dhikr-text">Loading...</p>
+        <div class="card__dhikr-info" id="dhikr-info"></div>
+        <div class="card__controls">
+          <button class="card__button" id="next-dhikr">🔄 Next Dhikr</button>
+          <button class="card__button card__button--secondary" id="toggle-notifications" data-enabled="false">🔔 Notifications: OFF</button>
+        </div>
+        <div class="card__notification-settings hidden" id="notification-settings">
+          <label class="card__label">
+            Reminder Interval (seconds):
+            <input type="number" id="dhikr-interval" min="5" max="3600" value="60" class="card__input">
+          </label>
+          <div class="card__interval-presets">
+            <button class="card__preset" data-seconds="30">30s</button>
+            <button class="card__preset" data-seconds="60">1m</button>
+            <button class="card__preset" data-seconds="300">5m</button>
+            <button class="card__preset" data-seconds="900">15m</button>
+          </div>
+          <div class="card__validation-message hidden" id="interval-validation"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+  
+  <script type="module" src="popup.js"></script>
+</body>
+</html> 
