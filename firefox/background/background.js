@@ -74,18 +74,23 @@ let audioWindowId = null;
  * @returns {Promise<'granted'|'denied'|'default'>}
  */
 function getNotificationPermissionLevel() {
-  // Newer Chrome releases (>=116) return a promise when no callback is
-  // supplied.  Detect this by checking the function length (expected
-  // callback-arity of 1 in the classic API).
+  // Some browsers (Firefox) do not implement getPermissionLevel at all; assume
+  // granted because the user had to approve notifications permission at
+  // install time.  If the API exists, normalise to Promise.
+
+  if (!chrome.notifications || typeof chrome.notifications.getPermissionLevel !== 'function') {
+    return Promise.resolve('granted');
+  }
+
+  // Newer Chrome releases return a promise when no callback is supplied.
   try {
     if (chrome.notifications.getPermissionLevel.length === 0) {
-      // Promise variant available.
       return chrome.notifications.getPermissionLevel();
     }
   } catch (_) {
-    // Fall back to callback style below.
+    // ignore, will wrap callback below
   }
-
+   
   // Fallback for older Chrome versions – wrap the callback style.
   return new Promise((resolve) => {
     try {
