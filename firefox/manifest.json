@@ -6,9 +6,7 @@
   "permissions": [
     "storage",
     "alarms",
-    "notifications"
-  ],
-  "host_permissions": [
+    "notifications",
     "https://api.hadith.gading.dev/*",
     "https://api.quran.com/*",
     "https://verses.quran.com/*",
@@ -19,9 +17,14 @@
     "scripts": ["background/background.js"],
     "persistent": true
   },
-  "action": {
+  "browser_action": {
     "default_popup": "popup/index.html",
-    "default_title": "Qur'an & Sunnah Companion"
+    "default_title": "Qur'an & Sunnah Companion",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
   },
   "icons": {
     "16": "assets/icon16.png",
