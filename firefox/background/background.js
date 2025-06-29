@@ -186,6 +186,19 @@ async function handleMessage(message, sender, sendResponse) {
     console.error('Background: Error in handleMessage:', error);
     sendResponse({ success: false, error: `Message handling failed: ${error.message}` });
   }
+
+  if (message.action === 'getAudioState') {
+    let contextExists = false;
+    if (chrome.offscreen && chrome.offscreen.hasDocument) {
+      try { contextExists = await chrome.offscreen.hasDocument(); } catch (_) {contextExists=false;}
+    } else if (audioWindowId !== null) {
+      try { await chrome.windows.get(audioWindowId); contextExists=true;} catch(_){ contextExists=false; audioWindowId=null; }
+    }
+    if (!contextExists) {
+      sendResponse({ success: true, state: {} });
+      return;
+    }
+  }
 }
 
 async function handleDhikrMessage(message, sendResponse) {
@@ -235,10 +248,12 @@ async function handleDhikrMessage(message, sendResponse) {
 
 async function handleAudioMessage(message, sendResponse) {
   try {
-    // For any audio action, ensure the offscreen document exists.
-    console.log('Background: Creating offscreen document if needed...');
-    await createOffscreenDocumentIfNeeded();
-    console.log('Background: Offscreen document ready');
+    // Only prepare audio context when we are about to play or resume.
+    if (message.action === 'playAudio' || message.action === 'resumeAudio') {
+      console.log('Background: Preparing audio context...');
+      await createOffscreenDocumentIfNeeded();
+      console.log('Background: Audio context ready');
+    }
     
     // Forward the message to the offscreen document.
     console.log('Background: Forwarding message to offscreen document...');
