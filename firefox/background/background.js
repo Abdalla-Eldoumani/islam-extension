@@ -248,6 +248,27 @@ async function handleDhikrMessage(message, sendResponse) {
 
 async function handleAudioMessage(message, sendResponse) {
   try {
+    // If Offscreen API is not available, handle audio directly in background
+    if (!hasOffscreen) {
+      let resp;
+      switch (message.action) {
+        case 'playAudio':
+          resp = await bgPlayAudio(message); break;
+        case 'pauseAudio':
+          resp = await bgPauseAudio(); break;
+        case 'resumeAudio':
+          resp = await bgResumeAudio(); break;
+        case 'seekAudio':
+          resp = await bgSeekAudio(message); break;
+        case 'getAudioState':
+          resp = bgGetAudioState(); break;
+        default:
+          resp = { success: false, error: 'Unknown audio action' };
+      }
+      sendResponse(resp);
+      return;
+    }
+    
     // Only prepare audio context when we are about to play or resume.
     if (message.action === 'playAudio' || message.action === 'resumeAudio') {
       console.log('Background: Preparing audio context...');
@@ -297,52 +318,8 @@ async function handleAudioMessage(message, sendResponse) {
 
 async function createOffscreenDocumentIfNeeded() {
   try {
-    // Firefox does not support the Offscreen API – simply return if it is
-    // unavailable.  Audio will stop when the popup closes, but the extension
-    // will continue to function.
-    if (!chrome.offscreen || typeof chrome.offscreen.createDocument !== 'function') {
-      console.warn('Offscreen API not available – using hidden popup window for audio persistence.');
-      if (audioWindowId !== null) {
-        // Already created
-        try {
-          await chrome.windows.get(audioWindowId);
-          return;
-        } catch (_) {
-          audioWindowId = null; // window was closed
-        }
-      }
-
-      const win = await chrome.windows.create({
-        url: chrome.runtime.getURL('offscreen/offscreen.html'),
-        type: 'popup',
-        left: 30000,
-        top: 0,
-        width: 1,
-        height: 1,
-        focused: false
-      });
-      audioWindowId = win.id;
-      console.log('Background: Hidden audio window created with id', audioWindowId);
-      return;
-    }
-
-    const hasDocument = await chrome.offscreen.hasDocument();
-    if (hasDocument) {
-      console.log('Background: Offscreen document already exists.');
-      return;
-    }
-
-    console.log('Background: Creating new offscreen document...');
-    await chrome.offscreen.createDocument({
-      url: 'offscreen/offscreen.html',
-      reasons: ['AUDIO_PLAYBACK'],
-      justification: 'Keep Qur\'an audio playing when popup closes'
-    });
-    console.log('Background: Offscreen document created successfully');
-    
-    // Give the offscreen document a moment to initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    // Offscreen API absent – background audio element handles playback.
+    return;
   } catch (error) {
     console.error('Background: Failed to create offscreen document:', error);
     throw new Error(`Failed to create audio player: ${error.message}`);
@@ -614,19 +591,13 @@ async function startAudioMonitoring() {
   audioMonitoringInterval = setInterval(async () => {
     try {
       let audioContextExists = true;
-      if (chrome.offscreen && chrome.offscreen.hasDocument) {
-        audioContextExists = await chrome.offscreen.hasDocument();
+      if (!hasOffscreen) {
+        audioContextExists = !!(bgAudio && !bgAudio.ended);
       } else {
-        // Verify hidden window still open
-        if (audioWindowId === null) {
+        try {
+          audioContextExists = await chrome.offscreen.hasDocument();
+        } catch (_) {
           audioContextExists = false;
-        } else {
-          try {
-            await chrome.windows.get(audioWindowId);
-          } catch (_) {
-            audioContextExists = false;
-            audioWindowId = null;
-          }
         }
       }
 
@@ -805,4 +776,87 @@ function scheduleNextDhikrTimeout() {
       scheduleNextDhikrTimeout();
     }
   }, dhikrIntervalSeconds * 1000);
+}
+
+// ============================================================================
+//  BACKGROUND AUDIO FALLBACK (Firefox, no Offscreen API)
+// ============================================================================
+
+const hasOffscreen = !!(chrome.offscreen && typeof chrome.offscreen.createDocument === 'function');
+
+let bgAudio = null; // HTMLAudioElement when hasOffscreen === false
+let audioState = {
+  audioUrl: null,
+  suraId: null,
+  reciterKey: null,
+  isPlaying: false,
+  currentTime: 0,
+  duration: 0
+};
+
+function ensureBgAudio() {
+  if (bgAudio) return bgAudio;
+  bgAudio = new Audio();
+  bgAudio.addEventListener('timeupdate', () => {
+    audioState.currentTime = Math.floor(bgAudio.currentTime);
+    audioState.duration = Math.floor(bgAudio.duration || 0);
+  });
+  bgAudio.addEventListener('ended', () => {
+    audioState.isPlaying = false;
+    updatePopupAudioState();
+  });
+  return bgAudio;
+}
+
+function updatePopupAudioState() {
+  chrome.runtime.sendMessage({ action: 'audioStateUpdated', state: audioState }).catch(() => {});
+}
+
+async function bgPlayAudio(msg) {
+  const audio = ensureBgAudio();
+  audio.src = msg.audioUrl;
+  audio.currentTime = 0;
+  await audio.play().catch(() => {});
+  audioState = {
+    audioUrl: msg.audioUrl,
+    suraId: msg.suraId,
+    reciterKey: msg.reciterKey,
+    isPlaying: true,
+    currentTime: 0,
+    duration: Math.floor(audio.duration || 0)
+  };
+  updatePopupAudioState();
+  startAudioMonitoring();
+  return { success: true };
+}
+
+async function bgPauseAudio() {
+  if (!bgAudio) return { success: false, error: 'No audio' };
+  await bgAudio.pause();
+  audioState.isPlaying = false;
+  updatePopupAudioState();
+  return { success: true };
+}
+
+async function bgResumeAudio() {
+  if (!bgAudio) return { success: false, error: 'No audio' };
+  await bgAudio.play().catch(() => {});
+  audioState.isPlaying = true;
+  updatePopupAudioState();
+  startAudioMonitoring();
+  return { success: true };
+}
+
+async function bgSeekAudio(msg) {
+  if (!bgAudio) return { success: false, error: 'No audio' };
+  const pct = msg.percentage || 0;
+  const newTime = (bgAudio.duration || 0) * (pct / 100);
+  bgAudio.currentTime = newTime;
+  audioState.currentTime = Math.floor(newTime);
+  updatePopupAudioState();
+  return { success: true };
+}
+
+function bgGetAudioState() {
+  return { success: true, state: audioState };
 } 
