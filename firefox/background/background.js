@@ -455,15 +455,20 @@ async function showDhikrNotification(isTest = false) {
     let chromeNotificationWorked = false;
     
     try {
-      const chromeNotificationId = await chrome.notifications.create({
+      const notifOptions = {
         type: 'basic',
         iconUrl: iconUrl,
         title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
         message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
-        priority: 2, // High priority
-        requireInteraction: true, // Stay visible until user interacts
+        priority: 2,
         silent: false
-      });
+      };
+      if (typeof browser === 'undefined') {
+        // Chrome supports requireInteraction
+        notifOptions.requireInteraction = true;
+      }
+
+      const chromeNotificationId = await chrome.notifications.create(notifOptions);
       
       if (chromeNotificationId) {
         console.log('Background: Chrome extension notification created:', chromeNotificationId);
@@ -504,7 +509,7 @@ async function showDhikrNotification(isTest = false) {
     }
     
     // If neither worked, try creating a popup window as last resort
-    if (!chromeNotificationWorked && isTest) {
+    if (!chromeNotificationWorked && isTest && typeof browser === 'undefined') {
       console.log('Background: Trying popup window as last resort for test...');
       try {
         await chrome.windows.create({
@@ -801,9 +806,17 @@ function ensureBgAudio() {
     audioState.currentTime = Math.floor(bgAudio.currentTime);
     audioState.duration = Math.floor(bgAudio.duration || 0);
   });
-  bgAudio.addEventListener('ended', () => {
+  bgAudio.addEventListener('ended', async () => {
     audioState.isPlaying = false;
     updatePopupAudioState();
+
+    // Autoplay next sura if enabled in settings
+    try {
+      const { userSelections } = await chrome.storage.local.get('userSelections');
+      if (userSelections?.autoplayEnabled) {
+        await handleAutoplayNext(audioState.suraId, audioState.reciterKey);
+      }
+    } catch (e) { console.error('Autoplay (ended) error:', e); }
   });
   return bgAudio;
 }
