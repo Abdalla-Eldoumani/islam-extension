@@ -6,7 +6,6 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/)
-[![Firefox Preview](https://img.shields.io/badge/Firefox-Preview-orange?logo=firefox-browser&logoColor=white)](https://developer.chrome.com/docs/extensions/)
 [![Firefox Preview](https://img.shields.io/badge/Firefox-Preview-orange?logo=firefox-browser&logoColor=white)](#option-3-firefox-early-preview)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-green)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 
