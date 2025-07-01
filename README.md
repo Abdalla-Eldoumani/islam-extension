@@ -82,6 +82,21 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 3. Click **Play** to start listening
 4. Explore Hadith and set up Dhikr reminders
 
+### Option 3: Firefox (Early Preview)
+
+The extension now has an **experimental Firefox build**.  Because Firefox lacks Chrome's Offscreen API, some features are still being refined.
+
+1. Clone or download the repo and open the `firefox` folder.
+2. In Firefox, navigate to `about:debugging`, choose **This Firefox** → **Load Temporary Add-on**.
+3. Select the `manifest.json` inside the `firefox/` folder.
+
+Limitations of this preview:
+
+* Qurʼān audio plays, but **Autoplay to the next surah is disabled**.
+* Dhikr **notifications don't fire yet**; the button is currently a no-op.
+
+We're actively working on full parity – feel free to file issues or PRs.
+
 ### 🎥 Video Tutorial
 *Coming soon - we'll add a video walkthrough for visual learners!*
 
@@ -231,3 +246,10 @@ SOFTWARE.
 **May Allah (SWT) accept this small effort and make it beneficial for the Ummah. Ameen.** 🤲
 
 *If this extension benefits you, please remember us in your duas and consider starring the repository to help others discover it.* 
+
+## Known Issues & Limitations
+
+1. **Firefox preview gaps**: Autoplay next-sura & Dhikr notifications are still under development.
+2. **Notification Toggle (Chrome)**: Occasionally unresponsive, requires persistence from users.
+3. **Audio Loading**: Some reciters may have limited sura availability.
+4. **Autoplay**: Requires user interaction for first play (browser autoplay policy).
