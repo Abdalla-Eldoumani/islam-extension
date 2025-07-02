@@ -435,19 +435,11 @@ async function fetchReciters() {
     const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
     if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
     const { recitations } = await response.json();
-    
-    // Use substrings for more robust matching against the preferred list
-    const preferredReciterSubstrings = [
-      "Alafasy", "AbdulBaset", "Al-Husary", "Minshawi", "Muaiqly", 
-      "Ali Jaber", "Ayyub", "Bandar Baleela", "Badr Al-Turki", "Jibreel", "al-Afasy"
-    ];
-    
-    const filteredRecitations = recitations.filter(r => 
-        r.style && preferredReciterSubstrings.some(name => r.reciter_name.includes(name))
-    );
+  
+    const recitationsWithStyle = recitations.filter(r => !!r.style);
 
-    console.log(`Found ${filteredRecitations.length} recitations from preferred reciters.`);
-    return filteredRecitations.sort((a,b) => a.reciter_name.localeCompare(b.reciter_name));
+    console.log(`Fetched ${recitationsWithStyle.length} recitations with a usable style.`);
+    return recitationsWithStyle.sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
 }
 
 // --- AUDIO LOGIC ---
