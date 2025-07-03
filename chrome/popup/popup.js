@@ -432,14 +432,17 @@ async function fetchSuras() {
 }
 
 async function fetchReciters() {
-    const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
-    if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
-    const { recitations } = await response.json();
+  const response = await fetch('https://api.quran.com/api/v4/resources/recitations');
+  if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
+  const { recitations } = await response.json();
   
-    const recitationsWithStyle = recitations.filter(r => !!r.style);
+  const cleaned = recitations.map(r => ({ ...r, style: r.style || 'Unknown' }));
 
-    console.log(`Fetched ${recitationsWithStyle.length} recitations with a usable style.`);
-    return recitationsWithStyle.sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
+  console.log(`Fetched ${cleaned.length} recitations (all styles).`);
+  return cleaned.sort((a, b) => {
+    const nameCompare = a.reciter_name.localeCompare(b.reciter_name);
+    return nameCompare !== 0 ? nameCompare : a.style.localeCompare(b.style);
+  });
 }
 
 // --- AUDIO LOGIC ---
