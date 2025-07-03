@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Qur'an & Sunnah Companion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,9 +19,8 @@
         <select class="card__select" id="sura-select">
           <option value="">Select Sura...</option>
         </select>
-        <select class="card__select" id="reciter-select">
-          <option value="">Select Reciter...</option>
-        </select>
+        <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
+        <datalist id="reciter-list"></datalist>
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
           <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
