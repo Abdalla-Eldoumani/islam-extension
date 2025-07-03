@@ -9,6 +9,9 @@
 // Global progress tracking interval
 let progressTrackingInterval = null;
 
+// Keep full list of reciters for quick filtering
+let ALL_RECITERS = [];
+
 // Unified in-memory catalogue for all reciters pulled from every provider.
 // Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
 const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
@@ -29,6 +32,7 @@ function setupEventHandlers() {
   const autoplayButton = document.getElementById('autoplay-toggle');
   const suraSelect = document.getElementById('sura-select');
   const reciterSelect = document.getElementById('reciter-select');
+  const reciterFilter = document.getElementById('reciter-filter');
 
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
@@ -69,6 +73,8 @@ function setupEventHandlers() {
       saveDhikrSettings();
     });
   });
+
+  // Quick filter handler is attached in setupEventHandlers
 }
 
 async function handlePlayPauseResume(event) {
@@ -404,11 +410,14 @@ async function saveDhikrSettings() {
 async function setupQuranSelectors() {
   const suraSelect = document.getElementById('sura-select');
   const reciterSelect = document.getElementById('reciter-select');
+  const reciterFilter = document.getElementById('reciter-filter');
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: `${r.reciter_name} (${r.style})`}));
+    // Store for filtering
+    ALL_RECITERS = reciters;
+    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`}));
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
     suraSelect.innerHTML = '<option value="">Error</option>';
@@ -452,7 +461,8 @@ async function fetchQuranComReciters() {
       reciter_name: r.reciter_name,
       style: r.style || 'Default',
       source: 'qurancom',
-      qurancomId: r.id
+      qurancomId: r.id,
+      bitrate: 128
     };
   });
 }
@@ -510,6 +520,22 @@ async function fetchIslamicNetworkReciters() {
 
 // Aggregate loader ----------------------------------------------------------------
 async function fetchReciters() {
+  // 1) Try cached catalogue first ------------------------------------------------
+  try {
+    const { reciterCache } = await chrome.storage.local.get('reciterCache');
+    if (reciterCache && reciterCache.timestamp && Array.isArray(reciterCache.reciters)) {
+      const age = Date.now() - reciterCache.timestamp;
+      if (age < 24 * 60 * 60 * 1000) { // < 24h old
+        console.log('Using cached reciter catalogue (age', Math.round(age / 1000), 's)');
+        reciterCache.reciters.forEach(r => (RECITER_CATALOG[r.id] = r));
+        return reciterCache.reciters;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load reciter cache:', err);
+  }
+
+  // 2) Fetch fresh catalogues ----------------------------------------------------
   const [qc, mp3q, isl] = await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
@@ -520,6 +546,13 @@ async function fetchReciters() {
 
   // Populate global catalogue for quick lookup later
   combined.forEach(r => (RECITER_CATALOG[r.id] = r));
+
+  // Store in cache --------------------------------------------------------------
+  try {
+    await chrome.storage.local.set({ reciterCache: { reciters: combined, timestamp: Date.now() } });
+  } catch (err) {
+    console.warn('Failed to save reciter cache:', err);
+  }
 
   console.log(`Reciters fetched – Quran.com: ${qc.length}, MP3Quran: ${mp3q.length}, Islamic.network: ${isl.length}`);
 
@@ -590,14 +623,14 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
-    // availabilityStatus.innerHTML = '&#x2705; Playing...';
-    // availabilityStatus.style.color = 'green';
+    availabilityStatus.innerHTML = '&#x2705; Playing...';
+    availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true, 0);
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    // availabilityStatus.innerHTML = '&#x274C; Audio not found for this selection.';
-    // availabilityStatus.style.color = 'red';
+    availabilityStatus.innerHTML = '&#x274C; Reciter not available right now.';
+    availabilityStatus.style.color = 'red';
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
