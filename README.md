@@ -12,14 +12,14 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 ## 🌟 Features
 
 ### 📖 Qur'an Recitation
-- **3 renowned reciters** available:
-  - **Abdul Basit** (Murattal & Mujawwad styles)
-  - **Mahmoud Khalil Al-Hussary** (Muallim style)
-  - **Siddiq Minshawi** (Murattal style)
-- **All 114 Surahs** with high-quality audio
-- **Autoplay functionality** to continue through multiple Surahs
+- **50+ reciters** sourced from a unified catalog that merges Quran.com, MP3Quran, and Islamic.network
+- **Instant search filter** – start typing to quickly find your favourite Qāriʾ
+- **Bit-rate & style labels** shown for every recording (e.g., 128 kbps Murattal, 64 kbps Muʿallim)
+- **Resilient audio fallback** – automatically tries alternative mirrors if a file is missing
+- **All 114 Sūrahs** with high-quality audio
+- **Autoplay** to continue seamlessly through consecutive Sūrahs
 - **Progress tracking** with seek controls
-- **Persistent playback** - audio continues even when popup is closed
+- **Persistent playback** – audio continues even when the popup is closed
 
 ### 📚 Authentic Hadith
 - **Sahih Bukhari collection** with random authentic narrations
@@ -102,10 +102,10 @@ We're actively working on full parity – feel free to file issues or PRs.
 
 ### 🎵 Playing Qur'an
 1. **Select a Surah** from the dropdown (1-114)
-2. **Choose a reciter** from renowned scholars
-3. **Click Play** to start listening
-4. **Enable Autoplay** to continue to the next Surah automatically
-5. **Use progress bar** to skip to different parts
+2. **Search or pick a reciter** from the **300+** available (type to filter)
+3. **Click Play** to start listening (audio keeps playing when you close the popup)
+4. **Enable Autoplay** to move to the next Surah automatically
+5. **Use the progress bar** to skip to different parts
 
 ### 📖 Reading Hadith
 - Fresh authentic Hadith loads automatically
@@ -128,9 +128,11 @@ We're actively working on full parity – feel free to file issues or PRs.
 - **Chrome APIs** - Storage, Alarms, Notifications, Offscreen
 
 ### APIs Used
-- **Quran.com API** - Surah data and audio files
-- **Hadith API** - Authentic Sahih Bukhari collection
-- **Local Dhikr Collection** - No external dependencies
+- **Quran.com Catalog API** – Surah metadata & primary audio streams
+- **MP3Quran.net API** – high-bit-rate MP3 mirrors (with server-side caching)
+- **Islamic.network Recitations API** – additional reciters & styles
+- **Hadith API** – Authentic Ṣaḥīḥ al-Bukhārī collection
+- **Local Dhikr Collection** – Offline-ready assets
 
 ### Browser Compatibility
 - **Chrome 109+** (required for Offscreen API)
