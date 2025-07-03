@@ -117,8 +117,6 @@ We're actively working on full parity – feel free to file issues or PRs.
 3. **Use preset buttons** for quick setup (30s, 1m, 5m, 15m)
 4. **Allow notifications** when Chrome asks for permission
 
-> **⚠️ Note**: The notification toggle button may occasionally be unresponsive. If it doesn't work immediately, please be persistent and try again after a few moments. We're actively working to resolve this issue.
-
 ## 🛠️ Technical Details
 
 ### Built With
