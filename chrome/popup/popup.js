@@ -436,7 +436,7 @@ async function fetchReciters() {
   if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
   const { recitations } = await response.json();
   
-  const cleaned = recitations.map(r => ({ ...r, style: r.style || 'Unknown' }));
+  const cleaned = recitations.map(r => ({ ...r, style: r.style || '' }));
 
   console.log(`Fetched ${cleaned.length} recitations (all styles).`);
   return cleaned.sort((a, b) => {
