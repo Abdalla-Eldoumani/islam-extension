@@ -9,6 +9,10 @@
 // Global progress tracking interval
 let progressTrackingInterval = null;
 
+// Unified in-memory catalogue for all reciters pulled from every provider.
+// Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
+const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
+
 // --- LIFECYCLE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -325,7 +329,7 @@ const dhikrCollection = [
     arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
     english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
     transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
-    reward: 'Powerful dua for seeking Allah\'s help and mercy'
+    reward: "Powerful dua for seeking Allah's help and mercy"
   },
   {
     arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
@@ -431,15 +435,96 @@ async function fetchSuras() {
   return chapters;
 }
 
-async function fetchReciters() {
-  const response = await fetch('https://api.quran.com/api/v4/resources/recitations');
-  if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
-  const { recitations } = await response.json();
-  
-  const cleaned = recitations.map(r => ({ ...r, style: r.style || 'Default' }));
+// ---------------------------------------------------------------------------------
+// Reciter catalogue helpers (multi-provider)
+// ---------------------------------------------------------------------------------
 
-  console.log(`Fetched ${cleaned.length} recitations (all styles).`);
-  return cleaned.sort((a, b) => {
+// 1) Quran.com – existing provider -------------------------------------------------
+async function fetchQuranComReciters() {
+  const url = 'https://api.quran.com/api/v4/resources/recitations?per_page=500';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Quran.com recitations request failed');
+  const { recitations } = await res.json();
+  return recitations.map(r => {
+    const reciterKey = `qc:${r.id}`;
+    return {
+      id: reciterKey,
+      reciter_name: r.reciter_name,
+      style: r.style || 'Default',
+      source: 'qurancom',
+      qurancomId: r.id
+    };
+  });
+}
+
+// 2) MP3Quran.net -----------------------------------------------------------------
+async function fetchMp3QuranReciters() {
+  const url = 'https://www.mp3quran.net/api/_english.json';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data.reciters)) return [];
+
+    return data.reciters.map(r => {
+      const reciterKey = `mp3:${r.id}`;
+      return {
+        id: reciterKey,
+        reciter_name: r.name,
+        style: r.rewaya || 'Default',
+        source: 'mp3quran',
+        server: r.Server.endsWith('/') ? r.Server : r.Server + '/',
+        bitrate: 128,
+        mp3quranId: r.id
+      };
+    });
+  } catch (err) {
+    console.error('Failed to fetch MP3Quran reciters:', err);
+    return [];
+  }
+}
+
+// 3) Islamic.network CDN -----------------------------------------------------------
+// No public catalogue endpoint – we hard-code popular slugs. Extend as needed.
+async function fetchIslamicNetworkReciters() {
+  const slugs = [
+    'ar.alafasy',
+    'ar.husary',
+    'ar.shuraym',
+    'ar.tablawee'
+    // Add more slugs here as required
+  ];
+  return slugs.map(slug => {
+    const reciterKey = `islamic:${slug}`;
+    const prettyName = slug.split('.')[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return {
+      id: reciterKey,
+      reciter_name: prettyName,
+      style: 'Default',
+      source: 'islamic',
+      slug,
+      bitrate: 128
+    };
+  });
+}
+
+// Aggregate loader ----------------------------------------------------------------
+async function fetchReciters() {
+  const [qc, mp3q, isl] = await Promise.all([
+    fetchQuranComReciters(),
+    fetchMp3QuranReciters(),
+    fetchIslamicNetworkReciters()
+  ]);
+
+  const combined = [...qc, ...mp3q, ...isl];
+
+  // Populate global catalogue for quick lookup later
+  combined.forEach(r => (RECITER_CATALOG[r.id] = r));
+
+  console.log(`Reciters fetched – Quran.com: ${qc.length}, MP3Quran: ${mp3q.length}, Islamic.network: ${isl.length}`);
+
+  // Sort alphabetically by name then style
+  return combined.sort((a, b) => {
     const nameCompare = a.reciter_name.localeCompare(b.reciter_name);
     return nameCompare !== 0 ? nameCompare : a.style.localeCompare(b.style);
   });
@@ -519,17 +604,41 @@ async function playQuranAudio() {
   }
 }
 
-async function getSuraAudioUrl(reciterId, suraId) {
+async function getSuraAudioUrl(reciterKey, suraId) {
+    // Determine provider prefix (default to Quran.com if none)
+    let provider = 'qc';
+    let rawId = reciterKey;
+    if (reciterKey.includes(':')) {
+        const parts = reciterKey.split(':');
+        provider = parts[0];
+        rawId = parts.slice(1).join(':');
+    }
+
+    // MP3Quran provider -----------------------------------------------------------
+    if (provider === 'mp3') {
+        const reciter = RECITER_CATALOG[reciterKey];
+        if (!reciter) throw new Error('Reciter not found in catalogue');
+        const suraStr = String(suraId).padStart(3, '0');
+        return `${reciter.server}${suraStr}.mp3`;
+    }
+
+    // Islamic.network provider ----------------------------------------------------
+    if (provider === 'islamic') {
+        const reciter = RECITER_CATALOG[reciterKey];
+        if (!reciter) throw new Error('Reciter not found in catalogue');
+        return `https://cdn.islamic.network/quran/audio/128/${reciter.slug}/${suraId}.mp3`;
+    }
+
+    // Default: Quran.com -----------------------------------------------------------
+    const reciterId = rawId; // numeric id for Quran.com API
+
     // Try to get full chapter audio first
     const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
     console.log('Fetching chapter audio from:', chapterUrl);
-    
     try {
         const chapterResponse = await fetch(chapterUrl);
         if (chapterResponse.ok) {
             const chapterData = await chapterResponse.json();
-            console.log('Chapter API response:', chapterData);
-            
             if (chapterData.audio_file?.audio_url) {
                 const audioUrl = chapterData.audio_file.audio_url;
                 return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
@@ -538,49 +647,27 @@ async function getSuraAudioUrl(reciterId, suraId) {
     } catch (error) {
         console.log('Chapter audio not available, trying verse-by-verse approach:', error.message);
     }
-    
+
     // Fallback to verse-by-verse audio
     const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
     console.log('Fetching verse audio from:', versesUrl);
-    
     const response = await fetch(versesUrl);
     if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
     }
-    
     const data = await response.json();
-    console.log('Verses API response data:', data);
-    
     if (!data.audio_files || data.audio_files.length === 0) {
         throw new Error('No audio files found in API response.');
     }
-    
-    // Get the first verse audio file
     const firstAudio = data.audio_files[0];
-    console.log('First audio file object:', firstAudio);
-    
     let audioUrl = firstAudio.url || firstAudio.audio_url;
-    
-    if (!audioUrl) {
-        console.error('No audio URL found in response:', data);
-        throw new Error('Audio URL not found in API response.');
-    }
-    
-    // Handle different URL formats
+    if (!audioUrl) throw new Error('Audio URL not found in API response.');
     if (audioUrl.startsWith('//')) {
-        // Protocol-relative URL
         return `https:${audioUrl}`;
     } else if (audioUrl.startsWith('http')) {
-        // Absolute URL
         return audioUrl;
     } else {
-        // Relative URL - need to determine the correct base
-        if (audioUrl.includes('quranicaudio.com') || audioUrl.includes('everyayah')) {
-            return `https://verses.quran.com/${audioUrl}`;
-        } else {
-            // Try different base URLs based on the reciter pattern
-            return `https://verses.quran.com/${audioUrl}`;
-        }
+        return `https://verses.quran.com/${audioUrl}`;
     }
 }
 
