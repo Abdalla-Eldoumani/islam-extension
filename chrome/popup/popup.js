@@ -16,6 +16,20 @@ let ALL_RECITERS = [];
 // Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
 const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
 
+// Map display label -> reciterKey for the datalist picker
+const RECITER_LABEL_TO_KEY = {};
+
+function getReciterKey() {
+  const input = document.getElementById('reciter-input');
+  return RECITER_LABEL_TO_KEY[input.value] || '';
+}
+
+function setReciterInputByKey(key) {
+  const input = document.getElementById('reciter-input');
+  const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === key);
+  if (label) input.value = label;
+}
+
 // --- LIFECYCLE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,8 +45,7 @@ function setupEventHandlers() {
   const pauseButton = document.getElementById('pause-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
   const suraSelect = document.getElementById('sura-select');
-  const reciterSelect = document.getElementById('reciter-select');
-  const reciterFilter = document.getElementById('reciter-filter');
+  const reciterInput = document.getElementById('reciter-input');
 
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
@@ -42,7 +55,7 @@ function setupEventHandlers() {
     validateQuranSelection();
     saveUserSelections();
   });
-  reciterSelect.addEventListener('change', () => {
+  reciterInput.addEventListener('input', () => {
     validateQuranSelection();
     saveUserSelections();
   });
@@ -74,7 +87,7 @@ function setupEventHandlers() {
     });
   });
 
-  // Quick filter handler is attached in setupEventHandlers
+  // datalist handles filtering natively, so no extra handler
 }
 
 async function handlePlayPauseResume(event) {
@@ -97,7 +110,7 @@ async function handlePlayPauseResume(event) {
 async function saveUserSelections() {
   try {
     const suraId = document.getElementById('sura-select').value;
-    const reciterKey = document.getElementById('reciter-select').value;
+    const reciterKey = getReciterKey();
     const autoplayEnabled = document.getElementById('autoplay-toggle').dataset.autoplay === 'true';
     
     const userSelections = {
@@ -129,25 +142,25 @@ async function loadSavedAudioState() {
 
       // Wait for reciters to load before setting reciter selection
       const waitForReciters = new Promise(resolve => {
-        const reciterSelect = document.getElementById('reciter-select');
-        if (reciterSelect.options.length > 1) { // Already populated
+        const reciterDatalist = document.getElementById('reciter-list');
+        if (reciterDatalist.options.length > 0) { // Already populated
           resolve();
           return;
         }
         const observer = new MutationObserver(() => {
-          if (reciterSelect.options.length > 1) {
+          if (reciterDatalist.options.length > 0) {
             observer.disconnect();
             resolve();
           }
         });
-        observer.observe(reciterSelect, { childList: true });
+        observer.observe(reciterDatalist, { childList: true });
         setTimeout(() => { observer.disconnect(); resolve(); }, 3000); // Failsafe timeout
       });
 
       await waitForReciters;
       
-      if (userSelections.reciterKey && Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === userSelections.reciterKey)) {
-        document.getElementById('reciter-select').value = userSelections.reciterKey;
+      if (userSelections.reciterKey) {
+        setReciterInputByKey(userSelections.reciterKey);
       }
       
       // Restore autoplay setting
@@ -162,7 +175,7 @@ async function loadSavedAudioState() {
     const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
     if (stateResponse?.success && stateResponse.state?.audioUrl) {
       const currentSuraId = document.getElementById('sura-select').value;
-      const currentReciterKey = document.getElementById('reciter-select').value;
+      const currentReciterKey = getReciterKey();
       
       console.log('Checking audio state:', { 
         audioState: stateResponse.state, 
@@ -192,9 +205,7 @@ async function loadSavedAudioState() {
           document.getElementById('sura-select').value = stateResponse.state.suraId;
         }
         
-        if (Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === stateResponse.state.reciterKey)) {
-          document.getElementById('reciter-select').value = stateResponse.state.reciterKey;
-        }
+        setReciterInputByKey(stateResponse.state.reciterKey);
         
         validateQuranSelection();
         updateProgressUI(stateResponse.state);
@@ -409,19 +420,27 @@ async function saveDhikrSettings() {
 
 async function setupQuranSelectors() {
   const suraSelect = document.getElementById('sura-select');
-  const reciterSelect = document.getElementById('reciter-select');
-  const reciterFilter = document.getElementById('reciter-filter');
+  const reciterInput = document.getElementById('reciter-input');
+  const reciterDatalist = document.getElementById('reciter-list');
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
     // Store for filtering
     ALL_RECITERS = reciters;
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`}));
+    // Build datalist
+    reciterDatalist.innerHTML = '';
+    reciters.forEach(r => {
+      const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`;
+      RECITER_LABEL_TO_KEY[label] = r.id;
+      const option = document.createElement('option');
+      option.value = label;
+      reciterDatalist.appendChild(option);
+    });
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
     suraSelect.innerHTML = '<option value="">Error</option>';
-    reciterSelect.innerHTML = '<option value="">Error</option>';
+    reciterInput.placeholder = 'Error loading reciters';
   }
 }
 
@@ -567,7 +586,7 @@ async function fetchReciters() {
 
 function validateQuranSelection() {
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterId = getReciterKey();
   const playButton = document.getElementById('play-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
   const availabilityStatus = document.getElementById('quran-availability');
@@ -587,7 +606,7 @@ function validateQuranSelection() {
 async function playQuranAudio() {
   setUILoading(true);
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterId = getReciterKey();
   const availabilityStatus = document.getElementById('quran-availability');
   
   try {
@@ -788,7 +807,7 @@ function getNextSuraId(currentSuraId) {
 
 async function playNextSura() {
   const currentSuraId = document.getElementById('sura-select').value;
-  const reciterKey = document.getElementById('reciter-select').value;
+  const reciterKey = getReciterKey();
   
   if (!currentSuraId || !reciterKey) {
     console.log('Cannot play next sura: missing current selection');

@@ -20,12 +20,10 @@
           <option value="">Select Sura...</option>
         </select>
 
-        <!-- Quick filter for the (large) reciter list -->
-        <input type="text" class="card__input" id="reciter-filter" placeholder="Filter reciters..." autocomplete="off" spellcheck="false">
+        <!-- Combined reciter picker with inline search -->
+        <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
+        <datalist id="reciter-list"></datalist>
 
-        <select class="card__select" id="reciter-select">
-          <option value="">Select Reciter...</option>
-        </select>
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
           <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
