@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await setupQuranSelectors();
   await Promise.all([loadHadith(), loadDhikr(), loadSavedAudioState()]);
   setupEventHandlers();
+  await initLanguage();
 });
 
 // --- UI SETUP & EVENT HANDLERS ---
@@ -371,8 +372,16 @@ async function loadDhikr() {
 
 function displayCurrentDhikr() {
   const dhikr = dhikrCollection[currentDhikrIndex];
-  document.getElementById('dhikr-text').textContent = `${dhikr.arabic} - ${dhikr.english}`;
-  document.getElementById('dhikr-info').textContent = `Reward: ${dhikr.reward}`;
+  const textEl = document.getElementById('dhikr-text');
+  const infoEl = document.getElementById('dhikr-info');
+  if (CURRENT_LANG === 'ar') {
+    textEl.textContent = dhikr.arabic;
+    infoEl.textContent = dhikr.reward ? `الأجر: ${dhikr.reward}` : '';
+  } else {
+    // Default to English
+    textEl.textContent = `${dhikr.arabic} - ${dhikr.english}`;
+    infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
+  }
 }
 
 function getRandomDhikr() {
@@ -387,7 +396,7 @@ async function loadDhikrSettings() {
       const interval = dhikrSettings.interval || 60;
       
       document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
-      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
       document.getElementById('dhikr-interval').value = interval;
       
       if (notificationsEnabled) {
@@ -425,7 +434,7 @@ async function setupQuranSelectors() {
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
-    populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
+    populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
     // Store for filtering
     ALL_RECITERS = reciters;
     // Build datalist
@@ -796,7 +805,7 @@ async function toggleAutoplay() {
 function updateAutoplayButton(isEnabled) {
   const autoplayButton = document.getElementById('autoplay-toggle');
   autoplayButton.dataset.autoplay = isEnabled.toString();
-  autoplayButton.textContent = isEnabled ? '🔄 Autoplay: ON' : '🔄 Autoplay: OFF';
+  autoplayButton.textContent = isEnabled ? t('autoplayOn') : t('autoplayOff');
 }
 
 function getNextSuraId(currentSuraId) {
@@ -823,7 +832,7 @@ async function playNextSura() {
   
   // Ensure UI is in clean state before starting new sura
   updatePlayButtonUI(false, true, 0);
-  document.getElementById('play-quran').textContent = '▶ Play';
+  document.getElementById('play-quran').textContent = t('play');
   document.getElementById('play-quran').dataset.action = 'play';
   
   // Start playing the next sura
@@ -850,9 +859,9 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   if (isPlaying) {
     playButton.classList.add('hidden');
     pauseButton.classList.remove('hidden');
-    pauseButton.textContent = '⏸ Pause';
+    pauseButton.textContent = t('pause');
   } else {
-    playButton.textContent = hasProgress ? '▶ Resume' : '▶ Play';
+    playButton.textContent = hasProgress ? t('resume') : t('play');
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
     playButton.classList.remove('hidden');
     pauseButton.classList.add('hidden');
@@ -903,7 +912,7 @@ function startProgressTracking() {
             console.log('Sura finished, autoplay is enabled - playing next sura');
             // Reset UI to fresh state before autoplay
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').textContent = t('play');
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -915,7 +924,7 @@ function startProgressTracking() {
           } else {
             console.log('Sura finished, autoplay is disabled - stopping playback');
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').textContent = t('play');
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -1051,7 +1060,7 @@ async function toggleDhikrNotifications() {
     
     // Update UI only after successful response
     button.dataset.enabled = newState.toString();
-    button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+    button.textContent = newState ? t('notificationsOn') : t('notificationsOff');
     
     // // Show success message
     // if (newState) {
@@ -1167,5 +1176,141 @@ function updatePresetButtons(currentInterval) {
     }
   });
 }
+
+// ---------------------------
+// 🗺️  BASIC I18N SUPPORT
+// ---------------------------
+
+const LANG_STORAGE_KEY = 'uiLanguage';
+let CURRENT_LANG = 'en';
+
+const I18N = {
+  en: {
+    appTitle: "Qur'an & Sunnah Companion",
+    quran: "Qur'an",
+    hadith: "Hadith",
+    dhikr: "Dhikr",
+    selectSura: "Select Sura...",
+    reciterPlaceholder: "Select or type a reciter...",
+    play: "▶ Play",
+    resume: "▶ Resume",
+    pause: "⏸ Pause",
+    autoplayOn: "🔄 Autoplay: ON",
+    autoplayOff: "🔄 Autoplay: OFF",
+    loading: "Loading...",
+    nextDhikr: "🔄 Next Dhikr",
+    notificationsOn: "🔔 Notifications: ON",
+    notificationsOff: "🔔 Notifications: OFF",
+    reminderLabel: "Reminder Interval (seconds):"
+  },
+  ar: {
+    appTitle: "رفيق القرآن والسنة",
+    quran: "القرآن",
+    hadith: "حديث",
+    dhikr: "ذِكر",
+    selectSura: "اختر السورة...",
+    reciterPlaceholder: "اختر أو اكتب اسم القارئ...",
+    play: "▶ تشغيل",
+    resume: "▶ استئناف",
+    pause: "⏸ إيقاف",
+    autoplayOn: "🔄 التشغيل التلقائي: مفعل",
+    autoplayOff: "🔄 التشغيل التلقائي: معطل",
+    loading: "جارٍ التحميل...",
+    nextDhikr: "🔄 الذكر التالي",
+    notificationsOn: "🔔 الإشعارات: مفعلة",
+    notificationsOff: "🔔 الإشعارات: معطلة",
+    reminderLabel: "فاصل التذكير (ثوان):"
+  }
+};
+
+function t(key) {
+  return (I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) || key;
+}
+
+async function initLanguage() {
+  // Load saved preference or fall back to browser UI language
+  const { [LANG_STORAGE_KEY]: savedLang } = await chrome.storage.local.get(LANG_STORAGE_KEY);
+  if (savedLang && I18N[savedLang]) {
+    CURRENT_LANG = savedLang;
+  } else {
+    const browserLang = (chrome.i18n?.getUILanguage?.() || navigator.language || 'en').split('-')[0];
+    CURRENT_LANG = I18N[browserLang] ? browserLang : 'en';
+  }
+
+  // Apply language immediately
+  applyLanguage();
+
+  // Set selector value
+  const langSelect = document.getElementById('language-select');
+  if (langSelect) {
+    langSelect.value = CURRENT_LANG;
+    langSelect.addEventListener('change', async (e) => {
+      const newLang = e.target.value;
+      if (I18N[newLang]) {
+        CURRENT_LANG = newLang;
+        await chrome.storage.local.set({ [LANG_STORAGE_KEY]: newLang });
+        applyLanguage();
+      }
+    });
+  }
+}
+
+function applyLanguage() {
+  // Direction & lang attribute
+  document.documentElement.lang = CURRENT_LANG;
+  document.body.dir = CURRENT_LANG === 'ar' ? 'rtl' : 'ltr';
+
+  // Static titles
+  const titleEl = document.getElementById('app-title');
+  if (titleEl) titleEl.textContent = t('appTitle');
+  const quranTitle = document.getElementById('quran-title');
+  if (quranTitle) quranTitle.textContent = t('quran');
+  const hadithTitle = document.getElementById('hadith-title');
+  if (hadithTitle) hadithTitle.textContent = t('hadith');
+  const dhikrTitle = document.getElementById('dhikr-title');
+  if (dhikrTitle) dhikrTitle.textContent = t('dhikr');
+
+  // Placeholders & labels
+  const reciterInput = document.getElementById('reciter-input');
+  if (reciterInput) reciterInput.placeholder = t('reciterPlaceholder');
+
+  const reminderLabel = document.getElementById('reminder-label');
+  if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `; // preserve spacing
+
+  // Buttons that exist at load
+  const playBtn = document.getElementById('play-quran');
+  if (playBtn && playBtn.dataset.action === 'play') playBtn.textContent = t('play');
+  const pauseBtn = document.getElementById('pause-quran');
+  if (pauseBtn) pauseBtn.textContent = t('pause');
+  const autoplayBtn = document.getElementById('autoplay-toggle');
+  if (autoplayBtn) {
+    const on = autoplayBtn.dataset.autoplay === 'true';
+    autoplayBtn.textContent = on ? t('autoplayOn') : t('autoplayOff');
+  }
+  const nextDhikrBtn = document.getElementById('next-dhikr');
+  if (nextDhikrBtn) nextDhikrBtn.textContent = t('nextDhikr');
+  const notifBtn = document.getElementById('toggle-notifications');
+  if (notifBtn) {
+    const en = notifBtn.dataset.enabled === 'true';
+    notifBtn.textContent = en ? t('notificationsOn') : t('notificationsOff');
+  }
+
+  // Loading text
+  const loadingEl = document.getElementById('quran-loading');
+  if (loadingEl) loadingEl.textContent = t('loading');
+
+  // Update select default option if still default
+  const suraSelect = document.getElementById('sura-select');
+  if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
+    suraSelect.options[0].textContent = t('selectSura');
+  }
+
+  // Refresh dynamic texts that depend on language
+  displayCurrentDhikr();
+}
+
+// ---------------------------
+// END I18N
+// ---------------------------
 
  

@@ -10,12 +10,17 @@
 <body>
   <main class="popup">
     <header class="popup__header">
-      <h1 class="popup__title">Qur'an & Sunnah Companion</h1>
+      <h1 class="popup__title" id="app-title">Qur'an & Sunnah Companion</h1>
+      <!-- Language selector -->
+      <select id="language-select" class="language-select">
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+      </select>
     </header>
     
     <section class="cards">
       <article class="card card--quran">
-        <h2 class="card__title">Qur'an</h2>
+        <h2 class="card__title" id="quran-title">Qur'an</h2>
         <select class="card__select" id="sura-select">
           <option value="">Select Sura...</option>
         </select>
@@ -40,12 +45,12 @@
       </article>
       
       <article class="card card--hadith">
-        <h2 class="card__title">Hadith</h2>
+        <h2 class="card__title" id="hadith-title">Hadith</h2>
         <p class="card__content" id="hadith-text">Loading...</p>
       </article>
       
       <article class="card card--dhikr">
-        <h2 class="card__title">Dhikr</h2>
+        <h2 class="card__title" id="dhikr-title">Dhikr</h2>
         <p class="card__content" id="dhikr-text">Loading...</p>
         <div class="card__dhikr-info" id="dhikr-info"></div>
         <div class="card__controls">
@@ -53,7 +58,7 @@
           <button class="card__button card__button--secondary" id="toggle-notifications" data-enabled="false">🔔 Notifications: OFF</button>
         </div>
         <div class="card__notification-settings hidden" id="notification-settings">
-          <label class="card__label">
+          <label class="card__label" id="reminder-label">
             Reminder Interval (seconds):
             <input type="number" id="dhikr-interval" min="5" max="3600" value="60" class="card__input">
           </label>
