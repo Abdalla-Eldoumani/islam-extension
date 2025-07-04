@@ -395,13 +395,49 @@ async function loadDhikr() {
   await loadDhikrSettings();
 }
 
+// --- Arabic translations for Dhikr rewards -----------------------------------
+const DHIKR_REWARD_AR = {
+  'Each recitation equals a tree planted in Paradise': 'تُغرس له شجرةٌ في الجنة',
+  'Fills the scales of good deeds': 'تملأ ميزان الحسنات',
+  'Fills what is between heaven and earth': 'تملأ ما بين السماء والأرض',
+  'The best of remembrance, heaviest on the scales': 'أفضل الذكر وأثقلها في الميزان',
+  '100 sins erased, even if like foam on the sea': 'يحط الله بها مائة خطيئة وإن كانت مثل زبد البحر',
+  'Beloved to Allah, light on the tongue, heavy on the scales': 'حبيبتان إلى الرحمن، خفيفتان على اللسان، ثقيلتان في الميزان',
+  'A treasure from the treasures of Paradise': 'كنز من كنوز الجنة',
+  'Opens doors of mercy and provision': 'يفتح أبواب الرحمة والرزق',
+  'Allah sends 10 blessings for each one sent': 'يُصلي الله عليه عشرًا بكل صلاة',
+  'Protection and blessings in all affairs': 'يحصل بها الحفظ والبركة في الأمور',
+  'Direct supplication for forgiveness': 'دعاء مباشر للمغفرة',
+  'Comprehensive dua for spiritual improvement': 'دعاء جامع لزيادة الإيمان والعمل الصالح',
+  'Protection from all harms and anxieties': 'حماية من كل شر وهم',
+  'The most comprehensive dua for both worlds': 'من أَوْسَعِ الأدعية للدنيا والآخرة',
+  'Dua for the four pillars of a good life': 'دعاء لأصول السعادة الأربع',
+  'Guarantees Paradise for the one who says it with conviction': 'ضمان الجنة لمن قالها موقنًا',
+  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'بداية سيد الاستغفار',
+  "Powerful dua for seeking Allah's help and mercy": 'دعاء قوي لطلب العون والرحمة',
+  'Dua for guidance and righteousness': 'دعاء للهداية والاستقامة',
+  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح'
+};
+
+// Helper to get reward in current language ------------------------------------
+function getRewardText(rewardEn) {
+  if (!rewardEn) return '';
+  return CURRENT_LANG === 'ar' ? (DHIKR_REWARD_AR[rewardEn] || '') : rewardEn;
+}
+
+// Helper to pick proper sura display name -------------------------------------
+function getSuraName(chapter) {
+  return CURRENT_LANG === 'ar' ? chapter.name_arabic : chapter.name_simple;
+}
+
 function displayCurrentDhikr() {
   const dhikr = dhikrCollection[currentDhikrIndex];
   const textEl = document.getElementById('dhikr-text');
   const infoEl = document.getElementById('dhikr-info');
   if (CURRENT_LANG === 'ar') {
     textEl.textContent = dhikr.arabic;
-    infoEl.textContent = dhikr.reward ? `الأجر: ${dhikr.reward}` : '';
+    const reward = getRewardText(dhikr.reward);
+    infoEl.textContent = reward ? `الأجر: ${reward}` : '';
   } else {
     // Default to English
     textEl.textContent = `${dhikr.arabic} - ${dhikr.english}`;
@@ -459,7 +495,7 @@ async function setupQuranSelectors() {
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
-    populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
+    populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
     // Store for filtering
     ALL_RECITERS = reciters;
     // Build datalist
@@ -1342,7 +1378,7 @@ function applyLanguage() {
       suraSelect,
       suras,
       t('selectSura'),
-      s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` })
+      s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` })
     );
     // restore previous selection if still valid
     if (currentVal) {
