@@ -27,11 +27,47 @@ body {
   flex-direction: column;
 }
 
-.popup__title {
-  text-align: center;
-  padding: 1rem;
+.popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--clr-border);
+}
+
+/* Keep title centred but allow flexible placement */
+.popup__title {
+  flex: 0 1 auto;
+  margin: 0;
+  border-bottom: none;
   font-weight: 600;
+  text-align: center;
+}
+
+/* Flip order in RTL so selector appears on logical left */
+body[dir="rtl"] .popup__header {
+  flex-direction: row-reverse;
+}
+
+.language-select {
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--clr-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.language-select:hover {
+  box-shadow: 0 0 0 2px rgba(20, 143, 119, 0.25);
+}
+
+.language-select:focus {
+  box-shadow: 0 0 0 3px rgba(20, 143, 119, 0.35);
 }
 
 .cards {

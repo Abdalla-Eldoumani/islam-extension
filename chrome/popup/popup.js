@@ -228,14 +228,39 @@ async function loadSavedAudioState() {
 async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
-    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
-    if (!response.ok) throw new Error('Network response was not ok.');
-    const data = await response.json();
-    const randomHadith = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
-    hadithEl.textContent = randomHadith?.arab || 'Error loading Hadith.';
+    if (CURRENT_LANG === 'ar') {
+      // Simple random Bukhari hadith in Arabic via Gading API
+      const res = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
+      if (!res.ok) throw new Error('Network response was not ok.');
+      const data = await res.json();
+      const random = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
+      hadithEl.textContent = random?.arab || 'حدث خطأ فى جلب الحديث';
+    } else {
+      // Use HadeethEnc translated API – try random ids until success
+      let attempts = 0;
+      let text = '';
+      while (attempts < 5 && !text) {
+        const randomId = Math.floor(Math.random() * 70000) + 1;
+        try {
+          const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+          if (res.ok) {
+            const data = await res.json();
+            text = data?.hadeeth || data?.title || '';
+            // Some ids return Arabic even in EN mode; skip those
+            if (/^[\u0600-\u06FF]/.test(text)) { // eslint-disable-line no-control-regex
+              text = '';
+            }
+          }
+        } catch {}
+        attempts++;
+      }
+      hadithEl.textContent = text || 'Error loading Hadith.';
+    }
   } catch (error) {
     console.error('Failed to load Hadith:', error);
-    hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ - There is no god but Allah';
+    hadithEl.textContent = CURRENT_LANG === 'ar'
+      ? 'لَا إِلَٰهَ إِلَّا اللَّهُ'
+      : 'There is no god but Allah';
   }
 }
 
@@ -464,11 +489,12 @@ function populateSelect(selectEl, items, defaultOptionText, mapper) {
   });
 }
 
-async function fetchSuras() {
-  const response = await fetch('https://api.quran.com/api/v4/chapters?language=en');
+async function fetchSuras(lang = CURRENT_LANG || 'en') {
+  // Quran.com supports ?language=ar or en
+  const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
-  console.log(`Successfully fetched ${chapters.length} surahs.`);
+  console.log(`Fetched ${chapters.length} surahs for lang`, lang);
   return chapters;
 }
 
@@ -1307,6 +1333,22 @@ function applyLanguage() {
 
   // Refresh dynamic texts that depend on language
   displayCurrentDhikr();
+  // Reload hadith and sura names when language changes
+  loadHadith();
+  fetchSuras().then(suras => {
+    const suraSelect = document.getElementById('sura-select');
+    const currentVal = suraSelect.value;
+    populateSelect(
+      suraSelect,
+      suras,
+      t('selectSura'),
+      s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` })
+    );
+    // restore previous selection if still valid
+    if (currentVal) {
+      suraSelect.value = currentVal;
+    }
+  }).catch(err => console.error('Failed to refresh suras for lang', CURRENT_LANG, err));
 }
 
 // ---------------------------
