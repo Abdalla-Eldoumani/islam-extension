@@ -4,19 +4,41 @@
  * This version uses the Quran.com v4 API for Surah names, reciters, and audio.
  */
 
-// ===== Cross-browser compatibility shim =====================================
-const chrome = (typeof browser !== 'undefined') ? browser : globalThis.chrome;
-
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
 let progressTrackingInterval = null;
 
+// Keep full list of reciters for quick filtering
+let ALL_RECITERS = [];
+
+// Unified in-memory catalogue for all reciters pulled from every provider.
+// Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
+const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
+
+// Map display label -> reciterKey for the datalist picker
+const RECITER_LABEL_TO_KEY = {};
+
+function getReciterKey() {
+  const input = document.getElementById('reciter-input');
+  return RECITER_LABEL_TO_KEY[input.value] || '';
+}
+
+function setReciterInputByKey(key) {
+  const input = document.getElementById('reciter-input');
+  const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === key);
+  if (label) input.value = label;
+}
+
 // --- LIFECYCLE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await initLanguage();
+
   await setupQuranSelectors();
-  await Promise.all([loadHadith(), loadDhikr(), loadSavedAudioState()]);
+
+  await Promise.all([loadDhikr(), loadSavedAudioState()]);
+
   setupEventHandlers();
 });
 
@@ -27,7 +49,7 @@ function setupEventHandlers() {
   const pauseButton = document.getElementById('pause-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
   const suraSelect = document.getElementById('sura-select');
-  const reciterSelect = document.getElementById('reciter-select');
+  const reciterInput = document.getElementById('reciter-input');
 
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
@@ -37,7 +59,7 @@ function setupEventHandlers() {
     validateQuranSelection();
     saveUserSelections();
   });
-  reciterSelect.addEventListener('change', () => {
+  reciterInput.addEventListener('input', () => {
     validateQuranSelection();
     saveUserSelections();
   });
@@ -68,6 +90,8 @@ function setupEventHandlers() {
       saveDhikrSettings();
     });
   });
+
+  // datalist handles filtering natively, so no extra handler
 }
 
 async function handlePlayPauseResume(event) {
@@ -90,7 +114,7 @@ async function handlePlayPauseResume(event) {
 async function saveUserSelections() {
   try {
     const suraId = document.getElementById('sura-select').value;
-    const reciterKey = document.getElementById('reciter-select').value;
+    const reciterKey = getReciterKey();
     const autoplayEnabled = document.getElementById('autoplay-toggle').dataset.autoplay === 'true';
     
     const userSelections = {
@@ -122,25 +146,25 @@ async function loadSavedAudioState() {
 
       // Wait for reciters to load before setting reciter selection
       const waitForReciters = new Promise(resolve => {
-        const reciterSelect = document.getElementById('reciter-select');
-        if (reciterSelect.options.length > 1) { // Already populated
+        const reciterDatalist = document.getElementById('reciter-list');
+        if (reciterDatalist.options.length > 0) { // Already populated
           resolve();
           return;
         }
         const observer = new MutationObserver(() => {
-          if (reciterSelect.options.length > 1) {
+          if (reciterDatalist.options.length > 0) {
             observer.disconnect();
             resolve();
           }
         });
-        observer.observe(reciterSelect, { childList: true });
+        observer.observe(reciterDatalist, { childList: true });
         setTimeout(() => { observer.disconnect(); resolve(); }, 3000); // Failsafe timeout
       });
 
       await waitForReciters;
       
-      if (userSelections.reciterKey && Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === userSelections.reciterKey)) {
-        document.getElementById('reciter-select').value = userSelections.reciterKey;
+      if (userSelections.reciterKey) {
+        setReciterInputByKey(userSelections.reciterKey);
       }
       
       // Restore autoplay setting
@@ -155,7 +179,7 @@ async function loadSavedAudioState() {
     const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
     if (stateResponse?.success && stateResponse.state?.audioUrl) {
       const currentSuraId = document.getElementById('sura-select').value;
-      const currentReciterKey = document.getElementById('reciter-select').value;
+      const currentReciterKey = getReciterKey();
       
       console.log('Checking audio state:', { 
         audioState: stateResponse.state, 
@@ -185,9 +209,7 @@ async function loadSavedAudioState() {
           document.getElementById('sura-select').value = stateResponse.state.suraId;
         }
         
-        if (Array.from(document.getElementById('reciter-select').options).some(opt => opt.value === stateResponse.state.reciterKey)) {
-          document.getElementById('reciter-select').value = stateResponse.state.reciterKey;
-        }
+        setReciterInputByKey(stateResponse.state.reciterKey);
         
         validateQuranSelection();
         updateProgressUI(stateResponse.state);
@@ -209,14 +231,79 @@ async function loadSavedAudioState() {
 async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
-    const response = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
-    if (!response.ok) throw new Error('Network response was not ok.');
-    const data = await response.json();
-    const randomHadith = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
-    hadithEl.textContent = randomHadith?.arab || 'Error loading Hadith.';
+    if (CURRENT_LANG === 'ar') {
+      // ---------------- Arabic ----------------
+      const AR_BOOKS = [
+        { id: 'abu-daud', available: 4419 },
+        { id: 'ahmad', available: 4305 },
+        { id: 'bukhari', available: 6638 },
+        { id: 'darimi', available: 2949 },
+        { id: 'ibnu-majah', available: 4285 },
+        { id: 'malik', available: 1587 },
+        { id: 'muslim', available: 4930 },
+        { id: 'nasai', available: 5364 },
+        { id: 'tirmidzi', available: 3625 }
+      ];
+      const picked = AR_BOOKS[Math.floor(Math.random() * AR_BOOKS.length)];
+      const rand = Math.floor(Math.random() * picked.available) + 1;
+      const res = await fetch(`https://api.hadith.gading.dev/books/${picked.id}?range=${rand}-${rand}`);
+      if (!res.ok) throw new Error('Hadith API failed');
+      const data = await res.json();
+      const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
+      hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
+    } else {
+      // ---------------- English ----------------
+      const EN_EDITIONS = [
+        { edition: 'eng-bukhari', count: 6638 },
+        { edition: 'eng-muslim', count: 4930 },
+        { edition: 'eng-abudawud', count: 4419 },
+        { edition: 'eng-nasai', count: 5364 },
+        { edition: 'eng-ibnmajah', count: 4285 },
+        { edition: 'eng-tirmidhi', count: 3625 },
+        { edition: 'eng-malik', count: 1587 }
+      ];
+      let attempts = 0;
+      let text = '';
+      while (attempts < 15 && !text) {
+        const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
+        const num = Math.floor(Math.random() * pick.count) + 1;
+        try {
+          const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            // The API returns { hadith : { english: "..." } } OR { english: "..." }
+            if (data.hadith?.english) text = data.hadith.english; else if (data.english) text = data.english;
+          }
+        } catch {
+          console.log('Error fetching Hadith:', url);
+        }
+        attempts++;
+      }
+
+      // Fallback to slow HadeethEnc random if still empty
+      if (!text) {
+        let backupAttempts = 0;
+        while (backupAttempts < 100 && !text) {
+          const randomId = Math.floor(Math.random() * 5000) + 1;
+          try {
+            const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+            if (res.ok) {
+              const data = await res.json();
+              text = data?.hadeeth || data?.title || '';
+            }
+          } catch {
+            console.log('Error fetching Hadith:', "HadeethEnc");
+          }
+          backupAttempts++;
+        }
+      }
+
+      hadithEl.textContent = text || 'Error loading Hadith.';
+    }
   } catch (error) {
     console.error('Failed to load Hadith:', error);
-    hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ - There is no god but Allah';
+    hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
   }
 }
 
@@ -328,7 +415,7 @@ const dhikrCollection = [
     arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
     english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
     transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
-    reward: 'Powerful dua for seeking Allah\'s help and mercy'
+    reward: "Powerful dua for seeking Allah's help and mercy"
   },
   {
     arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
@@ -351,10 +438,54 @@ async function loadDhikr() {
   await loadDhikrSettings();
 }
 
+// --- Arabic translations for Dhikr rewards -----------------------------------
+const DHIKR_REWARD_AR = {
+  'Each recitation equals a tree planted in Paradise': 'تُغرس له شجرةٌ في الجنة',
+  'Fills the scales of good deeds': 'تملأ ميزان الحسنات',
+  'Fills what is between heaven and earth': 'تملأ ما بين السماء والأرض',
+  'The best of remembrance, heaviest on the scales': 'أفضل الذكر وأثقلها في الميزان',
+  '100 sins erased, even if like foam on the sea': 'يحط الله بها مائة خطيئة وإن كانت مثل زبد البحر',
+  'Beloved to Allah, light on the tongue, heavy on the scales': 'حبيبتان إلى الرحمن، خفيفتان على اللسان، ثقيلتان في الميزان',
+  'A treasure from the treasures of Paradise': 'كنز من كنوز الجنة',
+  'Opens doors of mercy and provision': 'يفتح أبواب الرحمة والرزق',
+  'Allah sends 10 blessings for each one sent': 'يُصلي الله عليه عشرًا بكل صلاة',
+  'Protection and blessings in all affairs': 'يحصل بها الحفظ والبركة في الأمور',
+  'Direct supplication for forgiveness': 'دعاء مباشر للمغفرة',
+  'Comprehensive dua for spiritual improvement': 'دعاء جامع لزيادة الإيمان والعمل الصالح',
+  'Protection from all harms and anxieties': 'حماية من كل شر وهم',
+  'The most comprehensive dua for both worlds': 'من أَوْسَعِ الأدعية للدنيا والآخرة',
+  'Dua for the four pillars of a good life': 'دعاء لأصول السعادة الأربع',
+  'Guarantees Paradise for the one who says it with conviction': 'ضمان الجنة لمن قالها موقنًا',
+  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'بداية سيد الاستغفار',
+  "Powerful dua for seeking Allah's help and mercy": 'دعاء قوي لطلب العون والرحمة',
+  'Dua for guidance and righteousness': 'دعاء للهداية والاستقامة',
+  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح'
+};
+
+// Helper to get reward in current language ------------------------------------
+function getRewardText(rewardEn) {
+  if (!rewardEn) return '';
+  return CURRENT_LANG === 'ar' ? (DHIKR_REWARD_AR[rewardEn] || '') : rewardEn;
+}
+
+// Helper to pick proper sura display name -------------------------------------
+function getSuraName(chapter) {
+  return CURRENT_LANG === 'ar' ? chapter.name_arabic : chapter.name_simple;
+}
+
 function displayCurrentDhikr() {
   const dhikr = dhikrCollection[currentDhikrIndex];
-  document.getElementById('dhikr-text').textContent = `${dhikr.arabic} - ${dhikr.english}`;
-  document.getElementById('dhikr-info').textContent = `Reward: ${dhikr.reward}`;
+  const textEl = document.getElementById('dhikr-text');
+  const infoEl = document.getElementById('dhikr-info');
+  if (CURRENT_LANG === 'ar') {
+    textEl.textContent = dhikr.arabic;
+    const reward = getRewardText(dhikr.reward);
+    infoEl.textContent = reward ? `الأجر: ${reward}` : '';
+  } else {
+    // Default to English
+    textEl.textContent = `${dhikr.arabic} - ${dhikr.english}`;
+    infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
+  }
 }
 
 function getRandomDhikr() {
@@ -369,7 +500,7 @@ async function loadDhikrSettings() {
       const interval = dhikrSettings.interval || 60;
       
       document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
-      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
       document.getElementById('dhikr-interval').value = interval;
       
       if (notificationsEnabled) {
@@ -402,16 +533,27 @@ async function saveDhikrSettings() {
 
 async function setupQuranSelectors() {
   const suraSelect = document.getElementById('sura-select');
-  const reciterSelect = document.getElementById('reciter-select');
+  const reciterInput = document.getElementById('reciter-input');
+  const reciterDatalist = document.getElementById('reciter-list');
 
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
-    populateSelect(suraSelect, suras, 'Select Sura...', s => ({ value: s.id, text: `${s.id}. ${s.name_simple}` }));
-    populateSelect(reciterSelect, reciters, 'Select Reciter...', r => ({ value: r.id, text: `${r.reciter_name} (${r.style})`}));
+    populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
+    // Store for filtering
+    ALL_RECITERS = reciters;
+    // Build datalist
+    reciterDatalist.innerHTML = '';
+    reciters.forEach(r => {
+      const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`;
+      RECITER_LABEL_TO_KEY[label] = r.id;
+      const option = document.createElement('option');
+      option.value = label;
+      reciterDatalist.appendChild(option);
+    });
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
     suraSelect.innerHTML = '<option value="">Error</option>';
-    reciterSelect.innerHTML = '<option value="">Error</option>';
+    reciterInput.placeholder = 'Error loading reciters';
   }
 }
 
@@ -426,38 +568,139 @@ function populateSelect(selectEl, items, defaultOptionText, mapper) {
   });
 }
 
-async function fetchSuras() {
-  const response = await fetch('https://api.quran.com/api/v4/chapters?language=en');
+async function fetchSuras(lang = CURRENT_LANG || 'en') {
+  // Quran.com supports ?language=ar or en
+  const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
-  console.log(`Successfully fetched ${chapters.length} surahs.`);
+  console.log(`Fetched ${chapters.length} surahs for lang`, lang);
   return chapters;
 }
 
-async function fetchReciters() {
-    const response = await fetch('https://api.quran.com/api/v4/resources/recitations?language=en');
-    if (!response.ok) throw new Error('Failed to fetch reciters from api.quran.com');
-    const { recitations } = await response.json();
-    
-    // Use substrings for more robust matching against the preferred list
-    const preferredReciterSubstrings = [
-      "Alafasy", "AbdulBaset", "Al-Husary", "Minshawi", "Muaiqly", 
-      "Ali Jaber", "Ayyub", "Bandar Baleela", "Badr Al-Turki", "Jibreel", "al-Afasy"
-    ];
-    
-    const filteredRecitations = recitations.filter(r => 
-        r.style && preferredReciterSubstrings.some(name => r.reciter_name.includes(name))
-    );
+// ---------------------------------------------------------------------------------
+// Reciter catalogue helpers (multi-provider)
+// ---------------------------------------------------------------------------------
 
-    console.log(`Found ${filteredRecitations.length} recitations from preferred reciters.`);
-    return filteredRecitations.sort((a,b) => a.reciter_name.localeCompare(b.reciter_name));
+// 1) Quran.com – existing provider -------------------------------------------------
+async function fetchQuranComReciters() {
+  const url = 'https://api.quran.com/api/v4/resources/recitations?per_page=500';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Quran.com recitations request failed');
+  const { recitations } = await res.json();
+  return recitations.map(r => {
+    const reciterKey = `qc:${r.id}`;
+    return {
+      id: reciterKey,
+      reciter_name: r.reciter_name,
+      style: r.style || 'Default',
+      source: 'qurancom',
+      qurancomId: r.id,
+      bitrate: 128
+    };
+  });
+}
+
+// 2) MP3Quran.net -----------------------------------------------------------------
+async function fetchMp3QuranReciters() {
+  const url = 'https://www.mp3quran.net/api/_english.json';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data.reciters)) return [];
+
+    return data.reciters.map(r => {
+      const reciterKey = `mp3:${r.id}`;
+      return {
+        id: reciterKey,
+        reciter_name: r.name,
+        style: r.rewaya || 'Default',
+        source: 'mp3quran',
+        server: r.Server.endsWith('/') ? r.Server : r.Server + '/',
+        bitrate: 128,
+        mp3quranId: r.id
+      };
+    });
+  } catch (err) {
+    console.error('Failed to fetch MP3Quran reciters:', err);
+    return [];
+  }
+}
+
+// 3) Islamic.network CDN -----------------------------------------------------------
+// No public catalogue endpoint – we hard-code popular slugs. Extend as needed.
+async function fetchIslamicNetworkReciters() {
+  const slugs = [
+    'ar.alafasy',
+    'ar.husary',
+    'ar.shuraym',
+    'ar.tablawee'
+    // Add more slugs here as required
+  ];
+  return slugs.map(slug => {
+    const reciterKey = `islamic:${slug}`;
+    const prettyName = slug.split('.')[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return {
+      id: reciterKey,
+      reciter_name: prettyName,
+      style: 'Default',
+      source: 'islamic',
+      slug,
+      bitrate: 128
+    };
+  });
+}
+
+// Aggregate loader ----------------------------------------------------------------
+async function fetchReciters() {
+  // 1) Try cached catalogue first ------------------------------------------------
+  try {
+    const { reciterCache } = await chrome.storage.local.get('reciterCache');
+    if (reciterCache && reciterCache.timestamp && Array.isArray(reciterCache.reciters)) {
+      const age = Date.now() - reciterCache.timestamp;
+      if (age < 24 * 60 * 60 * 1000) { // < 24h old
+        console.log('Using cached reciter catalogue (age', Math.round(age / 1000), 's)');
+        reciterCache.reciters.forEach(r => (RECITER_CATALOG[r.id] = r));
+        return reciterCache.reciters;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load reciter cache:', err);
+  }
+
+  // 2) Fetch fresh catalogues ----------------------------------------------------
+  const [qc, mp3q, isl] = await Promise.all([
+    fetchQuranComReciters(),
+    fetchMp3QuranReciters(),
+    fetchIslamicNetworkReciters()
+  ]);
+
+  const combined = [...qc, ...mp3q, ...isl];
+
+  // Populate global catalogue for quick lookup later
+  combined.forEach(r => (RECITER_CATALOG[r.id] = r));
+
+  // Store in cache --------------------------------------------------------------
+  try {
+    await chrome.storage.local.set({ reciterCache: { reciters: combined, timestamp: Date.now() } });
+  } catch (err) {
+    console.warn('Failed to save reciter cache:', err);
+  }
+
+  console.log(`Reciters fetched – Quran.com: ${qc.length}, MP3Quran: ${mp3q.length}, Islamic.network: ${isl.length}`);
+
+  // Sort alphabetically by name then style
+  return combined.sort((a, b) => {
+    const nameCompare = a.reciter_name.localeCompare(b.reciter_name);
+    return nameCompare !== 0 ? nameCompare : a.style.localeCompare(b.style);
+  });
 }
 
 // --- AUDIO LOGIC ---
 
 function validateQuranSelection() {
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterId = getReciterKey();
   const playButton = document.getElementById('play-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
   const availabilityStatus = document.getElementById('quran-availability');
@@ -477,7 +720,7 @@ function validateQuranSelection() {
 async function playQuranAudio() {
   setUILoading(true);
   const suraId = document.getElementById('sura-select').value;
-  const reciterId = document.getElementById('reciter-select').value;
+  const reciterId = getReciterKey();
   const availabilityStatus = document.getElementById('quran-availability');
   
   try {
@@ -513,31 +756,55 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
-    // availabilityStatus.innerHTML = '&#x2705; Playing...';
-    // availabilityStatus.style.color = 'green';
+    availabilityStatus.innerHTML = '&#x2705; Playing...';
+    availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true, 0);
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    // availabilityStatus.innerHTML = '&#x274C; Audio not found for this selection.';
-    // availabilityStatus.style.color = 'red';
+    availabilityStatus.innerHTML = '&#x274C; Reciter not available right now.';
+    availabilityStatus.style.color = 'red';
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
   }
 }
 
-async function getSuraAudioUrl(reciterId, suraId) {
+async function getSuraAudioUrl(reciterKey, suraId) {
+    // Determine provider prefix (default to Quran.com if none)
+    let provider = 'qc';
+    let rawId = reciterKey;
+    if (reciterKey.includes(':')) {
+        const parts = reciterKey.split(':');
+        provider = parts[0];
+        rawId = parts.slice(1).join(':');
+    }
+
+    // MP3Quran provider -----------------------------------------------------------
+    if (provider === 'mp3') {
+        const reciter = RECITER_CATALOG[reciterKey];
+        if (!reciter) throw new Error('Reciter not found in catalogue');
+        const suraStr = String(suraId).padStart(3, '0');
+        return `${reciter.server}${suraStr}.mp3`;
+    }
+
+    // Islamic.network provider ----------------------------------------------------
+    if (provider === 'islamic') {
+        const reciter = RECITER_CATALOG[reciterKey];
+        if (!reciter) throw new Error('Reciter not found in catalogue');
+        return `https://cdn.islamic.network/quran/audio/128/${reciter.slug}/${suraId}.mp3`;
+    }
+
+    // Default: Quran.com -----------------------------------------------------------
+    const reciterId = rawId; // numeric id for Quran.com API
+
     // Try to get full chapter audio first
     const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
     console.log('Fetching chapter audio from:', chapterUrl);
-    
     try {
         const chapterResponse = await fetch(chapterUrl);
         if (chapterResponse.ok) {
             const chapterData = await chapterResponse.json();
-            console.log('Chapter API response:', chapterData);
-            
             if (chapterData.audio_file?.audio_url) {
                 const audioUrl = chapterData.audio_file.audio_url;
                 return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
@@ -546,49 +813,27 @@ async function getSuraAudioUrl(reciterId, suraId) {
     } catch (error) {
         console.log('Chapter audio not available, trying verse-by-verse approach:', error.message);
     }
-    
+
     // Fallback to verse-by-verse audio
     const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
     console.log('Fetching verse audio from:', versesUrl);
-    
     const response = await fetch(versesUrl);
     if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
     }
-    
     const data = await response.json();
-    console.log('Verses API response data:', data);
-    
     if (!data.audio_files || data.audio_files.length === 0) {
         throw new Error('No audio files found in API response.');
     }
-    
-    // Get the first verse audio file
     const firstAudio = data.audio_files[0];
-    console.log('First audio file object:', firstAudio);
-    
     let audioUrl = firstAudio.url || firstAudio.audio_url;
-    
-    if (!audioUrl) {
-        console.error('No audio URL found in response:', data);
-        throw new Error('Audio URL not found in API response.');
-    }
-    
-    // Handle different URL formats
+    if (!audioUrl) throw new Error('Audio URL not found in API response.');
     if (audioUrl.startsWith('//')) {
-        // Protocol-relative URL
         return `https:${audioUrl}`;
     } else if (audioUrl.startsWith('http')) {
-        // Absolute URL
         return audioUrl;
     } else {
-        // Relative URL - need to determine the correct base
-        if (audioUrl.includes('quranicaudio.com') || audioUrl.includes('everyayah')) {
-            return `https://verses.quran.com/${audioUrl}`;
-        } else {
-            // Try different base URLs based on the reciter pattern
-            return `https://verses.quran.com/${audioUrl}`;
-        }
+        return `https://verses.quran.com/${audioUrl}`;
     }
 }
 
@@ -665,7 +910,7 @@ async function toggleAutoplay() {
 function updateAutoplayButton(isEnabled) {
   const autoplayButton = document.getElementById('autoplay-toggle');
   autoplayButton.dataset.autoplay = isEnabled.toString();
-  autoplayButton.textContent = isEnabled ? '🔄 Autoplay: ON' : '🔄 Autoplay: OFF';
+  autoplayButton.textContent = isEnabled ? t('autoplayOn') : t('autoplayOff');
 }
 
 function getNextSuraId(currentSuraId) {
@@ -676,7 +921,7 @@ function getNextSuraId(currentSuraId) {
 
 async function playNextSura() {
   const currentSuraId = document.getElementById('sura-select').value;
-  const reciterKey = document.getElementById('reciter-select').value;
+  const reciterKey = getReciterKey();
   
   if (!currentSuraId || !reciterKey) {
     console.log('Cannot play next sura: missing current selection');
@@ -692,7 +937,7 @@ async function playNextSura() {
   
   // Ensure UI is in clean state before starting new sura
   updatePlayButtonUI(false, true, 0);
-  document.getElementById('play-quran').textContent = '▶ Play';
+  document.getElementById('play-quran').textContent = t('play');
   document.getElementById('play-quran').dataset.action = 'play';
   
   // Start playing the next sura
@@ -719,9 +964,9 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   if (isPlaying) {
     playButton.classList.add('hidden');
     pauseButton.classList.remove('hidden');
-    pauseButton.textContent = '⏸ Pause';
+    pauseButton.textContent = t('pause');
   } else {
-    playButton.textContent = hasProgress ? '▶ Resume' : '▶ Play';
+    playButton.textContent = hasProgress ? t('resume') : t('play');
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
     playButton.classList.remove('hidden');
     pauseButton.classList.add('hidden');
@@ -772,7 +1017,7 @@ function startProgressTracking() {
             console.log('Sura finished, autoplay is enabled - playing next sura');
             // Reset UI to fresh state before autoplay
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').textContent = t('play');
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -784,7 +1029,7 @@ function startProgressTracking() {
           } else {
             console.log('Sura finished, autoplay is disabled - stopping playback');
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = '▶ Play';
+            document.getElementById('play-quran').textContent = t('play');
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -920,7 +1165,7 @@ async function toggleDhikrNotifications() {
     
     // Update UI only after successful response
     button.dataset.enabled = newState.toString();
-    button.textContent = newState ? '🔔 Notifications: ON' : '🔔 Notifications: OFF';
+    button.textContent = newState ? t('notificationsOn') : t('notificationsOff');
     
     // // Show success message
     // if (newState) {
@@ -1037,4 +1282,154 @@ function updatePresetButtons(currentInterval) {
   });
 }
 
- 
+// ---------------------------
+// 🗺️  BASIC I18N SUPPORT
+// ---------------------------
+
+const LANG_STORAGE_KEY = 'uiLanguage';
+let CURRENT_LANG = 'en';
+
+const I18N = {
+  en: {
+    appTitle: "Qur'an & Sunnah Companion",
+    quran: "Qur'an",
+    hadith: "Hadith",
+    dhikr: "Dhikr",
+    selectSura: "Select Sura...",
+    reciterPlaceholder: "Select or type a reciter...",
+    play: "▶ Play",
+    resume: "▶ Resume",
+    pause: "⏸ Pause",
+    autoplayOn: "🔄 Autoplay: ON",
+    autoplayOff: "🔄 Autoplay: OFF",
+    loading: "Loading...",
+    nextDhikr: "🔄 Next Dhikr",
+    notificationsOn: "🔔 Notifications: ON",
+    notificationsOff: "🔔 Notifications: OFF",
+    reminderLabel: "Reminder Interval (seconds):"
+  },
+  ar: {
+    appTitle: "رفيق القرآن والسنة",
+    quran: "القرآن",
+    hadith: "حديث",
+    dhikr: "ذِكر",
+    selectSura: "اختر السورة...",
+    reciterPlaceholder: "اختر أو اكتب اسم القارئ...",
+    play: "▶ تشغيل",
+    resume: "▶ استئناف",
+    pause: "⏸ إيقاف",
+    autoplayOn: "🔄 التشغيل التلقائي: مفعل",
+    autoplayOff: "🔄 التشغيل التلقائي: معطل",
+    loading: "جارٍ التحميل...",
+    nextDhikr: "🔄 الذكر التالي",
+    notificationsOn: "🔔 الإشعارات: مفعلة",
+    notificationsOff: "🔔 الإشعارات: معطلة",
+    reminderLabel: "فاصل التذكير (ثوان):"
+  }
+};
+
+function t(key) {
+  return (I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) || key;
+}
+
+async function initLanguage() {
+  // Load saved preference or fall back to browser UI language
+  const { [LANG_STORAGE_KEY]: savedLang } = await chrome.storage.local.get(LANG_STORAGE_KEY);
+  if (savedLang && I18N[savedLang]) {
+    CURRENT_LANG = savedLang;
+  } else {
+    const browserLang = (chrome.i18n?.getUILanguage?.() || navigator.language || 'en').split('-')[0];
+    CURRENT_LANG = I18N[browserLang] ? browserLang : 'en';
+  }
+
+  // Apply language immediately
+  applyLanguage();
+
+  // Set selector value
+  const langSelect = document.getElementById('language-select');
+  if (langSelect) {
+    langSelect.value = CURRENT_LANG;
+    langSelect.addEventListener('change', async (e) => {
+      const newLang = e.target.value;
+      if (I18N[newLang]) {
+        CURRENT_LANG = newLang;
+        await chrome.storage.local.set({ [LANG_STORAGE_KEY]: newLang });
+        applyLanguage();
+      }
+    });
+  }
+}
+
+function applyLanguage() {
+  // Direction & lang attribute
+  document.documentElement.lang = CURRENT_LANG;
+  document.body.dir = CURRENT_LANG === 'ar' ? 'rtl' : 'ltr';
+
+  // Static titles
+  const titleEl = document.getElementById('app-title');
+  if (titleEl) titleEl.textContent = t('appTitle');
+  const quranTitle = document.getElementById('quran-title');
+  if (quranTitle) quranTitle.textContent = t('quran');
+  const hadithTitle = document.getElementById('hadith-title');
+  if (hadithTitle) hadithTitle.textContent = t('hadith');
+  const dhikrTitle = document.getElementById('dhikr-title');
+  if (dhikrTitle) dhikrTitle.textContent = t('dhikr');
+
+  // Placeholders & labels
+  const reciterInput = document.getElementById('reciter-input');
+  if (reciterInput) reciterInput.placeholder = t('reciterPlaceholder');
+
+  const reminderLabel = document.getElementById('reminder-label');
+  if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `; // preserve spacing
+
+  // Buttons that exist at load
+  const playBtn = document.getElementById('play-quran');
+  if (playBtn && playBtn.dataset.action === 'play') playBtn.textContent = t('play');
+  const pauseBtn = document.getElementById('pause-quran');
+  if (pauseBtn) pauseBtn.textContent = t('pause');
+  const autoplayBtn = document.getElementById('autoplay-toggle');
+  if (autoplayBtn) {
+    const on = autoplayBtn.dataset.autoplay === 'true';
+    autoplayBtn.textContent = on ? t('autoplayOn') : t('autoplayOff');
+  }
+  const nextDhikrBtn = document.getElementById('next-dhikr');
+  if (nextDhikrBtn) nextDhikrBtn.textContent = t('nextDhikr');
+  const notifBtn = document.getElementById('toggle-notifications');
+  if (notifBtn) {
+    const en = notifBtn.dataset.enabled === 'true';
+    notifBtn.textContent = en ? t('notificationsOn') : t('notificationsOff');
+  }
+
+  // Loading text
+  const loadingEl = document.getElementById('quran-loading');
+  if (loadingEl) loadingEl.textContent = t('loading');
+
+  // Update select default option if still default
+  const suraSelect = document.getElementById('sura-select');
+  if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
+    suraSelect.options[0].textContent = t('selectSura');
+  }
+
+  // Reset Hadith area while we fetch a new one in the selected language
+  const hadithEl = document.getElementById('hadith-text');
+  if (hadithEl) hadithEl.textContent = t('loading');
+
+  // Refresh dynamic texts that depend on language
+  displayCurrentDhikr();
+  // Reload hadith and sura names when language changes
+  loadHadith();
+  fetchSuras().then(suras => {
+    const suraSelect = document.getElementById('sura-select');
+    const currentVal = suraSelect.value;
+    populateSelect(
+      suraSelect,
+      suras,
+      t('selectSura'),
+      s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` })
+    );
+    // restore previous selection if still valid
+    if (currentVal) {
+      suraSelect.value = currentVal;
+    }
+  }).catch(err => console.error('Failed to refresh suras for lang', CURRENT_LANG, err));
+}

@@ -11,7 +11,12 @@
     "https://api.quran.com/*",
     "https://verses.quran.com/*",
     "https://mirrors.quranicaudio.com/*",
-    "https://download.quranicaudio.com/*"
+    "https://download.quranicaudio.com/*",
+    "https://www.mp3quran.net/*",
+    "https://*.mp3quran.net/*",
+    "https://cdn.islamic.network/*",
+    "https://hadeethenc.com/*",
+    "https://cdn.jsdelivr.net/*"
   ],
   "background": {
     "scripts": ["background/background.js"],
@@ -31,7 +36,7 @@
     "48": "assets/icon48.png",
     "128": "assets/icon128.png"
   },
-  "content_security_policy": "default-src 'self'; media-src https://verses.quran.com https://mirrors.quranicaudio.com https://download.quranicaudio.com; connect-src https://api.hadith.gading.dev https://api.quran.com; object-src 'none';",
+  "content_security_policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; media-src https://verses.quran.com https://mirrors.quranicaudio.com https://download.quranicaudio.com https://cdn.islamic.network https://*.mp3quran.net https://www.mp3quran.net; connect-src https://api.hadith.gading.dev https://api.quran.com https://www.mp3quran.net https://cdn.islamic.network https://hadeethenc.com https://cdn.jsdelivr.net; object-src 'none';",
   "browser_specific_settings": {
     "gecko": {
       "id": "quran-sunnah-companion@example.com",

@@ -3,14 +3,6 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
-// ===== Cross-browser compatibility shim =====================================
-// In Firefox the promise-based API lives under `browser`, while `chrome` only
-// offers the callback style.  Re-alias `chrome` to `browser` inside this
-// module so the rest of the code (which uses `await chrome.*`) continues to
-// work without changes.
-// (Chrome will ignore this because `browser` is undefined there.)
-const chrome = (typeof browser !== 'undefined') ? browser : globalThis.chrome;
-
 const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
@@ -61,9 +53,6 @@ let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
 
-// Fallback audio window ID for browsers without Offscreen API
-let audioWindowId = null;
-
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
  * Chrome's notifications.getPermissionLevel historically supported only the
@@ -74,23 +63,18 @@ let audioWindowId = null;
  * @returns {Promise<'granted'|'denied'|'default'>}
  */
 function getNotificationPermissionLevel() {
-  // Some browsers (Firefox) do not implement getPermissionLevel at all; assume
-  // granted because the user had to approve notifications permission at
-  // install time.  If the API exists, normalise to Promise.
-
-  if (!chrome.notifications || typeof chrome.notifications.getPermissionLevel !== 'function') {
-    return Promise.resolve('granted');
-  }
-
-  // Newer Chrome releases return a promise when no callback is supplied.
+  // Newer Chrome releases (>=116) return a promise when no callback is
+  // supplied.  Detect this by checking the function length (expected
+  // callback-arity of 1 in the classic API).
   try {
     if (chrome.notifications.getPermissionLevel.length === 0) {
+      // Promise variant available.
       return chrome.notifications.getPermissionLevel();
     }
   } catch (_) {
-    // ignore, will wrap callback below
+    // Fall back to callback style below.
   }
-   
+
   // Fallback for older Chrome versions – wrap the callback style.
   return new Promise((resolve) => {
     try {
@@ -186,19 +170,6 @@ async function handleMessage(message, sender, sendResponse) {
     console.error('Background: Error in handleMessage:', error);
     sendResponse({ success: false, error: `Message handling failed: ${error.message}` });
   }
-
-  if (message.action === 'getAudioState') {
-    let contextExists = false;
-    if (chrome.offscreen && chrome.offscreen.hasDocument) {
-      try { contextExists = await chrome.offscreen.hasDocument(); } catch (_) {contextExists=false;}
-    } else if (audioWindowId !== null) {
-      try { await chrome.windows.get(audioWindowId); contextExists=true;} catch(_){ contextExists=false; audioWindowId=null; }
-    }
-    if (!contextExists) {
-      sendResponse({ success: true, state: {} });
-      return;
-    }
-  }
 }
 
 async function handleDhikrMessage(message, sendResponse) {
@@ -248,33 +219,10 @@ async function handleDhikrMessage(message, sendResponse) {
 
 async function handleAudioMessage(message, sendResponse) {
   try {
-    // If Offscreen API is not available, handle audio directly in background
-    if (!hasOffscreen) {
-      let resp;
-      switch (message.action) {
-        case 'playAudio':
-          resp = await bgPlayAudio(message); break;
-        case 'pauseAudio':
-          resp = await bgPauseAudio(); break;
-        case 'resumeAudio':
-          resp = await bgResumeAudio(); break;
-        case 'seekAudio':
-          resp = await bgSeekAudio(message); break;
-        case 'getAudioState':
-          resp = bgGetAudioState(); break;
-        default:
-          resp = { success: false, error: 'Unknown audio action' };
-      }
-      sendResponse(resp);
-      return;
-    }
-    
-    // Only prepare audio context when we are about to play or resume.
-    if (message.action === 'playAudio' || message.action === 'resumeAudio') {
-      console.log('Background: Preparing audio context...');
-      await createOffscreenDocumentIfNeeded();
-      console.log('Background: Audio context ready');
-    }
+    // For any audio action, ensure the offscreen document exists.
+    console.log('Background: Creating offscreen document if needed...');
+    await createOffscreenDocumentIfNeeded();
+    console.log('Background: Offscreen document ready');
     
     // Forward the message to the offscreen document.
     console.log('Background: Forwarding message to offscreen document...');
@@ -318,8 +266,23 @@ async function handleAudioMessage(message, sendResponse) {
 
 async function createOffscreenDocumentIfNeeded() {
   try {
-    // Offscreen API absent – background audio element handles playback.
-    return;
+    const hasDocument = await chrome.offscreen.hasDocument();
+    if (hasDocument) {
+      console.log('Background: Offscreen document already exists.');
+      return;
+    }
+
+    console.log('Background: Creating new offscreen document...');
+    await chrome.offscreen.createDocument({
+      url: 'offscreen/offscreen.html',
+      reasons: ['AUDIO_PLAYBACK'],
+      justification: 'Keep Qur\'an audio playing when popup closes'
+    });
+    console.log('Background: Offscreen document created successfully');
+    
+    // Give the offscreen document a moment to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
   } catch (error) {
     console.error('Background: Failed to create offscreen document:', error);
     throw new Error(`Failed to create audio player: ${error.message}`);
@@ -394,13 +357,6 @@ async function stopDhikrNotifications() {
       console.log('Background: Dhikr timeout cleared successfully');
     }
     
-    if (audioWindowId !== null) {
-      try {
-        chrome.windows.remove(audioWindowId);
-      } catch (_) {}
-      audioWindowId = null;
-    }
-    
   } catch (error) {
     console.error('Background: Failed to stop Dhikr notifications:', error);
     throw error;
@@ -455,20 +411,15 @@ async function showDhikrNotification(isTest = false) {
     let chromeNotificationWorked = false;
     
     try {
-      const notifOptions = {
+      const chromeNotificationId = await chrome.notifications.create({
         type: 'basic',
         iconUrl: iconUrl,
         title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
         message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
-        priority: 2,
+        priority: 2, // High priority
+        requireInteraction: true, // Stay visible until user interacts
         silent: false
-      };
-      if (typeof browser === 'undefined') {
-        // Chrome supports requireInteraction
-        notifOptions.requireInteraction = true;
-      }
-
-      const chromeNotificationId = await chrome.notifications.create(notifOptions);
+      });
       
       if (chromeNotificationId) {
         console.log('Background: Chrome extension notification created:', chromeNotificationId);
@@ -509,7 +460,7 @@ async function showDhikrNotification(isTest = false) {
     }
     
     // If neither worked, try creating a popup window as last resort
-    if (!chromeNotificationWorked && isTest && typeof browser === 'undefined') {
+    if (!chromeNotificationWorked && isTest) {
       console.log('Background: Trying popup window as last resort for test...');
       try {
         await chrome.windows.create({
@@ -595,19 +546,10 @@ async function startAudioMonitoring() {
   
   audioMonitoringInterval = setInterval(async () => {
     try {
-      let audioContextExists = true;
-      if (!hasOffscreen) {
-        audioContextExists = !!(bgAudio && !bgAudio.ended);
-      } else {
-        try {
-          audioContextExists = await chrome.offscreen.hasDocument();
-        } catch (_) {
-          audioContextExists = false;
-        }
-      }
-
-      if (!audioContextExists) {
-        console.log('Background: No audio context, stopping audio monitoring');
+      // Check if offscreen document exists
+      const hasDocument = await chrome.offscreen.hasDocument();
+      if (!hasDocument) {
+        console.log('Background: No offscreen document, stopping audio monitoring');
         stopAudioMonitoring();
         return;
       }
@@ -655,13 +597,6 @@ function stopAudioMonitoring() {
     audioMonitoringInterval = null;
     console.log('Background: Stopped audio monitoring');
   }
-  
-  if (audioWindowId !== null) {
-    try {
-      chrome.windows.remove(audioWindowId);
-    } catch (_) {}
-    audioWindowId = null;
-  }
 }
 
 async function handleAutoplayNext(currentSuraId, reciterKey) {
@@ -707,17 +642,58 @@ async function handleAutoplayNext(currentSuraId, reciterKey) {
   }
 }
 
-async function getNextSuraAudioUrl(reciterId, suraId) {
+// Cache for MP3Quran catalogue lookups to avoid hitting the API repeatedly.
+const mp3quranCache = {};
+
+async function getMp3QuranReciterById(id) {
+  if (mp3quranCache[id]) return mp3quranCache[id];
+  try {
+    const res = await fetch('https://www.mp3quran.net/api/_english.json');
+    const data = await res.json();
+    const reciter = data.reciters?.find(r => String(r.id) === String(id));
+    if (reciter) mp3quranCache[id] = reciter;
+    return reciter;
+  } catch (err) {
+    console.error('Background: Failed to fetch MP3Quran catalogue:', err);
+    return null;
+  }
+}
+
+async function getNextSuraAudioUrl(reciterKey, suraId) {
+  // Detect provider prefix
+  let provider = 'qc';
+  let rawId = reciterKey;
+  if (reciterKey.includes(':')) {
+    const parts = reciterKey.split(':');
+    provider = parts[0];
+    rawId = parts.slice(1).join(':');
+  }
+
+  // MP3Quran provider -----------------------------------------------------------
+  if (provider === 'mp3') {
+    const reciter = await getMp3QuranReciterById(rawId);
+    if (!reciter) throw new Error('Reciter not found in MP3Quran catalogue');
+    const base = reciter.Server.endsWith('/') ? reciter.Server : reciter.Server + '/';
+    const suraStr = String(suraId).padStart(3, '0');
+    return `${base}${suraStr}.mp3`;
+  }
+
+  // Islamic.network provider ----------------------------------------------------
+  if (provider === 'islamic') {
+    const slug = rawId; // e.g. ar.alafasy
+    return `https://cdn.islamic.network/quran/audio/128/${slug}/${suraId}.mp3`;
+  }
+
+  // Default: Quran.com -----------------------------------------------------------
+  const reciterId = rawId;
+
   // Try to get full chapter audio first
   const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
   console.log('Background: Fetching chapter audio from:', chapterUrl);
-  
   try {
     const chapterResponse = await fetch(chapterUrl);
     if (chapterResponse.ok) {
       const chapterData = await chapterResponse.json();
-      console.log('Background: Chapter API response:', chapterData);
-      
       if (chapterData.audio_file?.audio_url) {
         const audioUrl = chapterData.audio_file.audio_url;
         return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
@@ -726,35 +702,21 @@ async function getNextSuraAudioUrl(reciterId, suraId) {
   } catch (error) {
     console.log('Background: Chapter audio not available, trying verse-by-verse approach:', error.message);
   }
-  
+
   // Fallback to verse-by-verse audio
   const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
   console.log('Background: Fetching verse audio from:', versesUrl);
-  
   const response = await fetch(versesUrl);
   if (!response.ok) {
     throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
   }
-  
   const data = await response.json();
-  console.log('Background: Verses API response data:', data);
-  
   if (!data.audio_files || data.audio_files.length === 0) {
     throw new Error('No audio files found in API response.');
   }
-  
-  // Get the first verse audio file
   const firstAudio = data.audio_files[0];
-  console.log('Background: First audio file object:', firstAudio);
-  
   let audioUrl = firstAudio.url || firstAudio.audio_url;
-  
-  if (!audioUrl) {
-    console.error('Background: No audio URL found in response:', data);
-    throw new Error('Audio URL not found in API response.');
-  }
-  
-  // Handle different URL formats
+  if (!audioUrl) throw new Error('Audio URL not found in API response.');
   if (audioUrl.startsWith('//')) {
     return `https:${audioUrl}`;
   } else if (audioUrl.startsWith('http')) {
@@ -781,95 +743,4 @@ function scheduleNextDhikrTimeout() {
       scheduleNextDhikrTimeout();
     }
   }, dhikrIntervalSeconds * 1000);
-}
-
-// ============================================================================
-//  BACKGROUND AUDIO FALLBACK (Firefox, no Offscreen API)
-// ============================================================================
-
-const hasOffscreen = !!(chrome.offscreen && typeof chrome.offscreen.createDocument === 'function');
-
-let bgAudio = null; // HTMLAudioElement when hasOffscreen === false
-let audioState = {
-  audioUrl: null,
-  suraId: null,
-  reciterKey: null,
-  isPlaying: false,
-  currentTime: 0,
-  duration: 0
-};
-
-function ensureBgAudio() {
-  if (bgAudio) return bgAudio;
-  bgAudio = new Audio();
-  bgAudio.addEventListener('timeupdate', () => {
-    audioState.currentTime = Math.floor(bgAudio.currentTime);
-    audioState.duration = Math.floor(bgAudio.duration || 0);
-  });
-  bgAudio.addEventListener('ended', async () => {
-    audioState.isPlaying = false;
-    updatePopupAudioState();
-
-    // Autoplay next sura if enabled in settings
-    try {
-      const { userSelections } = await chrome.storage.local.get('userSelections');
-      if (userSelections?.autoplayEnabled) {
-        await handleAutoplayNext(audioState.suraId, audioState.reciterKey);
-      }
-    } catch (e) { console.error('Autoplay (ended) error:', e); }
-  });
-  return bgAudio;
-}
-
-function updatePopupAudioState() {
-  chrome.runtime.sendMessage({ action: 'audioStateUpdated', state: audioState }).catch(() => {});
-}
-
-async function bgPlayAudio(msg) {
-  const audio = ensureBgAudio();
-  audio.src = msg.audioUrl;
-  audio.currentTime = 0;
-  await audio.play().catch(() => {});
-  audioState = {
-    audioUrl: msg.audioUrl,
-    suraId: msg.suraId,
-    reciterKey: msg.reciterKey,
-    isPlaying: true,
-    currentTime: 0,
-    duration: Math.floor(audio.duration || 0)
-  };
-  updatePopupAudioState();
-  startAudioMonitoring();
-  return { success: true };
-}
-
-async function bgPauseAudio() {
-  if (!bgAudio) return { success: false, error: 'No audio' };
-  await bgAudio.pause();
-  audioState.isPlaying = false;
-  updatePopupAudioState();
-  return { success: true };
-}
-
-async function bgResumeAudio() {
-  if (!bgAudio) return { success: false, error: 'No audio' };
-  await bgAudio.play().catch(() => {});
-  audioState.isPlaying = true;
-  updatePopupAudioState();
-  startAudioMonitoring();
-  return { success: true };
-}
-
-async function bgSeekAudio(msg) {
-  if (!bgAudio) return { success: false, error: 'No audio' };
-  const pct = msg.percentage || 0;
-  const newTime = (bgAudio.duration || 0) * (pct / 100);
-  bgAudio.currentTime = newTime;
-  audioState.currentTime = Math.floor(newTime);
-  updatePopupAudioState();
-  return { success: true };
-}
-
-function bgGetAudioState() {
-  return { success: true, state: audioState };
 } 
