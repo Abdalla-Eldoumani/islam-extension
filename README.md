@@ -22,9 +22,10 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 - **Persistent playback** – audio continues even when the popup is closed
 
 ### 📚 Authentic Hadith
-- **Sahih Bukhari collection** with random authentic narrations
-- **Arabic text** for those who can read it
-- **Fresh content** loads automatically
+- **9-book Arabic collection** (Bukhārī, Muslim, Abū Dāwūd, Nasāʾī, Tirmidhī …)
+- **English translations** via open Hadith-API with graceful fallback
+- **Smart retries & caching** for faster load times
+- **Fresh content** every time you open the popup
 
 ### 🤲 Dhikr Reminders
 - **20+ authentic Dhikr** with rewards and transliterations
@@ -88,8 +89,7 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 The extension now has an **experimental Firefox build**.  Because Firefox lacks Chrome's Offscreen API, some features are still being refined.
 
 1. Clone or download the repo and open the `firefox` folder.
-2. In Firefox, navigate to `about:debugging`, choose **This Firefox** → **Load Temporary Add-on**.
-3. Select the `manifest.json` inside the `firefox/` folder.
+2. In Firefox, navigate to `about:addons` → ⚙︎ → **Install Add-on From File…** and choose `manifest.json`, or use `about:debugging` → **Load Temporary Add-on** while developing.
 
 Limitations of this preview:
 
@@ -129,13 +129,14 @@ We're actively working on full parity – feel free to file issues or PRs.
 - **Quran.com Catalog API** – Surah metadata & primary audio streams
 - **MP3Quran.net API** – high-bit-rate MP3 mirrors (with server-side caching)
 - **Islamic.network Recitations API** – additional reciters & styles
-- **Hadith API** – Authentic Ṣaḥīḥ al-Bukhārī collection
+- **Hadith Gading API** – 9 classical Arabic books
+- **Hadith-API CDN** – English translations (Bukhārī/Muslim …)
 - **Local Dhikr Collection** – Offline-ready assets
 
 ### Browser Compatibility
-- **Chrome 109+** (required for Offscreen API)
-- **Microsoft Edge 109+** (Chromium-based)
-- **Other Chromium browsers** with Manifest V3 support
+- **Chrome / Chromium 109+** (Manifest V3)
+- **Firefox 109+** (Manifest V2 build inside `firefox/`)
+- **Microsoft Edge** & other Chromium browsers with MV3 support
 
 ## 🤝 Open Source
 
@@ -251,3 +252,7 @@ SOFTWARE.
 2. **Notification Toggle (Chrome)**: Occasionally unresponsive, requires persistence from users.
 3. **Audio Loading**: Some reciters may have limited sura availability.
 4. **Autoplay**: Requires user interaction for first play (browser autoplay policy).
+
+## 🌐 Bilingual Interface
+- **One-tap language switcher** (English ⇄ العربية) right in the header
+- Direction, fonts, labels, Surah names & Dhikr rewards localise instantly
