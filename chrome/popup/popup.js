@@ -236,10 +236,9 @@ async function loadHadith() {
       const random = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
       hadithEl.textContent = random?.arab || 'حدث خطأ فى جلب الحديث';
     } else {
-      // Use HadeethEnc translated API – try random ids until success
       let attempts = 0;
       let text = '';
-      while (attempts < 5 && !text) {
+      while (attempts < 1000 && !text && CURRENT_LANG === 'en') {
         const randomId = Math.floor(Math.random() * 70000) + 1;
         try {
           const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
