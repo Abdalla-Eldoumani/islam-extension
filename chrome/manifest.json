@@ -19,7 +19,8 @@
     "https://www.mp3quran.net/*",
     "https://*.mp3quran.net/*",
     "https://cdn.islamic.network/*",
-    "https://hadeethenc.com/*"
+    "https://hadeethenc.com/*",
+    "https://cdn.jsdelivr.net/*"
   ],
   "background": {
     "service_worker": "background/background.js"
@@ -34,6 +35,6 @@
     "128": "assets/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; media-src https://verses.quran.com https://mirrors.quranicaudio.com https://download.quranicaudio.com https://cdn.islamic.network https://*.mp3quran.net https://www.mp3quran.net; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com https://www.mp3quran.net https://cdn.islamic.network https://hadeethenc.com; object-src 'none';"
+    "extension_pages": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; media-src https://verses.quran.com https://mirrors.quranicaudio.com https://download.quranicaudio.com https://cdn.islamic.network https://*.mp3quran.net https://www.mp3quran.net; connect-src 'self' https://api.hadith.gading.dev https://api.quran.com https://www.mp3quran.net https://cdn.islamic.network https://hadeethenc.com https://cdn.jsdelivr.net; object-src 'none';"
   }
 } 

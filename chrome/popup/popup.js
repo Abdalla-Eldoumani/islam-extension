@@ -232,37 +232,78 @@ async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
     if (CURRENT_LANG === 'ar') {
-      // Simple random Bukhari hadith in Arabic via Gading API
-      const res = await fetch('https://api.hadith.gading.dev/books/bukhari?range=1-300');
-      if (!res.ok) throw new Error('Network response was not ok.');
+      // ---------------- Arabic ----------------
+      const AR_BOOKS = [
+        { id: 'abu-daud', available: 4419 },
+        { id: 'ahmad', available: 4305 },
+        { id: 'bukhari', available: 6638 },
+        { id: 'darimi', available: 2949 },
+        { id: 'ibnu-majah', available: 4285 },
+        { id: 'malik', available: 1587 },
+        { id: 'muslim', available: 4930 },
+        { id: 'nasai', available: 5364 },
+        { id: 'tirmidzi', available: 3625 }
+      ];
+      const picked = AR_BOOKS[Math.floor(Math.random() * AR_BOOKS.length)];
+      const rand = Math.floor(Math.random() * picked.available) + 1;
+      const res = await fetch(`https://api.hadith.gading.dev/books/${picked.id}?range=${rand}-${rand}`);
+      if (!res.ok) throw new Error('Hadith API failed');
       const data = await res.json();
-      const random = data.data.hadiths[Math.floor(Math.random() * data.data.hadiths.length)];
-      hadithEl.textContent = random?.arab || 'حدث خطأ فى جلب الحديث';
+      const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
+      hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
     } else {
+      // ---------------- English ----------------
+      const EN_EDITIONS = [
+        { edition: 'eng-bukhari', count: 6638 },
+        { edition: 'eng-muslim', count: 4930 },
+        { edition: 'eng-abudawud', count: 4419 },
+        { edition: 'eng-nasai', count: 5364 },
+        { edition: 'eng-ibnmajah', count: 4285 },
+        { edition: 'eng-tirmidhi', count: 3625 },
+        { edition: 'eng-malik', count: 1587 }
+      ];
       let attempts = 0;
       let text = '';
-      while (attempts < 1000 && !text && CURRENT_LANG === 'en') {
-        const randomId = Math.floor(Math.random() * 70000) + 1;
+      while (attempts < 15 && !text) {
+        const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
+        const num = Math.floor(Math.random() * pick.count) + 1;
         try {
-          const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+          const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+          const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
-            text = data?.hadeeth || data?.title || '';
-            // Some ids return Arabic even in EN mode; skip those
-            if (/^[\u0600-\u06FF]/.test(text)) { // eslint-disable-line no-control-regex
-              text = '';
-            }
+            // The API returns { hadith : { english: "..." } } OR { english: "..." }
+            if (data.hadith?.english) text = data.hadith.english; else if (data.english) text = data.english;
           }
-        } catch {}
+        } catch {
+          console.log('Error fetching Hadith:', url);
+        }
         attempts++;
       }
+
+      // Fallback to slow HadeethEnc random if still empty
+      if (!text) {
+        let backupAttempts = 0;
+        while (backupAttempts < 100 && !text) {
+          const randomId = Math.floor(Math.random() * 5000) + 1;
+          try {
+            const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+            if (res.ok) {
+              const data = await res.json();
+              text = data?.hadeeth || data?.title || '';
+            }
+          } catch {
+            console.log('Error fetching Hadith:', "HadeethEnc");
+          }
+          backupAttempts++;
+        }
+      }
+
       hadithEl.textContent = text || 'Error loading Hadith.';
     }
   } catch (error) {
     console.error('Failed to load Hadith:', error);
-    hadithEl.textContent = CURRENT_LANG === 'ar'
-      ? 'لَا إِلَٰهَ إِلَّا اللَّهُ'
-      : 'There is no god but Allah';
+    hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
   }
 }
 
