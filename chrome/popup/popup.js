@@ -33,10 +33,13 @@ function setReciterInputByKey(key) {
 // --- LIFECYCLE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await setupQuranSelectors();
-  await Promise.all([loadHadith(), loadDhikr(), loadSavedAudioState()]);
-  setupEventHandlers();
   await initLanguage();
+
+  await setupQuranSelectors();
+
+  await Promise.all([loadDhikr(), loadSavedAudioState()]);
+
+  setupEventHandlers();
 });
 
 // --- UI SETUP & EVENT HANDLERS ---
@@ -1366,6 +1369,10 @@ function applyLanguage() {
     suraSelect.options[0].textContent = t('selectSura');
   }
 
+  // Reset Hadith area while we fetch a new one in the selected language
+  const hadithEl = document.getElementById('hadith-text');
+  if (hadithEl) hadithEl.textContent = t('loading');
+
   // Refresh dynamic texts that depend on language
   displayCurrentDhikr();
   // Reload hadith and sura names when language changes
@@ -1385,9 +1392,3 @@ function applyLanguage() {
     }
   }).catch(err => console.error('Failed to refresh suras for lang', CURRENT_LANG, err));
 }
-
-// ---------------------------
-// END I18N
-// ---------------------------
-
- 
