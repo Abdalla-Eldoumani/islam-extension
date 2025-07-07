@@ -91,6 +91,18 @@ function setupEventHandlers() {
     });
   });
 
+  // Clear button for reciter input -----------------------------------------
+  const clearReciterBtn = document.getElementById('clear-reciter');
+  if (clearReciterBtn) {
+    clearReciterBtn.addEventListener('click', () => {
+      // Remove current value and re-validate selection
+      reciterInput.value = '';
+      validateQuranSelection();
+      saveUserSelections();
+      reciterInput.focus();
+    });
+  }
+
   // datalist handles filtering natively, so no extra handler
 }
 
@@ -428,6 +440,48 @@ const dhikrCollection = [
     english: 'My Lord, inspire me to be grateful for Your blessing',
     transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
     reward: 'Dua for gratitude and righteous deeds'
+  },
+  {
+    arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
+    transliteration: 'La ilaha illallahu wahdahu la sharika lah, lahul mulk wa lahul hamd, wa huwa ala kulli shay\'in qadir',
+    reward: 'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَٰهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ',
+    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
+    transliteration: 'Subhan Allah, walhamdulillah, wa la ilaha illallah, wallahu akbar',
+    reward: 'More beloved to the Prophet than all the world and what it contains'
+  },
+  {
+    arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
+    transliteration: 'A\'udhu bi kalimatillahi at-tammati min sharri ma khalaq',
+    reward: 'Protection from harm until morning'
+  },
+  {
+    arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
+    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
+    transliteration: 'Bismillahi alladhi la yadurru ma\'a ismihi shay\'un fil-ardi wa la fis-sama\'i wa huwa as-sami\'u al-alim',
+    reward: 'Nothing will harm the one who says it three times in morning and evening'
+  },
+  {
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
+    english: 'Allah is sufficient for me; there is no god but Him. Upon Him I rely and He is the Lord of the mighty throne',
+    transliteration: 'Hasbiyallahu la ilaha illa Huwa, alayhi tawakkaltu wa Huwa Rabbul-Arsh il-Azeem',
+    reward: 'Whoever recites it seven times morning and evening Allah will suffice him'
+  },
+  {
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
+    english: 'My Lord, expand for me my chest and ease for me my task',
+    transliteration: 'Rabbi shrah li sadri wa yassir li amri',
+    reward: 'Ease in tasks and removal of anxiety'
+  },
+  {
+    arabic: 'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
+    english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
+    transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
+    reward: "Dua for parents leading to Allah's mercy"
   }
 ];
 
@@ -459,7 +513,16 @@ const DHIKR_REWARD_AR = {
   'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'بداية سيد الاستغفار',
   "Powerful dua for seeking Allah's help and mercy": 'دعاء قوي لطلب العون والرحمة',
   'Dua for guidance and righteousness': 'دعاء للهداية والاستقامة',
-  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح'
+  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح',
+  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'يعدل عتق 10 رقاب ويكتب 100 حسنة ويمحى 100 سيئة ويحفظه من الشيطان يومًا كاملاً',
+  'More beloved to the Prophet than all the world and what it contains': 'أحب إلى النبي مما طلعت عليه الشمس',
+  'Relief from anxieties and debts': 'فرج للهموم والدين',
+  'Protection from harm until morning': 'حفظ من كل أذى حتى الصباح',
+  'Nothing will harm the one who says it three times in morning and evening': 'لا يضره شيء إذا قالها ثلاثًا صباحًا ومساءً',
+  'Whoever recites it seven times morning and evening Allah will suffice him': 'من قالها سبع مرات صباحًا ومساءً كفاه الله',
+  'Ease in tasks and removal of anxiety': 'تيسير الأمور وشرح الصدر',
+  "Dua for parents leading to Allah's mercy": 'دعاء للوالدين يجلب رحمة الله',
+  'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
 };
 
 // Helper to get reward in current language ------------------------------------
@@ -483,7 +546,7 @@ function displayCurrentDhikr() {
     infoEl.textContent = reward ? `الأجر: ${reward}` : '';
   } else {
     // Default to English
-    textEl.textContent = `${dhikr.arabic} - ${dhikr.english}`;
+    textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
     infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
   }
 }
