@@ -376,12 +376,6 @@ const dhikrCollection = [
     reward: 'Allah sends 10 blessings for each one sent'
   },
   {
-    arabic: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-    english: 'In the name of Allah, the Most Gracious, the Most Merciful',
-    transliteration: 'Bismillahir-Rahmanir-Raheem',
-    reward: 'Protection and blessings in all affairs'
-  },
-  {
     arabic: 'رَبِّ اغْفِرْ لِي',
     english: 'My Lord, forgive me',
     transliteration: 'Rabbighfir li',
@@ -1369,7 +1363,10 @@ const I18N = {
     nextDhikr: "🔄 Next Dhikr",
     notificationsOn: "🔔 Notifications: ON",
     notificationsOff: "🔔 Notifications: OFF",
-    reminderLabel: "Reminder Interval (seconds):"
+    reminderLabel: "Reminder Interval (seconds):",
+    invalidInterval: "Please enter a value between 5 and 3600 seconds.",
+    notificationError: "An error occurred. Please try again.",
+    clearReciter: "✖ Clear"
   },
   ar: {
     appTitle: "رفيق القرآن والسنة",
@@ -1387,7 +1384,10 @@ const I18N = {
     nextDhikr: "🔄 الذكر التالي",
     notificationsOn: "🔔 الإشعارات: مفعلة",
     notificationsOff: "🔔 الإشعارات: معطلة",
-    reminderLabel: "فاصل التذكير (ثوان):"
+    reminderLabel: "فاصل التذكير (ثوان):",
+    invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
+    notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    clearReciter: "✖ مسح"
   }
 };
 
@@ -1472,6 +1472,28 @@ function applyLanguage() {
   if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
     suraSelect.options[0].textContent = t('selectSura');
   }
+
+  // Update clear reciter button
+  const clearReciterBtn = document.getElementById('clear-reciter');
+  if (clearReciterBtn) clearReciterBtn.textContent = t('clearReciter');
+
+  // Update current time and total time
+  const currentTimeEl = document.getElementById('current-time');
+  if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
+  const totalTimeEl = document.getElementById('total-time');
+  if (totalTimeEl) totalTimeEl.textContent = t('totalTime');
+  // Update hadith text
+  const hadithTextEl = document.getElementById('hadith-text');
+  if (hadithTextEl) hadithTextEl.textContent = t('hadithText');
+  // Update dhikr text
+  const dhikrTextEl = document.getElementById('dhikr-text');
+  if (dhikrTextEl) dhikrTextEl.textContent = t('dhikrText');
+  // Update interval validation
+  const intervalValidationEl = document.getElementById('interval-validation');
+  if (intervalValidationEl) intervalValidationEl.textContent = t('intervalValidation');
+  // Update notification message
+  const notificationMessageEl = document.getElementById('notification-message');
+  if (notificationMessageEl) notificationMessageEl.textContent = t('notificationMessage');
 
   // Reset Hadith area while we fetch a new one in the selected language
   const hadithEl = document.getElementById('hadith-text');
