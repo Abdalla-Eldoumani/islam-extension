@@ -710,47 +710,45 @@ async function fetchIslamicNetworkReciters() {
 
 // Aggregate loader ----------------------------------------------------------------
 async function fetchReciters() {
-  // 1) Try cached catalogue first ------------------------------------------------
-  try {
-    const { reciterCache } = await chrome.storage.local.get('reciterCache');
-    if (reciterCache && reciterCache.timestamp && Array.isArray(reciterCache.reciters)) {
-      const age = Date.now() - reciterCache.timestamp;
-      if (age < 24 * 60 * 60 * 1000) { // < 24h old
-        console.log('Using cached reciter catalogue (age', Math.round(age / 1000), 's)');
-        reciterCache.reciters.forEach(r => (RECITER_CATALOG[r.id] = r));
-        return reciterCache.reciters;
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to load reciter cache:', err);
-  }
-
-  // 2) Fetch fresh catalogues ----------------------------------------------------
-  const [qc, mp3q, isl] = await Promise.all([
+  const combined = (await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
     fetchIslamicNetworkReciters()
-  ]);
+  ])).flat();
 
-  const combined = [...qc, ...mp3q, ...isl];
+  // -----------------------------------------------
+  // 🧹  Deduplicate reciters across providers
+  // -----------------------------------------------
+  const dedupedMap = new Map();
+  combined.forEach(r => {
+    // Normalise key by reciter name + style (case-insensitive)
+    const key = `${r.reciter_name.toLowerCase()}|${(r.style || '').toLowerCase()}`;
+    if (!dedupedMap.has(key)) {
+      // First occurrence becomes canonical entry
+      dedupedMap.set(key, { ...r, altIds: [] });
+    } else {
+      // Duplicate – push to altIds so we still remember it
+      dedupedMap.get(key).altIds.push(r.id);
+    }
+  });
 
-  // Populate global catalogue for quick lookup later
-  combined.forEach(r => (RECITER_CATALOG[r.id] = r));
+  const deduped = Array.from(dedupedMap.values());
 
-  // Store in cache --------------------------------------------------------------
+  // Persist in global catalogue (canonical id only)
+  deduped.forEach(r => {
+    RECITER_CATALOG[r.id] = r;
+    // Also register alternative IDs to point to canonical entry
+    (r.altIds || []).forEach(alt => (RECITER_CATALOG[alt] = r));
+  });
+
+  // Cache deduped catalogue for 6 h (21 600 000 ms)
   try {
-    await chrome.storage.local.set({ reciterCache: { reciters: combined, timestamp: Date.now() } });
+    await chrome.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
   } catch (err) {
     console.warn('Failed to save reciter cache:', err);
   }
 
-  console.log(`Reciters fetched – Quran.com: ${qc.length}, MP3Quran: ${mp3q.length}, Islamic.network: ${isl.length}`);
-
-  // Sort alphabetically by name then style
-  return combined.sort((a, b) => {
-    const nameCompare = a.reciter_name.localeCompare(b.reciter_name);
-    return nameCompare !== 0 ? nameCompare : a.style.localeCompare(b.style);
-  });
+  return deduped.sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
 }
 
 // --- AUDIO LOGIC ---
