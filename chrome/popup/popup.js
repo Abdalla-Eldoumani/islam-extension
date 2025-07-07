@@ -1011,19 +1011,25 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
 
-  playButton.disabled = !isEnabled;
+  // Enable/disable interactions depending on allowed state
   pauseButton.disabled = !isEnabled;
-  
+
   const hasProgress = currentTime > 0 || document.getElementById('progress-bar').value > 0;
-  
+
   if (isPlaying) {
-    playButton.classList.add('hidden');
+    // Audio currently playing ---------------------------------------------
+    playButton.classList.remove('hidden');
+    playButton.disabled = true;
+    playButton.textContent = t('playing');
+    playButton.dataset.action = '';
     pauseButton.classList.remove('hidden');
     pauseButton.textContent = t('pause');
   } else {
+    // Audio not playing (stopped or paused) --------------------------------
+    playButton.classList.remove('hidden');
+    playButton.disabled = !isEnabled;
     playButton.textContent = hasProgress ? t('resume') : t('play');
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
-    playButton.classList.remove('hidden');
     pauseButton.classList.add('hidden');
   }
 }
@@ -1361,6 +1367,7 @@ const I18N = {
     nextDhikr: "🔄 Next Dhikr",
     notificationsOn: "🔔 Notifications: ON",
     notificationsOff: "🔔 Notifications: OFF",
+    playing: "▶ Playing",
     reminderLabel: "Reminder Interval (seconds):",
     invalidInterval: "Please enter a value between 5 and 3600 seconds.",
     notificationError: "An error occurred. Please try again.",
@@ -1382,6 +1389,7 @@ const I18N = {
     nextDhikr: "🔄 الذكر التالي",
     notificationsOn: "🔔 الإشعارات: مفعلة",
     notificationsOff: "🔔 الإشعارات: معطلة",
+    playing: "▶ قيد التشغيل",
     reminderLabel: "فاصل التذكير (ثوان):",
     invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
     notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
