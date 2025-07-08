@@ -13,6 +13,17 @@ let currentAudioState = {
   reciterKey: null
 };
 
+// ---------------------------------------------------------------------------
+// Logging control – keep errors/warnings but silence verbose logs in release
+// ---------------------------------------------------------------------------
+if (typeof console !== 'undefined') {
+  console._log = console.log;
+  const ENV_PROD = true;
+  if (ENV_PROD) {
+    console.log = () => {};
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Offscreen: Received message:', message.action, message);
   

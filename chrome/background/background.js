@@ -3,6 +3,17 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
+// ---------------------------------------------------------------------------
+// Logging control – keep errors/warnings but silence verbose logs in release
+// ---------------------------------------------------------------------------
+if (typeof console !== 'undefined') {
+  console._log = console.log; // preserve original for dev
+  const ENV_PROD = true; // flip to false when actively debugging background
+  if (ENV_PROD) {
+    console.log = () => {};
+  }
+}
+
 const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
