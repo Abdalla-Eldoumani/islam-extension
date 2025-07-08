@@ -13,6 +13,17 @@ let currentAudioState = {
   reciterKey: null
 };
 
+// ---------------------------------------------------------------------------
+// Logging control – keep errors/warnings but silence verbose logs in release
+// ---------------------------------------------------------------------------
+if (typeof console !== 'undefined') {
+  console._log = console.log;
+  const ENV_PROD = true;
+  if (ENV_PROD) {
+    console.log = () => {};
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Offscreen: Received message:', message.action, message);
   
@@ -199,6 +210,30 @@ function pauseAudio() {
 
 async function resumeAudio() {
   try {
+    // If we have no previous source, bail early
+    if (!currentAudioState.audioUrl) {
+      throw new Error('No audio loaded to resume');
+    }
+
+    // Chrome may suspend the media element after long inactivity; if the
+    // element is in a weird state (network idle, readyState 0, etc.) reload it.
+    const needsReload = (
+      audioPlayer.readyState === 0 || // HAVE_NOTHING
+      audioPlayer.networkState === 3   // NETWORK_NO_SOURCE
+    );
+
+    if (needsReload) {
+      console.log('Offscreen: Audio element stale, reloading source before resume');
+      await playAudio(currentAudioState.audioUrl, currentAudioState.suraId, currentAudioState.reciterKey);
+      // Seek to previous position if > 0 and within duration
+      if (currentAudioState.currentTime > 0 && audioPlayer.duration > currentAudioState.currentTime) {
+        audioPlayer.currentTime = currentAudioState.currentTime;
+      }
+      currentAudioState.isPlaying = true;
+      await saveAudioState();
+      return;
+    }
+
     const playPromise = audioPlayer.play();
     if (playPromise !== undefined) {
       await playPromise;

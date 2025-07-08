@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dhikr Reminder</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { margin:0; display:flex; align-items:center; justify-content:center; height:100vh; background: var(--clr-bg); }
+    .reminder-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(8px) saturate(160%); border-radius: 1rem; padding:1rem 1.25rem; width: 90%; max-width: 360px; box-shadow:0 6px 18px rgba(0,0,0,0.2); position:relative; text-align:center; }
+    .close-btn { position:absolute; top:0.5rem; right:0.5rem; background:none; border:none; font-size:1.25rem; cursor:pointer; color:var(--clr-text); }
+    .dhikr-arabic { font-size:1.25rem; font-weight:600; margin-bottom:0.5rem; font-family:'Cairo', sans-serif; }
+    .dhikr-translit { font-size:0.85rem; color:#555; margin-bottom:0.25rem; }
+    .dhikr-english { font-size:0.95rem; margin-bottom:0.25rem; }
+    .dhikr-reward { font-size:0.8rem; color:#777; }
+  </style>
+</head>
+<body>
+  <div class="reminder-card">
+    <button class="close-btn" id="close-btn">✖</button>
+    <div class="dhikr-arabic" id="arabic"></div>
+    <div class="dhikr-translit" id="translit"></div>
+    <div class="dhikr-english" id="english"></div>
+    <div class="dhikr-reward" id="reward"></div>
+  </div>
+
+  <script src="reminder.js"></script>
+</body>
+</html> 

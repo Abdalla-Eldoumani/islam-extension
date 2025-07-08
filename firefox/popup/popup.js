@@ -91,6 +91,39 @@ function setupEventHandlers() {
     });
   });
 
+  // Clear button for reciter input -----------------------------------------
+  const clearReciterBtn = document.getElementById('clear-reciter');
+  if (clearReciterBtn) {
+    clearReciterBtn.addEventListener('click', () => {
+      // Remove current value and re-validate selection
+      reciterInput.value = '';
+      validateQuranSelection();
+      saveUserSelections();
+      reciterInput.focus();
+    });
+  }
+
+  // Reminder mode selector change ------------------------------------------
+  const modeSelect = document.getElementById('reminder-mode');
+  if (modeSelect) {
+    modeSelect.addEventListener('change', async () => {
+      await saveDhikrSettings();
+
+      // If notifications already active, update mode in background
+      const notifEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
+      if (notifEnabled) {
+        const newMode = modeSelect.value;
+        chrome.runtime.sendMessage({ action: 'updateDhikrMode', mode: newMode }, (resp) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Failed to update mode:', chrome.runtime.lastError.message);
+          } else {
+            // console.log('Mode updated:', resp);
+          }
+        });
+      }
+    });
+  }
+
   // datalist handles filtering natively, so no extra handler
 }
 
@@ -125,7 +158,7 @@ async function saveUserSelections() {
     };
     
     await chrome.storage.local.set({ userSelections });
-    console.log('Saved user selections:', userSelections);
+    // console.log('Saved user selections:', userSelections);
   } catch (error) {
     console.error('Failed to save user selections:', error);
   }
@@ -138,7 +171,7 @@ async function loadSavedAudioState() {
     
     // First, restore user selections (even if no audio is playing)
     if (userSelections?.suraId || userSelections?.reciterKey) {
-      console.log('Restoring user selections:', userSelections);
+      // console.log('Restoring user selections:', userSelections);
       
       if (userSelections.suraId) {
         document.getElementById('sura-select').value = userSelections.suraId;
@@ -181,19 +214,19 @@ async function loadSavedAudioState() {
       const currentSuraId = document.getElementById('sura-select').value;
       const currentReciterKey = getReciterKey();
       
-      console.log('Checking audio state:', { 
-        audioState: stateResponse.state, 
-        currentSuraId, 
-        currentReciterKey,
-        stateSuraId: stateResponse.state.suraId,
-        stateReciterKey: stateResponse.state.reciterKey
-      });
+      // console.log('Checking audio state:', { 
+      //   audioState: stateResponse.state, 
+      //   currentSuraId, 
+      //   currentReciterKey,
+      //   stateSuraId: stateResponse.state.suraId,
+      //   stateReciterKey: stateResponse.state.reciterKey
+      // });
       
       // If the audio state matches current selections, restore the playback UI
       if (stateResponse.state.reciterKey === currentReciterKey && 
           stateResponse.state.suraId === currentSuraId) {
         
-        console.log('Restoring audio playback state:', stateResponse.state);
+        // console.log('Restoring audio playback state:', stateResponse.state);
         updateProgressUI(stateResponse.state);
         updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
         
@@ -203,7 +236,7 @@ async function loadSavedAudioState() {
       } else if (stateResponse.state.reciterKey && stateResponse.state.suraId) {
         // If there's an active audio session but it doesn't match current selections,
         // update the selections to match the active session
-        console.log('Updating selections to match active audio session');
+        // console.log('Updating selections to match active audio session');
         
         if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === stateResponse.state.suraId)) {
           document.getElementById('sura-select').value = stateResponse.state.suraId;
@@ -252,51 +285,40 @@ async function loadHadith() {
       const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
       hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
     } else {
-      // ---------------- English ----------------
-      const EN_EDITIONS = [
-        { edition: 'eng-bukhari', count: 6638 },
-        { edition: 'eng-muslim', count: 4930 },
-        { edition: 'eng-abudawud', count: 4419 },
-        { edition: 'eng-nasai', count: 5364 },
-        { edition: 'eng-ibnmajah', count: 4285 },
-        { edition: 'eng-tirmidhi', count: 3625 },
-        { edition: 'eng-malik', count: 1587 }
-      ];
-      let attempts = 0;
+      // ---------------- English with local cache ----------------
+      const CACHE_KEY = 'hadithCacheEn';
+      const TARGET_CACHE_SIZE = 30;
+
+      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
+      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
+
       let text = '';
-      while (attempts < 15 && !text) {
-        const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
-        const num = Math.floor(Math.random() * pick.count) + 1;
-        try {
-          const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            // The API returns { hadith : { english: "..." } } OR { english: "..." }
-            if (data.hadith?.english) text = data.hadith.english; else if (data.english) text = data.english;
-          }
-        } catch {
-          console.log('Error fetching Hadith:', url);
-        }
-        attempts++;
+      if (cacheArr.length > 0) {
+        text = cacheArr.shift(); // use first item
+        // save trimmed cache back but don't await to prevent UI delay
+        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
       }
 
-      // Fallback to slow HadeethEnc random if still empty
       if (!text) {
-        let backupAttempts = 0;
-        while (backupAttempts < 100 && !text) {
-          const randomId = Math.floor(Math.random() * 5000) + 1;
+        text = await fetchRandomEnglishHadith();
+      }
+
+      // Top-up the cache asynchronously if it's below threshold
+      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
+        (async () => {
           try {
-            const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
-            if (res.ok) {
-              const data = await res.json();
-              text = data?.hadeeth || data?.title || '';
+            const needed = TARGET_CACHE_SIZE - cacheArr.length;
+            const newOnes = [];
+            for (let i = 0; i < needed; i++) {
+              const h = await fetchRandomEnglishHadith();
+              if (h) newOnes.push(h);
             }
-          } catch {
-            console.log('Error fetching Hadith:', "HadeethEnc");
+            const updated = cacheArr.concat(newOnes);
+            await chrome.storage.local.set({ [CACHE_KEY]: updated });
+          } catch (err) {
+            console.warn('Failed to refill hadith cache:', err);
           }
-          backupAttempts++;
-        }
+        })();
       }
 
       hadithEl.textContent = text || 'Error loading Hadith.';
@@ -305,6 +327,49 @@ async function loadHadith() {
     console.error('Failed to load Hadith:', error);
     hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
   }
+}
+
+// Helper: fetch a single random English hadith (tries fast JSdelivr, fallback HadeethEnc)
+async function fetchRandomEnglishHadith() {
+  const EN_EDITIONS = [
+    { edition: 'eng-bukhari', count: 6638 },
+    { edition: 'eng-muslim', count: 4930 },
+    { edition: 'eng-abudawud', count: 4419 },
+    { edition: 'eng-nasai', count: 5364 },
+    { edition: 'eng-ibnmajah', count: 4285 },
+    { edition: 'eng-tirmidhi', count: 3625 },
+    { edition: 'eng-malik', count: 1587 }
+  ];
+
+  // Try JSDelivr first – 6 quick attempts (random editions)
+  for (let i = 0; i < 6; i++) {
+    const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
+    const num = Math.floor(Math.random() * pick.count) + 1;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.hadith?.english || data.english;
+        if (text) return text;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // Fallback – up to 20 attempts on HadeethEnc (random IDs)
+  for (let j = 0; j < 20; j++) {
+    const randomId = Math.floor(Math.random() * 5000) + 1;
+    try {
+      const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const txt = data?.hadeeth || data?.title;
+        if (txt) return txt;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  return '';
 }
 
 // Comprehensive collection of authentic Dhikr with their rewards
@@ -362,12 +427,6 @@ const dhikrCollection = [
     english: 'O Allah, send blessings upon Muhammad',
     transliteration: 'Allahumma salli ala Muhammad',
     reward: 'Allah sends 10 blessings for each one sent'
-  },
-  {
-    arabic: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-    english: 'In the name of Allah, the Most Gracious, the Most Merciful',
-    transliteration: 'Bismillahir-Rahmanir-Raheem',
-    reward: 'Protection and blessings in all affairs'
   },
   {
     arabic: 'رَبِّ اغْفِرْ لِي',
@@ -428,6 +487,48 @@ const dhikrCollection = [
     english: 'My Lord, inspire me to be grateful for Your blessing',
     transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
     reward: 'Dua for gratitude and righteous deeds'
+  },
+  {
+    arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
+    transliteration: 'La ilaha illallahu wahdahu la sharika lah, lahul mulk wa lahul hamd, wa huwa ala kulli shay\'in qadir',
+    reward: 'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَٰهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ',
+    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
+    transliteration: 'Subhan Allah, walhamdulillah, wa la ilaha illallah, wallahu akbar',
+    reward: 'More beloved to the Prophet than all the world and what it contains'
+  },
+  {
+    arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
+    transliteration: 'A\'udhu bi kalimatillahi at-tammati min sharri ma khalaq',
+    reward: 'Protection from harm until morning'
+  },
+  {
+    arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
+    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
+    transliteration: 'Bismillahi alladhi la yadurru ma\'a ismihi shay\'un fil-ardi wa la fis-sama\'i wa huwa as-sami\'u al-alim',
+    reward: 'Nothing will harm the one who says it three times in morning and evening'
+  },
+  {
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
+    english: 'Allah is sufficient for me; there is no god but Him. Upon Him I rely and He is the Lord of the mighty throne',
+    transliteration: 'Hasbiyallahu la ilaha illa Huwa, alayhi tawakkaltu wa Huwa Rabbul-Arsh il-Azeem',
+    reward: 'Whoever recites it seven times morning and evening Allah will suffice him'
+  },
+  {
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
+    english: 'My Lord, expand for me my chest and ease for me my task',
+    transliteration: 'Rabbi shrah li sadri wa yassir li amri',
+    reward: 'Ease in tasks and removal of anxiety'
+  },
+  {
+    arabic: 'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
+    english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
+    transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
+    reward: "Dua for parents leading to Allah's mercy"
   }
 ];
 
@@ -459,7 +560,16 @@ const DHIKR_REWARD_AR = {
   'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'بداية سيد الاستغفار',
   "Powerful dua for seeking Allah's help and mercy": 'دعاء قوي لطلب العون والرحمة',
   'Dua for guidance and righteousness': 'دعاء للهداية والاستقامة',
-  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح'
+  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح',
+  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'يعدل عتق 10 رقاب ويكتب 100 حسنة ويمحى 100 سيئة ويحفظه من الشيطان يومًا كاملاً',
+  'More beloved to the Prophet than all the world and what it contains': 'أحب إلى النبي مما طلعت عليه الشمس',
+  'Relief from anxieties and debts': 'فرج للهموم والدين',
+  'Protection from harm until morning': 'حفظ من كل أذى حتى الصباح',
+  'Nothing will harm the one who says it three times in morning and evening': 'لا يضره شيء إذا قالها ثلاثًا صباحًا ومساءً',
+  'Whoever recites it seven times morning and evening Allah will suffice him': 'من قالها سبع مرات صباحًا ومساءً كفاه الله',
+  'Ease in tasks and removal of anxiety': 'تيسير الأمور وشرح الصدر',
+  "Dua for parents leading to Allah's mercy": 'دعاء للوالدين يجلب رحمة الله',
+  'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
 };
 
 // Helper to get reward in current language ------------------------------------
@@ -483,7 +593,7 @@ function displayCurrentDhikr() {
     infoEl.textContent = reward ? `الأجر: ${reward}` : '';
   } else {
     // Default to English
-    textEl.textContent = `${dhikr.arabic} - ${dhikr.english}`;
+    textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
     infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
   }
 }
@@ -498,10 +608,15 @@ async function loadDhikrSettings() {
     if (dhikrSettings) {
       const notificationsEnabled = dhikrSettings.notificationsEnabled || false;
       const interval = dhikrSettings.interval || 60;
+      const mode = dhikrSettings.mode || 'notification';
       
       document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
       document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
       document.getElementById('dhikr-interval').value = interval;
+      
+      // Set reminder mode selector
+      const modeSelect = document.getElementById('reminder-mode');
+      if (modeSelect) modeSelect.value = mode;
       
       if (notificationsEnabled) {
         document.getElementById('notification-settings').classList.remove('hidden');
@@ -517,10 +632,12 @@ async function saveDhikrSettings() {
   try {
     const notificationsEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
     const interval = parseInt(document.getElementById('dhikr-interval').value);
+    const mode = document.getElementById('reminder-mode')?.value || 'notification';
     
     const dhikrSettings = {
       notificationsEnabled,
       interval,
+      mode,
       timestamp: Date.now()
     };
     
@@ -573,7 +690,7 @@ async function fetchSuras(lang = CURRENT_LANG || 'en') {
   const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
-  console.log(`Fetched ${chapters.length} surahs for lang`, lang);
+  // console.log(`Fetched ${chapters.length} surahs for lang`, lang);
   return chapters;
 }
 
@@ -653,47 +770,45 @@ async function fetchIslamicNetworkReciters() {
 
 // Aggregate loader ----------------------------------------------------------------
 async function fetchReciters() {
-  // 1) Try cached catalogue first ------------------------------------------------
-  try {
-    const { reciterCache } = await chrome.storage.local.get('reciterCache');
-    if (reciterCache && reciterCache.timestamp && Array.isArray(reciterCache.reciters)) {
-      const age = Date.now() - reciterCache.timestamp;
-      if (age < 24 * 60 * 60 * 1000) { // < 24h old
-        console.log('Using cached reciter catalogue (age', Math.round(age / 1000), 's)');
-        reciterCache.reciters.forEach(r => (RECITER_CATALOG[r.id] = r));
-        return reciterCache.reciters;
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to load reciter cache:', err);
-  }
-
-  // 2) Fetch fresh catalogues ----------------------------------------------------
-  const [qc, mp3q, isl] = await Promise.all([
+  const combined = (await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
     fetchIslamicNetworkReciters()
-  ]);
+  ])).flat();
 
-  const combined = [...qc, ...mp3q, ...isl];
+  // -----------------------------------------------
+  // 🧹  Deduplicate reciters across providers
+  // -----------------------------------------------
+  const dedupedMap = new Map();
+  combined.forEach(r => {
+    // Normalise key by reciter name + style (case-insensitive)
+    const key = `${r.reciter_name.toLowerCase()}|${(r.style || '').toLowerCase()}`;
+    if (!dedupedMap.has(key)) {
+      // First occurrence becomes canonical entry
+      dedupedMap.set(key, { ...r, altIds: [] });
+    } else {
+      // Duplicate – push to altIds so we still remember it
+      dedupedMap.get(key).altIds.push(r.id);
+    }
+  });
 
-  // Populate global catalogue for quick lookup later
-  combined.forEach(r => (RECITER_CATALOG[r.id] = r));
+  const deduped = Array.from(dedupedMap.values());
 
-  // Store in cache --------------------------------------------------------------
+  // Persist in global catalogue (canonical id only)
+  deduped.forEach(r => {
+    RECITER_CATALOG[r.id] = r;
+    // Also register alternative IDs to point to canonical entry
+    (r.altIds || []).forEach(alt => (RECITER_CATALOG[alt] = r));
+  });
+
+  // Cache deduped catalogue for 6 h (21 600 000 ms)
   try {
-    await chrome.storage.local.set({ reciterCache: { reciters: combined, timestamp: Date.now() } });
+    await chrome.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
   } catch (err) {
     console.warn('Failed to save reciter cache:', err);
   }
 
-  console.log(`Reciters fetched – Quran.com: ${qc.length}, MP3Quran: ${mp3q.length}, Islamic.network: ${isl.length}`);
-
-  // Sort alphabetically by name then style
-  return combined.sort((a, b) => {
-    const nameCompare = a.reciter_name.localeCompare(b.reciter_name);
-    return nameCompare !== 0 ? nameCompare : a.style.localeCompare(b.style);
-  });
+  return deduped.sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
 }
 
 // --- AUDIO LOGIC ---
@@ -956,19 +1071,25 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
 
-  playButton.disabled = !isEnabled;
+  // Enable/disable interactions depending on allowed state
   pauseButton.disabled = !isEnabled;
-  
+
   const hasProgress = currentTime > 0 || document.getElementById('progress-bar').value > 0;
-  
+
   if (isPlaying) {
-    playButton.classList.add('hidden');
+    // Audio currently playing ---------------------------------------------
+    playButton.classList.remove('hidden');
+    playButton.disabled = true;
+    playButton.textContent = t('playing');
+    playButton.dataset.action = '';
     pauseButton.classList.remove('hidden');
     pauseButton.textContent = t('pause');
   } else {
+    // Audio not playing (stopped or paused) --------------------------------
+    playButton.classList.remove('hidden');
+    playButton.disabled = !isEnabled;
     playButton.textContent = hasProgress ? t('resume') : t('play');
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
-    playButton.classList.remove('hidden');
     pauseButton.classList.add('hidden');
   }
 }
@@ -1100,6 +1221,7 @@ async function toggleDhikrNotifications() {
       // Starting notifications
       settingsPanel.classList.remove('hidden');
       const interval = parseInt(document.getElementById('dhikr-interval').value);
+      const mode = document.getElementById('reminder-mode')?.value || 'notification';
       updatePresetButtons(interval);
       
       console.log('Sending startDhikrNotifications message...');
@@ -1109,7 +1231,8 @@ async function toggleDhikrNotifications() {
         new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
             action: 'startDhikrNotifications',
-            interval: interval
+            interval: interval,
+            mode: mode
           }, (response) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1306,7 +1429,14 @@ const I18N = {
     nextDhikr: "🔄 Next Dhikr",
     notificationsOn: "🔔 Notifications: ON",
     notificationsOff: "🔔 Notifications: OFF",
-    reminderLabel: "Reminder Interval (seconds):"
+    playing: "▶ Playing",
+    reminderStyle: "Reminder Style:",
+    modeNotification: "📣 Notification",
+    modePopup: "🗔 Pop-up",
+    reminderLabel: "Reminder Interval (seconds):",
+    invalidInterval: "Please enter a value between 5 and 3600 seconds.",
+    notificationError: "An error occurred. Please try again.",
+    clearReciter: "✖ Clear"
   },
   ar: {
     appTitle: "رفيق القرآن والسنة",
@@ -1324,7 +1454,14 @@ const I18N = {
     nextDhikr: "🔄 الذكر التالي",
     notificationsOn: "🔔 الإشعارات: مفعلة",
     notificationsOff: "🔔 الإشعارات: معطلة",
-    reminderLabel: "فاصل التذكير (ثوان):"
+    playing: "▶ قيد التشغيل",
+    reminderStyle: "نوع التذكير:",
+    modeNotification: "📣 إشعار",
+    modePopup: "🗔 نافذة منبثقة",
+    reminderLabel: "فاصل التذكير (ثوان):",
+    invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
+    notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    clearReciter: "✖ مسح"
   }
 };
 
@@ -1382,6 +1519,16 @@ function applyLanguage() {
   const reminderLabel = document.getElementById('reminder-label');
   if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `; // preserve spacing
 
+  // Reminder style label & options
+  const reminderStyleLabel = document.getElementById('reminder-style-label');
+  if (reminderStyleLabel) reminderStyleLabel.childNodes[0].nodeValue = `${t('reminderStyle')}\n            `;
+
+  const modeSelect = document.getElementById('reminder-mode');
+  if (modeSelect && modeSelect.options.length >= 2) {
+    modeSelect.options[0].textContent = t('modeNotification');
+    modeSelect.options[1].textContent = t('modePopup');
+  }
+
   // Buttons that exist at load
   const playBtn = document.getElementById('play-quran');
   if (playBtn && playBtn.dataset.action === 'play') playBtn.textContent = t('play');
@@ -1409,6 +1556,28 @@ function applyLanguage() {
   if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
     suraSelect.options[0].textContent = t('selectSura');
   }
+
+  // Update clear reciter button
+  const clearReciterBtn = document.getElementById('clear-reciter');
+  if (clearReciterBtn) clearReciterBtn.textContent = t('clearReciter');
+
+  // Update current time and total time
+  const currentTimeEl = document.getElementById('current-time');
+  if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
+  const totalTimeEl = document.getElementById('total-time');
+  if (totalTimeEl) totalTimeEl.textContent = t('totalTime');
+  // Update hadith text
+  const hadithTextEl = document.getElementById('hadith-text');
+  if (hadithTextEl) hadithTextEl.textContent = t('hadithText');
+  // Update dhikr text
+  const dhikrTextEl = document.getElementById('dhikr-text');
+  if (dhikrTextEl) dhikrTextEl.textContent = t('dhikrText');
+  // Update interval validation
+  const intervalValidationEl = document.getElementById('interval-validation');
+  if (intervalValidationEl) intervalValidationEl.textContent = t('intervalValidation');
+  // Update notification message
+  const notificationMessageEl = document.getElementById('notification-message');
+  if (notificationMessageEl) notificationMessageEl.textContent = t('notificationMessage');
 
   // Reset Hadith area while we fetch a new one in the selected language
   const hadithEl = document.getElementById('hadith-text');

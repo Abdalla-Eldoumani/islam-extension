@@ -28,6 +28,8 @@
         <!-- Combined reciter picker with inline search -->
         <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
         <datalist id="reciter-list"></datalist>
+        <!-- Clear selection button for better UX -->
+        <button class="card__button card__button--secondary" id="clear-reciter" title="Clear reciter selection">✖ Clear</button>
 
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
@@ -69,6 +71,14 @@
             <button class="card__preset" data-seconds="900">15m</button>
           </div>
           <div class="card__validation-message hidden" id="interval-validation"></div>
+          <!-- Reminder style selector -->
+          <label class="card__label" id="reminder-style-label">
+            Reminder Style:
+            <select id="reminder-mode" class="card__select">
+              <option value="notification">📣 Notification</option>
+              <option value="popup">🗔 Pop-up</option>
+            </select>
+          </label>
         </div>
       </article>
     </section>
