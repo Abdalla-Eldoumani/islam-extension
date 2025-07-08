@@ -1,4 +1,3 @@
-// Reads the latest dhikr from storage and displays it
 async function loadDhikr() {
   try {
     const { currentDhikr } = await chrome.storage.local.get('currentDhikr');
@@ -19,5 +18,4 @@ function updateUI(dhikr) {
 
 document.getElementById('close-btn').addEventListener('click', () => window.close());
 
-// Initially populate once DOM ready
 window.addEventListener('DOMContentLoaded', loadDhikr); 
