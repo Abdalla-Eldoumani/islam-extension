@@ -12,26 +12,26 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 ## 🌟 Features
 
 ### 📖 Qur'an Recitation
-- **50+ reciters** sourced from a unified catalog that merges Quran.com, MP3Quran, and Islamic.network
-- **Instant search filter** – start typing to quickly find your favourite Qāriʾ
-- **Bit-rate & style labels** shown for every recording (e.g., 128 kbps Murattal, 64 kbps Muʿallim)
-- **Resilient audio fallback** – automatically tries alternative mirrors if a file is missing
-- **All 114 Sūrahs** with high-quality audio
-- **Autoplay** to continue seamlessly through consecutive Sūrahs
-- **Progress tracking** with seek controls
-- **Persistent playback** – audio continues even when the popup is closed
+* **50+ reciters** combined from Quran.com, MP3Quran & Islamic.network **with automatic de-duplication** (names/styles collapsed into a single clean entry)
+* **Inline search** — type to filter instantly
+* **Bit-rate & style badges** (e.g. 128 kbps Murattal)
+* **"Clear ✖" button** to reset the reciter field in one click
+* **Resilient fallback chain** if a file is missing
+* **All 114 Sūrahs**, progress bar & seek controls
+* **Autoplay** next surah + background playback (offscreen API)
 
 ### 📚 Authentic Hadith
-- **9-book Arabic collection** (Bukhārī, Muslim, Abū Dāwūd, Nasāʾī, Tirmidhī …)
-- **English translations** via open Hadith-API with graceful fallback
-- **Smart retries & caching** for faster load times
-- **Fresh content** every time you open the popup
+* **9-book Arabic collection**
+* **Super-fast English translations** (30-item local cache for instant display)
+* Automatic fallback to secondary API if translation fails
+* New hadith each time you open the popup
 
 ### 🤲 Dhikr Reminders
-- **20+ authentic Dhikr** with rewards and transliterations
-- **Customizable notifications** (30 seconds to 1 hour intervals)
-- **Background reminders** to keep you connected throughout the day
-- **Authentic rewards** mentioned for each remembrance
+* **Dozens of authentic adhkār** — now with **Arabic, English & transliteration** side-by-side
+* **Reminder style selector:** 📣 *System Notification* **or** 🗔 *In-extension Pop-up*
+* **Smart cache** so English adhkār load instantly offline
+* Custom interval (5 s – 1 h) + quick-preset buttons
+* Rewards displayed in both languages
 
 ### 🔒 Privacy & Performance
 - **Zero personal data collection** - completely private
@@ -84,19 +84,14 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 3. Click **Play** to start listening
 4. Explore Hadith and set up Dhikr reminders
 
-### Option 3: Firefox (Early Preview)
+### Option 3: Firefox
 
-The extension now has an **experimental Firefox build**.  Because Firefox lacks Chrome's Offscreen API, some features are still being refined.
+Full **feature-parity Firefox build** is included under `firefox/`.
 
-1. Clone or download the repo and open the `firefox` folder.
-2. In Firefox, navigate to `about:addons` → ⚙︎ → **Install Add-on From File…** and choose `manifest.json`, or use `about:debugging` → **Load Temporary Add-on** while developing.
+1. Download/clone the repo and open the `firefox` folder.
+2. In Firefox, visit `about:addons` → ⚙︎ **Install Add-on From File…** and select `manifest.json` (or use `about:debugging` → **Load Temporary Add-on** in developer mode).
 
-Limitations of this preview:
-
-* Qurʼān audio plays, but **Autoplay to the next surah is disabled**.
-* Dhikr **notifications don't fire yet**; the button is currently a no-op.
-
-We're actively working on full parity – feel free to file issues or PRs.
+All Qurʼān playback, Dhikr reminders (including pop-up mode), Hadith loading, and UI enhancements work just like the Chrome version.
 
 ## 📱 How to Use
 
