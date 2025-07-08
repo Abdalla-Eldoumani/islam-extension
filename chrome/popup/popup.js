@@ -285,51 +285,40 @@ async function loadHadith() {
       const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
       hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
     } else {
-      // ---------------- English ----------------
-      const EN_EDITIONS = [
-        { edition: 'eng-bukhari', count: 6638 },
-        { edition: 'eng-muslim', count: 4930 },
-        { edition: 'eng-abudawud', count: 4419 },
-        { edition: 'eng-nasai', count: 5364 },
-        { edition: 'eng-ibnmajah', count: 4285 },
-        { edition: 'eng-tirmidhi', count: 3625 },
-        { edition: 'eng-malik', count: 1587 }
-      ];
-      let attempts = 0;
+      // ---------------- English with local cache ----------------
+      const CACHE_KEY = 'hadithCacheEn';
+      const TARGET_CACHE_SIZE = 30;
+
+      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
+      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
+
       let text = '';
-      while (attempts < 15 && !text) {
-        const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
-        const num = Math.floor(Math.random() * pick.count) + 1;
-        try {
-          const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            // The API returns { hadith : { english: "..." } } OR { english: "..." }
-            if (data.hadith?.english) text = data.hadith.english; else if (data.english) text = data.english;
-          }
-        } catch {
-          console.log('Error fetching Hadith:', url);
-        }
-        attempts++;
+      if (cacheArr.length > 0) {
+        text = cacheArr.shift(); // use first item
+        // save trimmed cache back but don't await to prevent UI delay
+        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
       }
 
-      // Fallback to slow HadeethEnc random if still empty
       if (!text) {
-        let backupAttempts = 0;
-        while (backupAttempts < 100 && !text) {
-          const randomId = Math.floor(Math.random() * 5000) + 1;
+        text = await fetchRandomEnglishHadith();
+      }
+
+      // Top-up the cache asynchronously if it's below threshold
+      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
+        (async () => {
           try {
-            const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
-            if (res.ok) {
-              const data = await res.json();
-              text = data?.hadeeth || data?.title || '';
+            const needed = TARGET_CACHE_SIZE - cacheArr.length;
+            const newOnes = [];
+            for (let i = 0; i < needed; i++) {
+              const h = await fetchRandomEnglishHadith();
+              if (h) newOnes.push(h);
             }
-          } catch {
-            console.log('Error fetching Hadith:', "HadeethEnc");
+            const updated = cacheArr.concat(newOnes);
+            await chrome.storage.local.set({ [CACHE_KEY]: updated });
+          } catch (err) {
+            console.warn('Failed to refill hadith cache:', err);
           }
-          backupAttempts++;
-        }
+        })();
       }
 
       hadithEl.textContent = text || 'Error loading Hadith.';
@@ -338,6 +327,49 @@ async function loadHadith() {
     console.error('Failed to load Hadith:', error);
     hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
   }
+}
+
+// Helper: fetch a single random English hadith (tries fast JSdelivr, fallback HadeethEnc)
+async function fetchRandomEnglishHadith() {
+  const EN_EDITIONS = [
+    { edition: 'eng-bukhari', count: 6638 },
+    { edition: 'eng-muslim', count: 4930 },
+    { edition: 'eng-abudawud', count: 4419 },
+    { edition: 'eng-nasai', count: 5364 },
+    { edition: 'eng-ibnmajah', count: 4285 },
+    { edition: 'eng-tirmidhi', count: 3625 },
+    { edition: 'eng-malik', count: 1587 }
+  ];
+
+  // Try JSDelivr first – 6 quick attempts (random editions)
+  for (let i = 0; i < 6; i++) {
+    const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
+    const num = Math.floor(Math.random() * pick.count) + 1;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.hadith?.english || data.english;
+        if (text) return text;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // Fallback – up to 20 attempts on HadeethEnc (random IDs)
+  for (let j = 0; j < 20; j++) {
+    const randomId = Math.floor(Math.random() * 5000) + 1;
+    try {
+      const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const txt = data?.hadeeth || data?.title;
+        if (txt) return txt;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  return '';
 }
 
 // Comprehensive collection of authentic Dhikr with their rewards
