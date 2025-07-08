@@ -103,6 +103,12 @@ function setupEventHandlers() {
     });
   }
 
+  // Reminder mode selector change ------------------------------------------
+  const modeSelect = document.getElementById('reminder-mode');
+  if (modeSelect) {
+    modeSelect.addEventListener('change', saveDhikrSettings);
+  }
+
   // datalist handles filtering natively, so no extra handler
 }
 
@@ -555,10 +561,15 @@ async function loadDhikrSettings() {
     if (dhikrSettings) {
       const notificationsEnabled = dhikrSettings.notificationsEnabled || false;
       const interval = dhikrSettings.interval || 60;
+      const mode = dhikrSettings.mode || 'notification';
       
       document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
       document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
       document.getElementById('dhikr-interval').value = interval;
+      
+      // Set reminder mode selector
+      const modeSelect = document.getElementById('reminder-mode');
+      if (modeSelect) modeSelect.value = mode;
       
       if (notificationsEnabled) {
         document.getElementById('notification-settings').classList.remove('hidden');
@@ -574,10 +585,12 @@ async function saveDhikrSettings() {
   try {
     const notificationsEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
     const interval = parseInt(document.getElementById('dhikr-interval').value);
+    const mode = document.getElementById('reminder-mode')?.value || 'notification';
     
     const dhikrSettings = {
       notificationsEnabled,
       interval,
+      mode,
       timestamp: Date.now()
     };
     
@@ -1161,6 +1174,7 @@ async function toggleDhikrNotifications() {
       // Starting notifications
       settingsPanel.classList.remove('hidden');
       const interval = parseInt(document.getElementById('dhikr-interval').value);
+      const mode = document.getElementById('reminder-mode')?.value || 'notification';
       updatePresetButtons(interval);
       
       console.log('Sending startDhikrNotifications message...');
@@ -1170,7 +1184,8 @@ async function toggleDhikrNotifications() {
         new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
             action: 'startDhikrNotifications',
-            interval: interval
+            interval: interval,
+            mode: mode
           }, (response) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1368,6 +1383,9 @@ const I18N = {
     notificationsOn: "🔔 Notifications: ON",
     notificationsOff: "🔔 Notifications: OFF",
     playing: "▶ Playing",
+    reminderStyle: "Reminder Style:",
+    modeNotification: "📣 Notification",
+    modePopup: "🗔 Pop-up",
     reminderLabel: "Reminder Interval (seconds):",
     invalidInterval: "Please enter a value between 5 and 3600 seconds.",
     notificationError: "An error occurred. Please try again.",
@@ -1390,6 +1408,9 @@ const I18N = {
     notificationsOn: "🔔 الإشعارات: مفعلة",
     notificationsOff: "🔔 الإشعارات: معطلة",
     playing: "▶ قيد التشغيل",
+    reminderStyle: "نوع التذكير:",
+    modeNotification: "📣 إشعار",
+    modePopup: "🗔 نافذة منبثقة",
     reminderLabel: "فاصل التذكير (ثوان):",
     invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
     notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
@@ -1450,6 +1471,16 @@ function applyLanguage() {
 
   const reminderLabel = document.getElementById('reminder-label');
   if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `; // preserve spacing
+
+  // Reminder style label & options
+  const reminderStyleLabel = document.getElementById('reminder-style-label');
+  if (reminderStyleLabel) reminderStyleLabel.childNodes[0].nodeValue = `${t('reminderStyle')}\n            `;
+
+  const modeSelect = document.getElementById('reminder-mode');
+  if (modeSelect && modeSelect.options.length >= 2) {
+    modeSelect.options[0].textContent = t('modeNotification');
+    modeSelect.options[1].textContent = t('modePopup');
+  }
 
   // Buttons that exist at load
   const playBtn = document.getElementById('play-quran');

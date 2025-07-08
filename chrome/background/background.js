@@ -52,6 +52,7 @@ let dhikrAlarmName = 'dhikr-reminder';
 let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
+let dhikrReminderMode = 'notification'; // 'notification' | 'popup'
 
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
@@ -185,7 +186,7 @@ async function handleDhikrMessage(message, sendResponse) {
         throw new Error('Invalid interval: must be a number between 5 and 3600 seconds');
       }
       
-      await startDhikrNotifications(message.interval);
+      await startDhikrNotifications(message.interval, message.mode);
       console.log('Background: startDhikrNotifications completed successfully');
       sendResponse({ success: true, message: 'Notifications started successfully' });
       
@@ -291,16 +292,17 @@ async function createOffscreenDocumentIfNeeded() {
 
 // --- DHIKR NOTIFICATION FUNCTIONS ---
 
-async function startDhikrNotifications(intervalSeconds) {
+async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
   try {
     console.log('Background: Starting Dhikr notifications with interval:', intervalSeconds, 'seconds');
     
-    // Check notification permission level first (robust polyfill)
-    const permissionLevel = await getNotificationPermissionLevel();
-    console.log('Background: Notification permission level:', permissionLevel);
-    
-    if (permissionLevel === 'denied') {
-      throw new Error('Notifications are disabled. Please enable notifications for this extension in Chrome settings.');
+    // If using classic notifications, ensure permission is granted
+    if (mode === 'notification') {
+      const permissionLevel = await getNotificationPermissionLevel();
+      console.log('Background: Notification permission level:', permissionLevel);
+      if (permissionLevel === 'denied') {
+        throw new Error('Notifications are disabled. Please enable notifications for this extension in Chrome settings.');
+      }
     }
     
     // Stop any existing notifications first
@@ -309,6 +311,7 @@ async function startDhikrNotifications(intervalSeconds) {
     // Store the interval and mark as active
     dhikrIntervalSeconds = intervalSeconds;
     dhikrNotificationsActive = true;
+    dhikrReminderMode = mode;
     
     if (intervalSeconds >= 60) {
       // Use chrome.alarms for intervals >= 1 minute
@@ -369,7 +372,7 @@ async function updateDhikrInterval(intervalSeconds) {
     
     if (dhikrNotificationsActive) {
       // Restart with new interval
-      await startDhikrNotifications(intervalSeconds);
+      await startDhikrNotifications(intervalSeconds, dhikrReminderMode);
     }
   } catch (error) {
     console.error('Background: Failed to update Dhikr interval:', error);
@@ -379,6 +382,26 @@ async function updateDhikrInterval(intervalSeconds) {
 
 function getRandomDhikr() {
   return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
+}
+
+// Show Dhikr in a small extension popup window ------------------------------
+async function showDhikrPopup(dhikr, isTest = false) {
+  try {
+    // Store current dhikr so the popup page can read it
+    await chrome.storage.local.set({ currentDhikr: dhikr });
+
+    // Create a focused popup window
+    await chrome.windows.create({
+      url: chrome.runtime.getURL('popup/reminder.html'),
+      type: 'popup',
+      width: 420,
+      height: 320,
+      focused: true
+    });
+    console.log('Background: Dhikr popup window opened');
+  } catch (err) {
+    console.error('Background: Failed to open Dhikr popup window:', err);
+  }
 }
 
 // Handle alarms
@@ -391,6 +414,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 async function showDhikrNotification(isTest = false) {
   try {
+    const dhikr = getRandomDhikr();
+
+    // If user selected popup mode, show popup and return early
+    if (dhikrReminderMode === 'popup') {
+      await showDhikrPopup(dhikr, isTest);
+      return;
+    }
+
     // Check notification permission level first (robust polyfill)
     const permissionLevel = await getNotificationPermissionLevel();
     console.log('Background: Current notification permission level:', permissionLevel);
@@ -399,8 +430,6 @@ async function showDhikrNotification(isTest = false) {
       console.error('Background: Notifications are denied, cannot show notification');
       return;
     }
-    
-    const dhikr = getRandomDhikr();
     
     // Use chrome.runtime.getURL to get the proper path to the icon
     const iconUrl = chrome.runtime.getURL('assets/icon48.png');
@@ -512,8 +541,8 @@ chrome.runtime.onStartup.addListener(async () => {
   try {
     const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
-      console.log('Background: Restoring Dhikr notifications on startup with interval:', dhikrSettings.interval || 60);
-      await startDhikrNotifications(dhikrSettings.interval || 60);
+      console.log('Background: Restoring Dhikr notifications on startup with interval:', dhikrSettings.interval || 60, 'and mode:', dhikrSettings.mode || 'notification');
+      await startDhikrNotifications(dhikrSettings.interval || 60, dhikrSettings.mode || 'notification');
     }
   } catch (error) {
     console.error('Background: Failed to restore Dhikr notifications on startup:', error);
@@ -525,8 +554,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   try {
     const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
-      console.log('Background: Restoring Dhikr notifications after install/update with interval:', dhikrSettings.interval || 60);
-      await startDhikrNotifications(dhikrSettings.interval || 60);
+      console.log('Background: Restoring Dhikr notifications after install/update with interval:', dhikrSettings.interval || 60, 'and mode:', dhikrSettings.mode || 'notification');
+      await startDhikrNotifications(dhikrSettings.interval || 60, dhikrSettings.mode || 'notification');
     }
   } catch (error) {
     console.error('Background: Failed to restore Dhikr notifications after install/update:', error);
