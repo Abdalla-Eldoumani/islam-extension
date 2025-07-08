@@ -106,7 +106,22 @@ function setupEventHandlers() {
   // Reminder mode selector change ------------------------------------------
   const modeSelect = document.getElementById('reminder-mode');
   if (modeSelect) {
-    modeSelect.addEventListener('change', saveDhikrSettings);
+    modeSelect.addEventListener('change', async () => {
+      await saveDhikrSettings();
+
+      // If notifications already active, update mode in background
+      const notifEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
+      if (notifEnabled) {
+        const newMode = modeSelect.value;
+        chrome.runtime.sendMessage({ action: 'updateDhikrMode', mode: newMode }, (resp) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Failed to update mode:', chrome.runtime.lastError.message);
+          } else {
+            console.log('Mode updated:', resp);
+          }
+        });
+      }
+    });
   }
 
   // datalist handles filtering natively, so no extra handler

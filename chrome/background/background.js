@@ -124,7 +124,8 @@ async function handleMessage(message, sender, sendResponse) {
     // Route dhikr notification messages
     if (message.action === 'startDhikrNotifications' || 
         message.action === 'stopDhikrNotifications' || 
-        message.action === 'updateDhikrInterval') {
+        message.action === 'updateDhikrInterval' ||
+        message.action === 'updateDhikrMode') {
       
       // Prevent duplicate operations with timestamp tracking
       const operationKey = `dhikr-${message.action}`;
@@ -204,6 +205,14 @@ async function handleDhikrMessage(message, sendResponse) {
       await updateDhikrInterval(message.interval);
       console.log('Background: updateDhikrInterval completed successfully');
       sendResponse({ success: true, message: 'Interval updated successfully' });
+      
+    } else if (message.action === 'updateDhikrMode') {
+      if (typeof message.mode !== 'string' || (message.mode !== 'notification' && message.mode !== 'popup')) {
+        throw new Error('Invalid mode: must be "notification" or "popup"');
+      }
+      dhikrReminderMode = message.mode;
+      console.log('Background: updateDhikrMode ->', dhikrReminderMode);
+      sendResponse({ success: true, message: 'Mode updated successfully' });
       
     } else {
       throw new Error(`Unknown dhikr action: ${message.action}`);
