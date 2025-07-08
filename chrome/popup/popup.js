@@ -117,7 +117,7 @@ function setupEventHandlers() {
           if (chrome.runtime.lastError) {
             console.warn('Failed to update mode:', chrome.runtime.lastError.message);
           } else {
-            console.log('Mode updated:', resp);
+            // console.log('Mode updated:', resp);
           }
         });
       }
@@ -158,7 +158,7 @@ async function saveUserSelections() {
     };
     
     await chrome.storage.local.set({ userSelections });
-    console.log('Saved user selections:', userSelections);
+    // console.log('Saved user selections:', userSelections);
   } catch (error) {
     console.error('Failed to save user selections:', error);
   }
@@ -171,7 +171,7 @@ async function loadSavedAudioState() {
     
     // First, restore user selections (even if no audio is playing)
     if (userSelections?.suraId || userSelections?.reciterKey) {
-      console.log('Restoring user selections:', userSelections);
+      // console.log('Restoring user selections:', userSelections);
       
       if (userSelections.suraId) {
         document.getElementById('sura-select').value = userSelections.suraId;
@@ -214,19 +214,19 @@ async function loadSavedAudioState() {
       const currentSuraId = document.getElementById('sura-select').value;
       const currentReciterKey = getReciterKey();
       
-      console.log('Checking audio state:', { 
-        audioState: stateResponse.state, 
-        currentSuraId, 
-        currentReciterKey,
-        stateSuraId: stateResponse.state.suraId,
-        stateReciterKey: stateResponse.state.reciterKey
-      });
+      // console.log('Checking audio state:', { 
+      //   audioState: stateResponse.state, 
+      //   currentSuraId, 
+      //   currentReciterKey,
+      //   stateSuraId: stateResponse.state.suraId,
+      //   stateReciterKey: stateResponse.state.reciterKey
+      // });
       
       // If the audio state matches current selections, restore the playback UI
       if (stateResponse.state.reciterKey === currentReciterKey && 
           stateResponse.state.suraId === currentSuraId) {
         
-        console.log('Restoring audio playback state:', stateResponse.state);
+        // console.log('Restoring audio playback state:', stateResponse.state);
         updateProgressUI(stateResponse.state);
         updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
         
@@ -236,7 +236,7 @@ async function loadSavedAudioState() {
       } else if (stateResponse.state.reciterKey && stateResponse.state.suraId) {
         // If there's an active audio session but it doesn't match current selections,
         // update the selections to match the active session
-        console.log('Updating selections to match active audio session');
+        // console.log('Updating selections to match active audio session');
         
         if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === stateResponse.state.suraId)) {
           document.getElementById('sura-select').value = stateResponse.state.suraId;
@@ -690,7 +690,7 @@ async function fetchSuras(lang = CURRENT_LANG || 'en') {
   const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
-  console.log(`Fetched ${chapters.length} surahs for lang`, lang);
+  // console.log(`Fetched ${chapters.length} surahs for lang`, lang);
   return chapters;
 }
 
