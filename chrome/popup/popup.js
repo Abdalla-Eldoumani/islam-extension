@@ -277,7 +277,7 @@ async function loadHadith() {
 
       let text = '';
       if (cacheArr.length > 0) {
-        text = cacheArr.shift(); // use first item
+        text = cacheArr.shift();
         // save trimmed cache back but don't await to prevent UI delay
         chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
       }
@@ -312,7 +312,7 @@ async function loadHadith() {
   }
 }
 
-// Helper: fetch a single random English hadith (tries fast JSdelivr, fallback HadeethEnc)
+// Helper function to fetch a random English hadith
 async function fetchRandomEnglishHadith() {
   const EN_EDITIONS = [
     { edition: 'eng-bukhari', count: 6638 },
@@ -324,7 +324,6 @@ async function fetchRandomEnglishHadith() {
     { edition: 'eng-malik', count: 1587 }
   ];
 
-  // Try JSDelivr first – 6 quick attempts (random editions)
   for (let i = 0; i < 6; i++) {
     const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
     const num = Math.floor(Math.random() * pick.count) + 1;
@@ -336,10 +335,9 @@ async function fetchRandomEnglishHadith() {
         const text = data.hadith?.english || data.english;
         if (text) return text;
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) {}
   }
 
-  // Fallback – up to 20 attempts on HadeethEnc (random IDs)
   for (let j = 0; j < 20; j++) {
     const randomId = Math.floor(Math.random() * 5000) + 1;
     try {
@@ -349,13 +347,12 @@ async function fetchRandomEnglishHadith() {
         const txt = data?.hadeeth || data?.title;
         if (txt) return txt;
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) {}
   }
 
   return '';
 }
 
-// Comprehensive collection of authentic Dhikr with their rewards
 const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
@@ -555,13 +552,11 @@ const DHIKR_REWARD_AR = {
   'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
 };
 
-// Helper to get reward in current language ------------------------------------
 function getRewardText(rewardEn) {
   if (!rewardEn) return '';
   return CURRENT_LANG === 'ar' ? (DHIKR_REWARD_AR[rewardEn] || '') : rewardEn;
 }
 
-// Helper to pick proper sura display name -------------------------------------
 function getSuraName(chapter) {
   return CURRENT_LANG === 'ar' ? chapter.name_arabic : chapter.name_simple;
 }
@@ -575,7 +570,6 @@ function displayCurrentDhikr() {
     const reward = getRewardText(dhikr.reward);
     infoEl.textContent = reward ? `الأجر: ${reward}` : '';
   } else {
-    // Default to English
     textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
     infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
   }
@@ -597,7 +591,6 @@ async function loadDhikrSettings() {
       document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
       document.getElementById('dhikr-interval').value = interval;
       
-      // Set reminder mode selector
       const modeSelect = document.getElementById('reminder-mode');
       if (modeSelect) modeSelect.value = mode;
       
@@ -639,9 +632,7 @@ async function setupQuranSelectors() {
   try {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
-    // Store for filtering
     ALL_RECITERS = reciters;
-    // Build datalist
     reciterDatalist.innerHTML = '';
     reciters.forEach(r => {
       const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`;
@@ -669,11 +660,9 @@ function populateSelect(selectEl, items, defaultOptionText, mapper) {
 }
 
 async function fetchSuras(lang = CURRENT_LANG || 'en') {
-  // Quran.com supports ?language=ar or en
   const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
-  // console.log(`Fetched ${chapters.length} surahs for lang`, lang);
   return chapters;
 }
 
@@ -728,14 +717,12 @@ async function fetchMp3QuranReciters() {
 }
 
 // 3) Islamic.network CDN -----------------------------------------------------------
-// No public catalogue endpoint – we hard-code popular slugs. Extend as needed.
 async function fetchIslamicNetworkReciters() {
   const slugs = [
     'ar.alafasy',
     'ar.husary',
     'ar.shuraym',
     'ar.tablawee'
-    // Add more slugs here as required
   ];
   return slugs.map(slug => {
     const reciterKey = `islamic:${slug}`;
@@ -760,31 +747,25 @@ async function fetchReciters() {
   ])).flat();
 
   // -----------------------------------------------
-  // 🧹  Deduplicate reciters across providers
+  // Deduplicate reciters across providers
   // -----------------------------------------------
   const dedupedMap = new Map();
   combined.forEach(r => {
-    // Normalise key by reciter name + style (case-insensitive)
     const key = `${r.reciter_name.toLowerCase()}|${(r.style || '').toLowerCase()}`;
     if (!dedupedMap.has(key)) {
-      // First occurrence becomes canonical entry
       dedupedMap.set(key, { ...r, altIds: [] });
     } else {
-      // Duplicate – push to altIds so we still remember it
       dedupedMap.get(key).altIds.push(r.id);
     }
   });
 
   const deduped = Array.from(dedupedMap.values());
 
-  // Persist in global catalogue (canonical id only)
   deduped.forEach(r => {
     RECITER_CATALOG[r.id] = r;
-    // Also register alternative IDs to point to canonical entry
     (r.altIds || []).forEach(alt => (RECITER_CATALOG[alt] = r));
   });
 
-  // Cache deduped catalogue for 6 h (21 600 000 ms)
   try {
     await chrome.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
   } catch (err) {
@@ -806,13 +787,6 @@ function validateQuranSelection() {
   const isEnabled = !!suraId && !!reciterId;
   playButton.disabled = !isEnabled;
   autoplayButton.disabled = !isEnabled;
-  
-  // if (isEnabled) {
-  //     availabilityStatus.innerHTML = '&#x2705; Ready to play';
-  //     availabilityStatus.style.color = 'green';
-  // } else {
-  //     availabilityStatus.textContent = '';
-  // }
 }
 
 async function playQuranAudio() {
@@ -822,7 +796,6 @@ async function playQuranAudio() {
   const availabilityStatus = document.getElementById('quran-availability');
   
   try {
-    // First, test if background script is responsive
     console.log('Popup: Testing background script connectivity...');
     try {
       const testResponse = await chrome.runtime.sendMessage({ action: 'ping' });
@@ -869,7 +842,6 @@ async function playQuranAudio() {
 }
 
 async function getSuraAudioUrl(reciterKey, suraId) {
-    // Determine provider prefix (default to Quran.com if none)
     let provider = 'qc';
     let rawId = reciterKey;
     if (reciterKey.includes(':')) {
@@ -893,8 +865,8 @@ async function getSuraAudioUrl(reciterKey, suraId) {
         return `https://cdn.islamic.network/quran/audio/128/${reciter.slug}/${suraId}.mp3`;
     }
 
-    // Default: Quran.com -----------------------------------------------------------
-    const reciterId = rawId; // numeric id for Quran.com API
+    // Default: Quran.com ----------------------------------------------------------
+    const reciterId = rawId;
 
     // Try to get full chapter audio first
     const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
@@ -912,7 +884,6 @@ async function getSuraAudioUrl(reciterKey, suraId) {
         console.log('Chapter audio not available, trying verse-by-verse approach:', error.message);
     }
 
-    // Fallback to verse-by-verse audio
     const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
     console.log('Fetching verse audio from:', versesUrl);
     const response = await fetch(versesUrl);
@@ -1013,7 +984,6 @@ function updateAutoplayButton(isEnabled) {
 
 function getNextSuraId(currentSuraId) {
   const currentId = parseInt(currentSuraId);
-  // Surahs are numbered 1-114, so wrap around to 1 after 114
   return currentId >= 114 ? '1' : (currentId + 1).toString();
 }
 
@@ -1029,16 +999,13 @@ async function playNextSura() {
   const nextSuraId = getNextSuraId(currentSuraId);
   console.log(`Autoplay: Moving from Sura ${currentSuraId} to Sura ${nextSuraId}`);
   
-  // Update the selection
   document.getElementById('sura-select').value = nextSuraId;
   await saveUserSelections();
   
-  // Ensure UI is in clean state before starting new sura
   updatePlayButtonUI(false, true, 0);
   document.getElementById('play-quran').textContent = t('play');
   document.getElementById('play-quran').dataset.action = 'play';
   
-  // Start playing the next sura
   await playQuranAudio();
 }
 
