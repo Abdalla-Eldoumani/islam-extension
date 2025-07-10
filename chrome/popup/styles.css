@@ -203,7 +203,7 @@ body[dir="rtl"] .popup__header {
   font-style: italic;
   color: #6c757d;
   margin-top: 0.5rem;
-  min-height: 1.2em; /* Reserve space to prevent layout shift */
+  min-height: 1.2em;
   text-align: center;
 }
 

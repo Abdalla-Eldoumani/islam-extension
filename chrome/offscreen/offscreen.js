@@ -27,7 +27,6 @@ if (typeof console !== 'undefined') {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Offscreen: Received message:', message.action, message);
   
-  // Handle async operations properly
   (async () => {
     try {
       switch (message.action) {
@@ -93,15 +92,13 @@ async function playAudio(audioUrl, suraId, reciterKey) {
       }
     } catch (fetchError) {
       console.error('Offscreen: Audio URL fetch test failed:', fetchError);
-      // Don't throw here - the HEAD request might fail even if audio works
       console.log('Offscreen: Continuing despite HEAD request failure...');
     }
     
-    // Set up audio player with Chrome extension-friendly settings
-    audioPlayer.crossOrigin = 'anonymous'; // Handle CORS
-    audioPlayer.preload = 'auto'; // Preload the audio
+    audioPlayer.crossOrigin = 'anonymous';
+    audioPlayer.preload = 'auto';
     audioPlayer.src = audioUrl;
-    audioPlayer.load(); // Force load the audio
+    audioPlayer.load();
     
     currentAudioState.audioUrl = audioUrl;
     currentAudioState.suraId = suraId;
@@ -110,7 +107,6 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     
     console.log('Offscreen: Loading audio...');
     
-    // Wait for audio to be ready with better error handling
     await new Promise((resolve, reject) => {
       const onCanPlay = () => {
         console.log('Offscreen: Audio can play');
@@ -165,7 +161,6 @@ async function playAudio(audioUrl, suraId, reciterKey) {
       audioPlayer.addEventListener('loadedmetadata', onLoadedMetadata);
       audioPlayer.addEventListener('error', onError);
       
-      // Timeout after 15 seconds
       setTimeout(() => {
         cleanup();
         reject(new Error('Audio load timeout after 15 seconds'));
@@ -191,7 +186,6 @@ async function playAudio(audioUrl, suraId, reciterKey) {
       }
     }
     
-    // Save state to storage
     await saveAudioState();
     
     console.log('Offscreen: Audio playing successfully:', audioUrl);
@@ -215,17 +209,14 @@ async function resumeAudio() {
       throw new Error('No audio loaded to resume');
     }
 
-    // Chrome may suspend the media element after long inactivity; if the
-    // element is in a weird state (network idle, readyState 0, etc.) reload it.
     const needsReload = (
-      audioPlayer.readyState === 0 || // HAVE_NOTHING
-      audioPlayer.networkState === 3   // NETWORK_NO_SOURCE
+      audioPlayer.readyState === 0 ||
+      audioPlayer.networkState === 3
     );
 
     if (needsReload) {
       console.log('Offscreen: Audio element stale, reloading source before resume');
       await playAudio(currentAudioState.audioUrl, currentAudioState.suraId, currentAudioState.reciterKey);
-      // Seek to previous position if > 0 and within duration
       if (currentAudioState.currentTime > 0 && audioPlayer.duration > currentAudioState.currentTime) {
         audioPlayer.currentTime = currentAudioState.currentTime;
       }
@@ -284,85 +275,6 @@ chrome.storage.local.get('audioState').then(result => {
   }
 });
 
-// Add test button for debugging
-document.getElementById('test-audio').addEventListener('click', async () => {
-  const debugInfo = document.getElementById('debug-info');
-  debugInfo.innerHTML = 'Testing audio...';
-  
-  try {
-    // Test with a simple audio URL
-    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
-    console.log('Offscreen: Test button clicked, testing URL:', testUrl);
-    
-    audioPlayer.crossOrigin = 'anonymous';
-    audioPlayer.preload = 'auto';
-    audioPlayer.src = testUrl;
-    audioPlayer.load();
-    
-    console.log('Offscreen: Audio element configured, waiting for load...');
-    
-    await new Promise((resolve, reject) => {
-      const onCanPlay = () => {
-        console.log('Offscreen: Test audio can play');
-        cleanup();
-        resolve();
-      };
-      const onError = (e) => {
-        console.error('Offscreen: Test audio error:', e, audioPlayer.error);
-        cleanup();
-        reject(new Error(`Audio load failed: ${audioPlayer.error?.message || 'Unknown error'}`));
-      };
-      const cleanup = () => {
-        audioPlayer.removeEventListener('canplay', onCanPlay);
-        audioPlayer.removeEventListener('error', onError);
-      };
-      
-      audioPlayer.addEventListener('canplay', onCanPlay);
-      audioPlayer.addEventListener('error', onError);
-      setTimeout(() => {
-        cleanup();
-        reject(new Error('Timeout after 10 seconds'));
-      }, 10000);
-    });
-    
-    console.log('Offscreen: Attempting to play test audio...');
-    const playPromise = audioPlayer.play();
-    if (playPromise !== undefined) {
-      await playPromise;
-    }
-    
-    console.log('Offscreen: Test audio playing successfully!');
-    debugInfo.innerHTML = 'Audio test successful! Check console for details.';
-  } catch (error) {
-    console.error('Offscreen: Test audio failed:', error);
-    debugInfo.innerHTML = `Audio test failed: ${error.message}`;
-  }
-});
-
-// Add network test button
-document.getElementById('test-network').addEventListener('click', async () => {
-  const debugInfo = document.getElementById('debug-info');
-  debugInfo.innerHTML = 'Testing network connectivity...';
-  
-  try {
-    const testUrl = 'https://download.quranicaudio.com/qdc/siddiq_minshawi/murattal/112.mp3';
-    console.log('Offscreen: Testing network connectivity to:', testUrl);
-    
-    // Test with fetch
-    const response = await fetch(testUrl, { method: 'HEAD' });
-    console.log('Offscreen: Network test response:', response.status, response.statusText);
-    
-    if (response.ok) {
-      debugInfo.innerHTML = `Network test successful! Status: ${response.status}`;
-    } else {
-      debugInfo.innerHTML = `Network test failed! Status: ${response.status} ${response.statusText}`;
-    }
-  } catch (error) {
-    console.error('Offscreen: Network test failed:', error);
-    debugInfo.innerHTML = `Network test failed: ${error.message}`;
-  }
-});
-
 // Add browser notification fallback
 async function showBrowserNotification(title, body, icon, requireInteraction = false) {
   try {
@@ -371,7 +283,6 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
     console.log('Offscreen: Body:', body);
     console.log('Offscreen: Icon:', icon);
     
-    // Check if browser notifications are supported and permitted
     if (!('Notification' in window)) {
       throw new Error('Browser notifications not supported');
     }
@@ -388,11 +299,11 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
       const notificationOptions = {
         body: body,
         icon: icon,
-        requireInteraction: true, // Force user interaction to make it more prominent
+        requireInteraction: true,
         silent: false,
-        tag: 'dhikr-reminder', // This prevents duplicate notifications
+        tag: 'dhikr-reminder',
         timestamp: Date.now(),
-        vibrate: [200, 100, 200], // Vibration pattern for mobile devices
+        vibrate: [200, 100, 200],
         actions: [
           { action: 'close', title: 'Close' }
         ]
@@ -404,11 +315,9 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
       
       console.log('Offscreen: Browser notification created:', notification);
       
-      // Add event listeners
       notification.onclick = () => {
         console.log('Offscreen: Notification clicked');
         notification.close();
-        // Focus the extension window if possible
         try {
           window.focus();
         } catch (e) {
@@ -428,7 +337,6 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
         console.log('Offscreen: Notification closed');
       };
       
-      // Auto-close after 15 seconds if requireInteraction is false
       if (!requireInteraction) {
         setTimeout(() => {
           notification.close();
@@ -444,4 +352,4 @@ async function showBrowserNotification(title, body, icon, requireInteraction = f
     console.error('Offscreen: Browser notification failed:', error);
     throw error;
   }
-} 
+}
