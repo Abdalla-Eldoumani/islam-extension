@@ -7,8 +7,8 @@
 // Logging control – keep errors/warnings but silence verbose logs in release
 // ---------------------------------------------------------------------------
 if (typeof console !== 'undefined') {
-  console._log = console.log; // preserve original for dev
-  const ENV_PROD = true; // flip to false when actively debugging background
+  console._log = console.log;
+  const ENV_PROD = true;
   if (ENV_PROD) {
     console.log = () => {};
   }
@@ -63,7 +63,7 @@ let dhikrAlarmName = 'dhikr-reminder';
 let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
-let dhikrReminderMode = 'notification'; // 'notification' | 'popup'
+let dhikrReminderMode = 'notification';
 
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
@@ -75,24 +75,15 @@ let dhikrReminderMode = 'notification'; // 'notification' | 'popup'
  * @returns {Promise<'granted'|'denied'|'default'>}
  */
 function getNotificationPermissionLevel() {
-  // Newer Chrome releases (>=116) return a promise when no callback is
-  // supplied.  Detect this by checking the function length (expected
-  // callback-arity of 1 in the classic API).
   try {
     if (chrome.notifications.getPermissionLevel.length === 0) {
-      // Promise variant available.
       return chrome.notifications.getPermissionLevel();
     }
-  } catch (_) {
-    // Fall back to callback style below.
-  }
+  } catch (_) {}
 
-  // Fallback for older Chrome versions – wrap the callback style.
   return new Promise((resolve) => {
     try {
       chrome.notifications.getPermissionLevel((level) => {
-        // In very old versions the callback can be undefined; treat it as
-        // 'denied' so we fail gracefully.
         resolve(level || 'denied');
       });
     } catch (err) {
@@ -105,11 +96,7 @@ function getNotificationPermissionLevel() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Message received from:', sender.tab ? 'content script' : (sender.url?.includes('popup') ? 'popup' : 'offscreen'), message);
   console.log('Background: Sender details:', { tab: sender.tab, url: sender.url, origin: sender.origin });
-  
-  // Single message router - prevents multiple handlers from processing the same message
   handleMessage(message, sender, sendResponse);
-  
-  // Always return true to keep the message channel open for async responses
   return true;
 });
 
@@ -193,7 +180,6 @@ async function handleDhikrMessage(message, sendResponse) {
     }
 
     if (message.action === 'startDhikrNotifications') {
-      // Validate interval parameter
       if (typeof message.interval !== 'number' || message.interval < 5 || message.interval > 3600) {
         throw new Error('Invalid interval: must be a number between 5 and 3600 seconds');
       }
@@ -208,7 +194,6 @@ async function handleDhikrMessage(message, sendResponse) {
       sendResponse({ success: true, message: 'Notifications stopped successfully' });
       
     } else if (message.action === 'updateDhikrInterval') {
-      // Validate interval parameter
       if (typeof message.interval !== 'number' || message.interval < 5 || message.interval > 3600) {
         throw new Error('Invalid interval: must be a number between 5 and 3600 seconds');
       }
