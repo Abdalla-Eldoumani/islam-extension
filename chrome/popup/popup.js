@@ -13,8 +13,7 @@ let progressTrackingInterval = null;
 let ALL_RECITERS = [];
 
 // Unified in-memory catalogue for all reciters pulled from every provider.
-// Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
-const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
+const RECITER_CATALOG = {};
 
 // Map display label -> reciterKey for the datalist picker
 const RECITER_LABEL_TO_KEY = {};
@@ -68,10 +67,8 @@ function setupEventHandlers() {
     seekAudio(e.target.value);
   });
 
-  // Dhikr event handlers
   document.getElementById('next-dhikr').addEventListener('click', nextDhikr);
   
-  // Add single event listener for notifications toggle with debouncing
   const notificationToggle = document.getElementById('toggle-notifications');
   if (notificationToggle && !notificationToggle.hasAttribute('data-listener-added')) {
     notificationToggle.addEventListener('click', toggleDhikrNotifications);
@@ -80,7 +77,6 @@ function setupEventHandlers() {
   
   document.getElementById('dhikr-interval').addEventListener('input', validateInterval);
   
-  // Preset buttons
   document.querySelectorAll('.card__preset').forEach(button => {
     button.addEventListener('click', (e) => {
       const seconds = parseInt(e.target.dataset.seconds);
@@ -91,11 +87,9 @@ function setupEventHandlers() {
     });
   });
 
-  // Clear button for reciter input -----------------------------------------
   const clearReciterBtn = document.getElementById('clear-reciter');
   if (clearReciterBtn) {
     clearReciterBtn.addEventListener('click', () => {
-      // Remove current value and re-validate selection
       reciterInput.value = '';
       validateQuranSelection();
       saveUserSelections();
@@ -191,7 +185,7 @@ async function loadSavedAudioState() {
           }
         });
         observer.observe(reciterDatalist, { childList: true });
-        setTimeout(() => { observer.disconnect(); resolve(); }, 3000); // Failsafe timeout
+        setTimeout(() => { observer.disconnect(); resolve(); }, 3000);
       });
 
       await waitForReciters;
@@ -214,17 +208,8 @@ async function loadSavedAudioState() {
       const currentSuraId = document.getElementById('sura-select').value;
       const currentReciterKey = getReciterKey();
       
-      // console.log('Checking audio state:', { 
-      //   audioState: stateResponse.state, 
-      //   currentSuraId, 
-      //   currentReciterKey,
-      //   stateSuraId: stateResponse.state.suraId,
-      //   stateReciterKey: stateResponse.state.reciterKey
-      // });
-      
       // If the audio state matches current selections, restore the playback UI
-      if (stateResponse.state.reciterKey === currentReciterKey && 
-          stateResponse.state.suraId === currentSuraId) {
+      if (stateResponse.state.reciterKey === currentReciterKey && stateResponse.state.suraId === currentSuraId) {
         
         // console.log('Restoring audio playback state:', stateResponse.state);
         updateProgressUI(stateResponse.state);
@@ -234,8 +219,7 @@ async function loadSavedAudioState() {
           startProgressTracking();
         }
       } else if (stateResponse.state.reciterKey && stateResponse.state.suraId) {
-        // If there's an active audio session but it doesn't match current selections,
-        // update the selections to match the active session
+        // If there's an active audio session but it doesn't match current selections, update the selections to match the active session
         // console.log('Updating selections to match active audio session');
         
         if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === stateResponse.state.suraId)) {
@@ -252,7 +236,6 @@ async function loadSavedAudioState() {
           startProgressTracking();
         }
         
-        // Save these as the new user selections
         await saveUserSelections();
       }
     }
