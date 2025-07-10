@@ -577,7 +577,7 @@ async function startAudioMonitoring() {
       
       const state = response.state;
       
-      // Check if audio finished (not playing, current time >= duration, and duration > 0)
+      // Check if audio finished
       if (!state.isPlaying && 
           state.currentTime >= state.duration && 
           state.duration > 0 && 
@@ -599,9 +599,8 @@ async function startAudioMonitoring() {
       
     } catch (error) {
       console.error('Background: Audio monitoring error:', error);
-      // Don't stop monitoring on errors, just log them
     }
-  }, 2000); // Check every 2 seconds (less frequent than popup)
+  }, 2000);
 }
 
 function stopAudioMonitoring() {
@@ -616,16 +615,13 @@ async function handleAutoplayNext(currentSuraId, reciterKey) {
   try {
     console.log(`Background: Autoplay moving from Sura ${currentSuraId} to next`);
     
-    // Calculate next sura ID
     const currentId = parseInt(currentSuraId);
     const nextSuraId = currentId >= 114 ? '1' : (currentId + 1).toString();
     
     console.log(`Background: Playing next sura: ${nextSuraId} with reciter: ${reciterKey}`);
     
-    // Get the audio URL for the next sura
     const audioUrl = await getNextSuraAudioUrl(reciterKey, nextSuraId);
     
-    // Play the next sura
     const playResponse = await chrome.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
@@ -673,7 +669,6 @@ async function getMp3QuranReciterById(id) {
 }
 
 async function getNextSuraAudioUrl(reciterKey, suraId) {
-  // Detect provider prefix
   let provider = 'qc';
   let rawId = reciterKey;
   if (reciterKey.includes(':')) {
@@ -752,8 +747,7 @@ function scheduleNextDhikrTimeout() {
     if (dhikrNotificationsActive) {
       console.log('Background: Timeout triggered, showing dhikr notification');
       showDhikrNotification(false);
-      // Schedule the next one
       scheduleNextDhikrTimeout();
     }
   }, dhikrIntervalSeconds * 1000);
-} 
+}
