@@ -1106,11 +1106,9 @@ function startProgressTracking() {
             document.getElementById('current-time').textContent = formatTime(0);
           }
         } else if (!response.state.isPlaying) {
-          // Audio paused - but don't clear the interval immediately
-          // This allows us to detect when it resumes
+          // Audio paused - but don't clear the interval immediately because it might resume
           updatePlayButtonUI(false, true, response.state.currentTime);
         } else if (response.state.isPlaying) {
-          // Audio is playing - make sure UI reflects this
           updatePlayButtonUI(true, true, response.state.currentTime);
         }
       } else {
@@ -1126,7 +1124,6 @@ function startProgressTracking() {
 
 // --- DHIKR FUNCTIONALITY ---
 
-// Add debouncing for notification toggle
 let notificationToggleInProgress = false;
 let lastToggleTime = 0;
 
@@ -1158,10 +1155,9 @@ async function toggleDhikrNotifications() {
   
   try {
     let response;
-    const messageTimeout = 1000; // 1 second timeout
+    const messageTimeout = 1000;
     
     if (newState && !validateInterval()) {
-      // Invalid interval – show feedback and abort the toggle attempt gracefully.
       button.disabled = false;
       notificationToggleInProgress = false;
       return;
@@ -1176,7 +1172,6 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending startDhikrNotifications message...');
       
-      // Send message with robust timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
@@ -1197,12 +1192,10 @@ async function toggleDhikrNotifications() {
       ]);
       
     } else {
-      // Stopping notifications
       settingsPanel.classList.add('hidden');
       
       console.log('Sending stopDhikrNotifications message...');
       
-      // Send message with robust timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
@@ -1223,7 +1216,6 @@ async function toggleDhikrNotifications() {
     
     console.log('Received response:', response);
     
-    // Validate response
     if (!response) {
       throw new Error('No response received from background script');
     }
@@ -1236,20 +1228,11 @@ async function toggleDhikrNotifications() {
       throw new Error(response.error || 'Background script returned failure');
     }
     
-    // Update UI only after successful response
     button.dataset.enabled = newState.toString();
     button.textContent = newState ? t('notificationsOn') : t('notificationsOff');
     
-    // // Show success message
-    // if (newState) {
-    //   showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
-    // } else {
-    //   showNotificationMessage('Dhikr notifications disabled.', 'info');
-    // }
-    
     await saveDhikrSettings();
     
-    // Small delay to prevent rapid re-clicking
     await new Promise(resolve => setTimeout(resolve, 500));
     
   } catch (error) {
@@ -1286,21 +1269,17 @@ async function toggleDhikrNotifications() {
     
     showNotificationMessage(errorMessage, 'error');
   } finally {
-    // Re-enable button and reset flag
     button.disabled = false;
     notificationToggleInProgress = false;
   }
 }
 
 function showNotificationMessage(message, type = 'info') {
-  // Create or update message element
   let messageEl = document.getElementById('notification-message');
   if (!messageEl) {
     messageEl = document.createElement('div');
     messageEl.id = 'notification-message';
     messageEl.className = 'card__notification-message';
-    
-    // Insert after the toggle button
     const toggleButton = document.getElementById('toggle-notifications');
     toggleButton.parentNode.insertBefore(messageEl, toggleButton.nextSibling);
   }
@@ -1309,7 +1288,6 @@ function showNotificationMessage(message, type = 'info') {
   messageEl.className = `card__notification-message card__notification-message--${type}`;
   messageEl.classList.remove('hidden');
   
-  // Auto-hide after 8 seconds
   setTimeout(() => {
     messageEl.classList.add('hidden');
   }, 8000);
@@ -1467,9 +1445,8 @@ function applyLanguage() {
   if (reciterInput) reciterInput.placeholder = t('reciterPlaceholder');
 
   const reminderLabel = document.getElementById('reminder-label');
-  if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `; // preserve spacing
+  if (reminderLabel) reminderLabel.childNodes[0].nodeValue = `${t('reminderLabel')}\n            `;
 
-  // Reminder style label & options
   const reminderStyleLabel = document.getElementById('reminder-style-label');
   if (reminderStyleLabel) reminderStyleLabel.childNodes[0].nodeValue = `${t('reminderStyle')}\n            `;
 
@@ -1479,16 +1456,18 @@ function applyLanguage() {
     modeSelect.options[1].textContent = t('modePopup');
   }
 
-  // Buttons that exist at load
   const playBtn = document.getElementById('play-quran');
   if (playBtn && playBtn.dataset.action === 'play') playBtn.textContent = t('play');
+  
   const pauseBtn = document.getElementById('pause-quran');
   if (pauseBtn) pauseBtn.textContent = t('pause');
+  
   const autoplayBtn = document.getElementById('autoplay-toggle');
   if (autoplayBtn) {
     const on = autoplayBtn.dataset.autoplay === 'true';
     autoplayBtn.textContent = on ? t('autoplayOn') : t('autoplayOff');
   }
+
   const nextDhikrBtn = document.getElementById('next-dhikr');
   if (nextDhikrBtn) nextDhikrBtn.textContent = t('nextDhikr');
   const notifBtn = document.getElementById('toggle-notifications');
@@ -1497,45 +1476,40 @@ function applyLanguage() {
     notifBtn.textContent = en ? t('notificationsOn') : t('notificationsOff');
   }
 
-  // Loading text
   const loadingEl = document.getElementById('quran-loading');
   if (loadingEl) loadingEl.textContent = t('loading');
 
-  // Update select default option if still default
   const suraSelect = document.getElementById('sura-select');
   if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
     suraSelect.options[0].textContent = t('selectSura');
   }
 
-  // Update clear reciter button
   const clearReciterBtn = document.getElementById('clear-reciter');
   if (clearReciterBtn) clearReciterBtn.textContent = t('clearReciter');
 
-  // Update current time and total time
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
+  
   const totalTimeEl = document.getElementById('total-time');
   if (totalTimeEl) totalTimeEl.textContent = t('totalTime');
-  // Update hadith text
+  
   const hadithTextEl = document.getElementById('hadith-text');
   if (hadithTextEl) hadithTextEl.textContent = t('hadithText');
-  // Update dhikr text
+
   const dhikrTextEl = document.getElementById('dhikr-text');
   if (dhikrTextEl) dhikrTextEl.textContent = t('dhikrText');
-  // Update interval validation
+
   const intervalValidationEl = document.getElementById('interval-validation');
   if (intervalValidationEl) intervalValidationEl.textContent = t('intervalValidation');
-  // Update notification message
+
   const notificationMessageEl = document.getElementById('notification-message');
   if (notificationMessageEl) notificationMessageEl.textContent = t('notificationMessage');
 
-  // Reset Hadith area while we fetch a new one in the selected language
+
   const hadithEl = document.getElementById('hadith-text');
   if (hadithEl) hadithEl.textContent = t('loading');
 
-  // Refresh dynamic texts that depend on language
   displayCurrentDhikr();
-  // Reload hadith and sura names when language changes
   loadHadith();
   fetchSuras().then(suras => {
     const suraSelect = document.getElementById('sura-select');
@@ -1546,7 +1520,6 @@ function applyLanguage() {
       t('selectSura'),
       s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` })
     );
-    // restore previous selection if still valid
     if (currentVal) {
       suraSelect.value = currentVal;
     }
