@@ -246,7 +246,6 @@ async function handleAudioMessage(message, sendResponse) {
       });
     });
     
-    // Check the response from offscreen document
     if (!offscreenResponse) {
       console.error('Background: No response received from offscreen document');
       sendResponse({ success: false, error: 'No response from audio player' });
@@ -256,7 +255,6 @@ async function handleAudioMessage(message, sendResponse) {
     } else {
       console.log('Background: Sending successful response to popup');
       
-      // Start audio monitoring for autoplay when audio starts playing
       if (message.action === 'playAudio') {
         startAudioMonitoring();
       }
@@ -286,7 +284,6 @@ async function createOffscreenDocumentIfNeeded() {
     });
     console.log('Background: Offscreen document created successfully');
     
-    // Give the offscreen document a moment to initialize
     await new Promise(resolve => setTimeout(resolve, 100));
     
   } catch (error) {
@@ -301,7 +298,6 @@ async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
   try {
     console.log('Background: Starting Dhikr notifications with interval:', intervalSeconds, 'seconds');
     
-    // If using classic notifications, ensure permission is granted
     if (mode === 'notification') {
       const permissionLevel = await getNotificationPermissionLevel();
       console.log('Background: Notification permission level:', permissionLevel);
@@ -310,16 +306,13 @@ async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
       }
     }
     
-    // Stop any existing notifications first
     await stopDhikrNotifications();
     
-    // Store the interval and mark as active
     dhikrIntervalSeconds = intervalSeconds;
     dhikrNotificationsActive = true;
     dhikrReminderMode = mode;
     
     if (intervalSeconds >= 60) {
-      // Use chrome.alarms for intervals >= 1 minute
       const periodMinutes = intervalSeconds / 60;
       console.log('Background: Using chrome.alarms with period:', periodMinutes, 'minutes');
       
@@ -330,12 +323,10 @@ async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
       
       console.log('Background: Dhikr alarm created successfully');
     } else {
-      // Use setTimeout for intervals < 1 minute
       console.log('Background: Using setTimeout for sub-minute interval:', intervalSeconds, 'seconds');
       scheduleNextDhikrTimeout();
     }
     
-    // Show a test notification immediately to confirm it's working
     setTimeout(() => {
       showDhikrNotification(true);
     }, 2000);
@@ -351,14 +342,11 @@ async function stopDhikrNotifications() {
   try {
     console.log('Background: Stopping Dhikr notifications');
     
-    // Mark as inactive first
     dhikrNotificationsActive = false;
     
-    // Clear chrome.alarms
     await chrome.alarms.clear(dhikrAlarmName);
     console.log('Background: Dhikr alarm cleared successfully');
     
-    // Clear setTimeout
     if (dhikrTimeoutId) {
       clearTimeout(dhikrTimeoutId);
       dhikrTimeoutId = null;
@@ -376,7 +364,6 @@ async function updateDhikrInterval(intervalSeconds) {
     console.log('Background: Updating Dhikr interval to:', intervalSeconds, 'seconds');
     
     if (dhikrNotificationsActive) {
-      // Restart with new interval
       await startDhikrNotifications(intervalSeconds, dhikrReminderMode);
     }
   } catch (error) {
@@ -392,10 +379,8 @@ function getRandomDhikr() {
 // Show Dhikr in a small extension popup window ------------------------------
 async function showDhikrPopup(dhikr, isTest = false) {
   try {
-    // Store current dhikr so the popup page can read it
     await chrome.storage.local.set({ currentDhikr: dhikr });
 
-    // Create a focused popup window
     await chrome.windows.create({
       url: chrome.runtime.getURL('popup/reminder.html'),
       type: 'popup',
@@ -427,7 +412,6 @@ async function showDhikrNotification(isTest = false) {
       return;
     }
 
-    // Check notification permission level first (robust polyfill)
     const permissionLevel = await getNotificationPermissionLevel();
     console.log('Background: Current notification permission level:', permissionLevel);
     
@@ -436,11 +420,9 @@ async function showDhikrNotification(isTest = false) {
       return;
     }
     
-    // Use chrome.runtime.getURL to get the proper path to the icon
     const iconUrl = chrome.runtime.getURL('assets/icon48.png');
     console.log('Background: Using icon URL:', iconUrl);
     
-    // Try Chrome extension notification first (more reliable for popups)
     console.log('Background: Trying Chrome extension notification first...');
     let chromeNotificationWorked = false;
     
@@ -450,8 +432,8 @@ async function showDhikrNotification(isTest = false) {
         iconUrl: iconUrl,
         title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
         message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
-        priority: 2, // High priority
-        requireInteraction: true, // Stay visible until user interacts
+        priority: 2,
+        requireInteraction: true,
         silent: false
       });
       
@@ -463,7 +445,6 @@ async function showDhikrNotification(isTest = false) {
       console.error('Background: Chrome extension notification failed:', chromeError);
     }
     
-    // Fallback to browser notification if Chrome notification failed
     if (!chromeNotificationWorked) {
       console.log('Background: Trying browser notification as fallback...');
       try {
@@ -493,7 +474,6 @@ async function showDhikrNotification(isTest = false) {
       }
     }
     
-    // If neither worked, try creating a popup window as last resort
     if (!chromeNotificationWorked && isTest) {
       console.log('Background: Trying popup window as last resort for test...');
       try {
@@ -510,7 +490,6 @@ async function showDhikrNotification(isTest = false) {
       }
     }
     
-    // As a final fallback, try audio notification
     if (!chromeNotificationWorked && !isTest) {
       console.log('Background: Trying audio notification fallback...');
       try {
