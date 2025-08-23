@@ -344,6 +344,44 @@ async function loadHadith() {
       const data = await res.json();
       const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
       hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
+    } else if (CURRENT_LANG === 'fr') {
+      // ---------------- French with local cache ----------------
+      const CACHE_KEY = 'hadithCacheFr';
+      const TARGET_CACHE_SIZE = 30;
+
+      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
+      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
+
+      let text = '';
+      if (cacheArr.length > 0) {
+        text = cacheArr.shift();
+        // save trimmed cache back but don't await to prevent UI delay
+        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
+      }
+
+      if (!text) {
+        text = await fetchRandomFrenchHadith();
+      }
+
+      // Top-up the cache asynchronously if it's below threshold
+      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
+        (async () => {
+          try {
+            const needed = TARGET_CACHE_SIZE - cacheArr.length;
+            const newOnes = [];
+            for (let i = 0; i < needed; i++) {
+              const h = await fetchRandomFrenchHadith();
+              if (h) newOnes.push(h);
+            }
+            const updated = cacheArr.concat(newOnes);
+            await chrome.storage.local.set({ [CACHE_KEY]: updated });
+          } catch (err) {
+            console.warn('Failed to refill French hadith cache:', err);
+          }
+        })();
+      }
+
+      hadithEl.textContent = text || 'Erreur lors du chargement du Hadith.';
     } else {
       // ---------------- English with local cache ----------------
       const CACHE_KEY = 'hadithCacheEn';
@@ -385,7 +423,13 @@ async function loadHadith() {
     }
   } catch (error) {
     console.error('Failed to load Hadith:', error);
-    hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
+    if (CURRENT_LANG === 'ar') {
+      hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ';
+    } else if (CURRENT_LANG === 'fr') {
+      hadithEl.textContent = "Il n'y a de divinité qu'Allah";
+    } else {
+      hadithEl.textContent = 'There is no god but Allah';
+    }
   }
 }
 
@@ -428,6 +472,49 @@ async function fetchRandomEnglishHadith() {
   }
 
   return '';
+}
+
+// Helper function to fetch a random French hadith
+async function fetchRandomFrenchHadith() {
+  const FR_EDITIONS = [
+    { edition: 'fra-bukhari', count: 7008 },
+    { edition: 'fra-muslim', count: 5362 },
+    { edition: 'fra-abudawud', count: 4590 },
+    { edition: 'fra-nasai', count: 5662 },
+    { edition: 'fra-ibnmajah', count: 4339 },
+    { edition: 'fra-malik', count: 1594 },
+    { edition: 'fra-nawawi', count: 42 },
+    { edition: 'fra-qudsi', count: 40 },
+    { edition: 'fra-dehlawi', count: 40 }
+  ];
+
+  for (let i = 0; i < 6; i++) {
+    const pick = FR_EDITIONS[Math.floor(Math.random() * FR_EDITIONS.length)];
+    const num = Math.floor(Math.random() * pick.count) + 1;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.hadiths?.[0]?.text || data.hadith?.french || data.french;
+        if (text && text.trim()) {
+          // Clean up the text a bit if needed
+          return text.length > 500 ? text.substring(0, 497) + '...' : text;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch French hadith:', err);
+    }
+  }
+
+  // Fallback to a default French hadith if APIs fail
+  const fallbackHadiths = [
+    "Rapporté par 'Umar ibn Al-Khattab : J'ai entendu le Messager d'Allah (ﷺ) dire : « Les actions ne valent que par les intentions, et chacun n'obtient que ce qu'il a eu l'intention de faire... »",
+    "Rapporté par 'A'ishah : Le Prophète (ﷺ) a dit : « Celui qui innove dans notre religion une chose qui n'en fait pas partie, cette chose sera rejetée. »",
+    "Rapporté par Abu Hurairah : Le Messager d'Allah (ﷺ) a dit : « Un croyant fort est meilleur et plus aimé d'Allah qu'un croyant faible, bien qu'il y ait du bien dans les deux... »"
+  ];
+
+  return fallbackHadiths[Math.floor(Math.random() * fallbackHadiths.length)];
 }
 
 const dhikrCollection = [
@@ -1511,7 +1598,8 @@ const I18N = {
     resuming: "Resuming",
     pausedAt: "Paused at",
     paused: "Paused",
-    resumeFailed: "Failed to resume audio"
+    resumeFailed: "Failed to resume audio",
+    audioConnectionLost: "Audio connection lost. Try refreshing if playback stops working."
   },
   fr: {
     appTitle: "Compagnon du Coran et de la Sunnah",
@@ -1554,7 +1642,8 @@ const I18N = {
     resuming: "Reprise",
     pausedAt: "Mis en pause à",
     paused: "En pause",
-    resumeFailed: "Échec de la reprise audio"
+    resumeFailed: "Échec de la reprise audio",
+    audioConnectionLost: "Connexion audio perdue. Essayez de rafraîchir si la lecture s'arrête."
   },
   ar: {
     appTitle: "رفيق القرآن والسنة",
