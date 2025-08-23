@@ -12,6 +12,14 @@ let progressTrackingInterval = null;
 // Keep full list of reciters for quick filtering
 let ALL_RECITERS = [];
 
+// Track the last known audio state to detect input changes
+let lastKnownAudioState = {
+  suraId: null,
+  reciterKey: null,
+  currentTime: 0,
+  isPlaying: false
+};
+
 // Unified in-memory catalogue for all reciters pulled from every provider.
 const RECITER_CATALOG = {};
 
@@ -55,12 +63,10 @@ function setupEventHandlers() {
   autoplayButton.addEventListener('click', toggleAutoplay);
   
   suraSelect.addEventListener('change', () => {
-    validateQuranSelection();
-    saveUserSelections();
+    handleInputChange();
   });
   reciterInput.addEventListener('input', () => {
-    validateQuranSelection();
-    saveUserSelections();
+    handleInputChange();
   });
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
@@ -91,8 +97,7 @@ function setupEventHandlers() {
   if (clearReciterBtn) {
     clearReciterBtn.addEventListener('click', () => {
       reciterInput.value = '';
-      validateQuranSelection();
-      saveUserSelections();
+      handleInputChange();
       reciterInput.focus();
     });
   }
@@ -119,6 +124,55 @@ function setupEventHandlers() {
   }
 
   // datalist handles filtering natively, so no extra handler
+}
+
+// New function to handle input changes
+function handleInputChange() {
+  validateQuranSelection();
+  saveUserSelections();
+  
+  // Check if current selections differ from active audio state
+  const currentSuraId = document.getElementById('sura-select').value;
+  const currentReciterKey = getReciterKey();
+  
+  if (lastKnownAudioState.suraId && lastKnownAudioState.reciterKey) {
+    const hasChanged = (
+      currentSuraId !== lastKnownAudioState.suraId || 
+      currentReciterKey !== lastKnownAudioState.reciterKey
+    );
+    
+    if (hasChanged) {
+      console.log('Input changed - resetting playback state');
+      resetPlaybackState();
+    }
+  }
+}
+
+// Function to reset playback state when inputs change
+function resetPlaybackState() {
+  // Reset the button to "Play" mode
+  const playButton = document.getElementById('play-quran');
+  playButton.textContent = t('play');
+  playButton.dataset.action = 'play';
+  
+  // Hide progress container since we're starting fresh
+  document.getElementById('progress-container').classList.add('hidden');
+  document.getElementById('progress-bar').value = 0;
+  document.getElementById('current-time').textContent = formatTime(0);
+  document.getElementById('total-time').textContent = formatTime(0);
+  
+  // Clear availability status
+  const availabilityStatus = document.getElementById('quran-availability');
+  availabilityStatus.innerHTML = '';
+  availabilityStatus.style.color = '';
+  
+  // Reset last known state
+  lastKnownAudioState = {
+    suraId: null,
+    reciterKey: null, 
+    currentTime: 0,
+    isPlaying: false
+  };
 }
 
 async function handlePlayPauseResume(event) {
@@ -212,8 +266,24 @@ async function loadSavedAudioState() {
       if (stateResponse.state.reciterKey === currentReciterKey && stateResponse.state.suraId === currentSuraId) {
         
         // console.log('Restoring audio playback state:', stateResponse.state);
+        lastKnownAudioState = {
+          suraId: stateResponse.state.suraId,
+          reciterKey: stateResponse.state.reciterKey,
+          currentTime: stateResponse.state.currentTime,
+          isPlaying: stateResponse.state.isPlaying
+        };
+        
         updateProgressUI(stateResponse.state);
         updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
+        
+        // Show resume indicator if there's significant progress
+        if (stateResponse.state.currentTime > 30) {
+          availabilityStatus.innerHTML = `⏯ Ready to resume from ${formatTime(stateResponse.state.currentTime)}`;
+          availabilityStatus.style.color = '#007bff';
+        } else if (stateResponse.state.currentTime > 5) {
+          availabilityStatus.innerHTML = `⏯ Previous session available`;
+          availabilityStatus.style.color = '#007bff';
+        }
         
         if (stateResponse.state.isPlaying) {
           startProgressTracking();
@@ -229,6 +299,13 @@ async function loadSavedAudioState() {
         setReciterInputByKey(stateResponse.state.reciterKey);
         
         validateQuranSelection();
+        lastKnownAudioState = {
+          suraId: stateResponse.state.suraId,
+          reciterKey: stateResponse.state.reciterKey,
+          currentTime: stateResponse.state.currentTime,
+          isPlaying: stateResponse.state.isPlaying
+        };
+        
         updateProgressUI(stateResponse.state);
         updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
         
@@ -795,6 +872,10 @@ async function playQuranAudio() {
   const reciterId = getReciterKey();
   const availabilityStatus = document.getElementById('quran-availability');
   
+  // Update last known state when starting new playback
+  lastKnownAudioState.suraId = suraId;
+  lastKnownAudioState.reciterKey = reciterId;
+  
   try {
     console.log('Popup: Testing background script connectivity...');
     try {
@@ -830,6 +911,7 @@ async function playQuranAudio() {
     availabilityStatus.innerHTML = '&#x2705; Playing...';
     availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true, 0);
+    lastKnownAudioState.isPlaying = true;
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
@@ -1024,7 +1106,15 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   // Enable/disable interactions depending on allowed state
   pauseButton.disabled = !isEnabled;
 
-  const hasProgress = currentTime > 0 || document.getElementById('progress-bar').value > 0;
+  // Check if we should show resume based on stored state and current selections
+  const currentSuraId = document.getElementById('sura-select').value;
+  const currentReciterKey = getReciterKey();
+  const hasMatchingSelection = (
+    lastKnownAudioState.suraId === currentSuraId && 
+    lastKnownAudioState.reciterKey === currentReciterKey
+  );
+  
+  const hasProgress = (currentTime > 0 || document.getElementById('progress-bar').value > 0) && hasMatchingSelection;
 
   if (isPlaying) {
     // Audio currently playing ---------------------------------------------
@@ -1038,8 +1128,15 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
     // Audio not playing (stopped or paused) --------------------------------
     playButton.classList.remove('hidden');
     playButton.disabled = !isEnabled;
-    playButton.textContent = hasProgress ? t('resume') : t('play');
-    playButton.dataset.action = hasProgress ? 'resume' : 'play';
+    
+    if (hasProgress && hasMatchingSelection) {
+      playButton.textContent = `${t('resume')} (${formatTime(currentTime)})`;
+      playButton.dataset.action = 'resume';
+    } else {
+      playButton.textContent = t('play');
+      playButton.dataset.action = 'play';
+    }
+    
     pauseButton.classList.add('hidden');
   }
 }
