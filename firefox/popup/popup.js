@@ -12,16 +12,24 @@ let progressTrackingInterval = null;
 // Keep full list of reciters for quick filtering
 let ALL_RECITERS = [];
 
+// Track the last known audio state to detect input changes
+let lastKnownAudioState = {
+  suraId: null,
+  reciterKey: null,
+  currentTime: 0,
+  isPlaying: false
+};
+
 // Unified in-memory catalogue for all reciters pulled from every provider.
-// Keyed by our internal `reciterKey` (e.g. "qc:7", "mp3:224", "islamic:ar.alafasy").
-const RECITER_CATALOG = {};  // Populated by `fetchReciters()`
+const RECITER_CATALOG = {};
 
 // Map display label -> reciterKey for the datalist picker
 const RECITER_LABEL_TO_KEY = {};
 
 function getReciterKey() {
   const input = document.getElementById('reciter-input');
-  return RECITER_LABEL_TO_KEY[input.value] || '';
+  if (!input.value) return '';
+  return RECITER_LABEL_TO_KEY[input.value];
 }
 
 function setReciterInputByKey(key) {
@@ -56,12 +64,10 @@ function setupEventHandlers() {
   autoplayButton.addEventListener('click', toggleAutoplay);
   
   suraSelect.addEventListener('change', () => {
-    validateQuranSelection();
-    saveUserSelections();
+    handleInputChange();
   });
   reciterInput.addEventListener('input', () => {
-    validateQuranSelection();
-    saveUserSelections();
+    handleInputChange();
   });
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
@@ -91,14 +97,11 @@ function setupEventHandlers() {
     });
   });
 
-  // Clear button for reciter input -----------------------------------------
   const clearReciterBtn = document.getElementById('clear-reciter');
   if (clearReciterBtn) {
     clearReciterBtn.addEventListener('click', () => {
-      // Remove current value and re-validate selection
       reciterInput.value = '';
-      validateQuranSelection();
-      saveUserSelections();
+      handleInputChange();
       reciterInput.focus();
     });
   }
@@ -113,9 +116,9 @@ function setupEventHandlers() {
       const notifEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
       if (notifEnabled) {
         const newMode = modeSelect.value;
-        chrome.runtime.sendMessage({ action: 'updateDhikrMode', mode: newMode }, (resp) => {
-          if (chrome.runtime.lastError) {
-            console.warn('Failed to update mode:', chrome.runtime.lastError.message);
+        browser.runtime.sendMessage({ action: 'updateDhikrMode', mode: newMode }, (resp) => {
+          if (browser.runtime.lastError) {
+            console.warn('Failed to update mode:', browser.runtime.lastError.message);
           } else {
             // console.log('Mode updated:', resp);
           }
@@ -125,6 +128,55 @@ function setupEventHandlers() {
   }
 
   // datalist handles filtering natively, so no extra handler
+}
+
+// New function to handle input changes
+function handleInputChange() {
+  validateQuranSelection();
+  saveUserSelections();
+  
+  // Check if current selections differ from active audio state
+  const currentSuraId = document.getElementById('sura-select').value;
+  const currentReciterKey = getReciterKey();
+  
+  if (lastKnownAudioState.suraId && lastKnownAudioState.reciterKey) {
+    const hasChanged = (
+      currentSuraId !== lastKnownAudioState.suraId || 
+      currentReciterKey !== lastKnownAudioState.reciterKey
+    );
+    
+    if (hasChanged) {
+      console.log('Input changed - resetting playback state');
+      resetPlaybackState();
+    }
+  }
+}
+
+// Function to reset playback state when inputs change
+function resetPlaybackState() {
+  // Reset the button to "Play" mode
+  const playButton = document.getElementById('play-quran');
+  playButton.textContent = t('play');
+  playButton.dataset.action = 'play';
+  
+  // Hide progress container since we're starting fresh
+  document.getElementById('progress-container').classList.add('hidden');
+  document.getElementById('progress-bar').value = 0;
+  document.getElementById('current-time').textContent = formatTime(0);
+  document.getElementById('total-time').textContent = formatTime(0);
+  
+  // Clear availability status
+  const availabilityStatus = document.getElementById('quran-availability');
+  availabilityStatus.innerHTML = '';
+  availabilityStatus.style.color = '';
+  
+  // Reset last known state
+  lastKnownAudioState = {
+    suraId: null,
+    reciterKey: null, 
+    currentTime: 0,
+    isPlaying: false
+  };
 }
 
 async function handlePlayPauseResume(event) {
@@ -157,7 +209,7 @@ async function saveUserSelections() {
       timestamp: Date.now()
     };
     
-    await chrome.storage.local.set({ userSelections });
+    await browser.storage.local.set({ userSelections });
     // console.log('Saved user selections:', userSelections);
   } catch (error) {
     console.error('Failed to save user selections:', error);
@@ -167,7 +219,7 @@ async function saveUserSelections() {
 async function loadSavedAudioState() {
   try {
     // Load both user selections and audio state
-    const { audioState, userSelections } = await chrome.storage.local.get(['audioState', 'userSelections']);
+    const { audioState, userSelections } = await browser.storage.local.get(['audioState', 'userSelections']);
     
     // First, restore user selections (even if no audio is playing)
     if (userSelections?.suraId || userSelections?.reciterKey) {
@@ -209,7 +261,7 @@ async function loadSavedAudioState() {
     }
 
     // Then, restore audio state - check if there's any active audio session
-    const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+    const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
     if (stateResponse?.success && stateResponse.state?.audioUrl) {
       const currentSuraId = document.getElementById('sura-select').value;
       const currentReciterKey = getReciterKey();
@@ -284,19 +336,23 @@ async function loadHadith() {
       const data = await res.json();
       const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
       hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
+    } else if (CURRENT_LANG === 'fr') {
+      // ---------------- French with fallback ----------------
+      const text = await fetchRandomFrenchHadith();
+      hadithEl.textContent = text || 'Il n\'y a de divinité qu\'Allah';
     } else {
       // ---------------- English with local cache ----------------
       const CACHE_KEY = 'hadithCacheEn';
       const TARGET_CACHE_SIZE = 30;
 
-      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
+      let { [CACHE_KEY]: cacheArr } = await browser.storage.local.get(CACHE_KEY);
       cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
 
       let text = '';
       if (cacheArr.length > 0) {
         text = cacheArr.shift(); // use first item
         // save trimmed cache back but don't await to prevent UI delay
-        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
+        browser.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
       }
 
       if (!text) {
@@ -314,7 +370,7 @@ async function loadHadith() {
               if (h) newOnes.push(h);
             }
             const updated = cacheArr.concat(newOnes);
-            await chrome.storage.local.set({ [CACHE_KEY]: updated });
+            await browser.storage.local.set({ [CACHE_KEY]: updated });
           } catch (err) {
             console.warn('Failed to refill hadith cache:', err);
           }
@@ -370,6 +426,33 @@ async function fetchRandomEnglishHadith() {
   }
 
   return '';
+}
+
+// French Hadith fetcher with fallbacks
+async function fetchRandomFrenchHadith() {
+  const FRENCH_FALLBACKS = [
+    'Le Prophète ﷺ a dit : "Les actions ne valent que par les intentions."',
+    'Le Prophète ﷺ a dit : "Souriez à votre frère, c\'est une aumône."',
+    'Le Prophète ﷺ a dit : "Le meilleur des hommes est celui qui est utile aux autres."',
+    'Le Prophète ﷺ a dit : "Celui qui croit en Allah et au Jour dernier, qu\'il dise du bien ou qu\'il se taise."',
+    'Le Prophète ﷺ a dit : "La foi (iman) a soixante-dix et quelques branches."'
+  ];
+
+  // Try HadeethEnc API for French
+  for (let i = 0; i < 10; i++) {
+    const randomId = Math.floor(Math.random() * 1000) + 1;
+    try {
+      const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=fr&id=${randomId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const txt = data?.hadeeth || data?.title;
+        if (txt && txt.length > 20) return txt;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // Return random fallback
+  return FRENCH_FALLBACKS[Math.floor(Math.random() * FRENCH_FALLBACKS.length)];
 }
 
 // Comprehensive collection of authentic Dhikr with their rewards
@@ -572,10 +655,43 @@ const DHIKR_REWARD_AR = {
   'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
 };
 
+// --- French translations for Dhikr rewards -----------------------------------
+const DHIKR_REWARD_FR = {
+  'Each recitation equals a tree planted in Paradise': 'Chaque récitation équivaut à un arbre planté au Paradis',
+  'Fills the scales of good deeds': 'Remplit la balance des bonnes actions',
+  'Fills what is between heaven and earth': 'Remplit ce qui est entre le ciel et la terre',
+  'The best of remembrance, heaviest on the scales': 'Le meilleur des rappels, le plus lourd sur la balance',
+  '100 sins erased, even if like foam on the sea': '100 péchés effacés, même s\'ils sont comme l\'écume sur la mer',
+  'Beloved to Allah, light on the tongue, heavy on the scales': 'Aimé d\'Allah, léger sur la langue, lourd sur la balance',
+  'A treasure from the treasures of Paradise': 'Un trésor des trésors du Paradis',
+  'Opens doors of mercy and provision': 'Ouvre les portes de la miséricorde et de la subsistance',
+  'Allah sends 10 blessings for each one sent': 'Allah envoie 10 bénédictions pour chacune envoyée',
+  'Direct supplication for forgiveness': 'Supplication directe pour le pardon',
+  'Comprehensive dua for spiritual improvement': 'Invocation complète pour l\'amélioration spirituelle',
+  'Protection from all harms and anxieties': 'Protection contre tous les maux et les angoisses',
+  'The most comprehensive dua for both worlds': 'L\'invocation la plus complète pour les deux mondes',
+  'Dua for the four pillars of a good life': 'Invocation pour les quatre piliers d\'une bonne vie',
+  'Guarantees Paradise for the one who says it with conviction': 'Garantit le Paradis à celui qui la dit avec conviction',
+  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'Début de Sayyid al-Istighfar - maître de la demande de pardon',
+  "Powerful dua for seeking Allah's help and mercy": 'Invocation puissante pour demander l\'aide et la miséricorde d\'Allah',
+  'Dua for guidance and righteousness': 'Invocation pour la guidance et la droiture',
+  'Dua for gratitude and righteous deeds': 'Invocation pour la gratitude et les bonnes actions',
+  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'La dire 100 fois équivaut à libérer 10 esclaves, 100 bonnes actions écrites et 100 péchés effacés, protection contre Shaytan toute la journée',
+  'More beloved to the Prophet than all the world and what it contains': 'Plus aimé du Prophète que le monde entier et ce qu\'il contient',
+  'Protection from harm until morning': 'Protection contre le mal jusqu\'au matin',
+  'Nothing will harm the one who says it three times in morning and evening': 'Rien ne fera de mal à celui qui la dit trois fois matin et soir',
+  'Whoever recites it seven times morning and evening Allah will suffice him': 'Quiconque la récite sept fois matin et soir, Allah lui suffira',
+  'Ease in tasks and removal of anxiety': 'Facilité dans les tâches et suppression de l\'anxiété',
+  "Dua for parents leading to Allah's mercy": 'Invocation pour les parents menant à la miséricorde d\'Allah',
+  'Protection from loss of blessings': 'Protection contre la perte des bénédictions'
+};
+
 // Helper to get reward in current language ------------------------------------
 function getRewardText(rewardEn) {
   if (!rewardEn) return '';
-  return CURRENT_LANG === 'ar' ? (DHIKR_REWARD_AR[rewardEn] || '') : rewardEn;
+  if (CURRENT_LANG === 'ar') return DHIKR_REWARD_AR[rewardEn] || '';
+  if (CURRENT_LANG === 'fr') return DHIKR_REWARD_FR[rewardEn] || rewardEn;
+  return rewardEn;
 }
 
 // Helper to pick proper sura display name -------------------------------------
@@ -587,14 +703,20 @@ function displayCurrentDhikr() {
   const dhikr = dhikrCollection[currentDhikrIndex];
   const textEl = document.getElementById('dhikr-text');
   const infoEl = document.getElementById('dhikr-info');
+  
   if (CURRENT_LANG === 'ar') {
     textEl.textContent = dhikr.arabic;
     const reward = getRewardText(dhikr.reward);
     infoEl.textContent = reward ? `الأجر: ${reward}` : '';
+  } else if (CURRENT_LANG === 'fr') {
+    textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
+    const reward = getRewardText(dhikr.reward);
+    infoEl.textContent = reward ? `Récompense : ${reward}` : '';
   } else {
     // Default to English
     textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
-    infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
+    const reward = getRewardText(dhikr.reward);
+    infoEl.textContent = reward ? `Reward: ${reward}` : '';
   }
 }
 
@@ -604,7 +726,7 @@ function getRandomDhikr() {
 
 async function loadDhikrSettings() {
   try {
-    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    const { dhikrSettings } = await browser.storage.local.get('dhikrSettings');
     if (dhikrSettings) {
       const notificationsEnabled = dhikrSettings.notificationsEnabled || false;
       const interval = dhikrSettings.interval || 60;
@@ -641,7 +763,7 @@ async function saveDhikrSettings() {
       timestamp: Date.now()
     };
     
-    await chrome.storage.local.set({ dhikrSettings });
+    await browser.storage.local.set({ dhikrSettings });
     console.log('Saved dhikr settings:', dhikrSettings);
   } catch (error) {
     console.error('Failed to save dhikr settings:', error);
@@ -803,7 +925,7 @@ async function fetchReciters() {
 
   // Cache deduped catalogue for 6 h (21 600 000 ms)
   try {
-    await chrome.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
+    await browser.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
   } catch (err) {
     console.warn('Failed to save reciter cache:', err);
   }
@@ -842,18 +964,18 @@ async function playQuranAudio() {
     // First, test if background script is responsive
     console.log('Popup: Testing background script connectivity...');
     try {
-      const testResponse = await chrome.runtime.sendMessage({ action: 'ping' });
+      const testResponse = await browser.runtime.sendMessage({ action: 'ping' });
       console.log('Popup: Background script ping response:', testResponse);
     } catch (pingError) {
       console.error('Popup: Background script ping failed:', pingError);
-      console.error('Popup: Chrome runtime lastError:', chrome.runtime.lastError);
+      console.error('Popup: Chrome runtime lastError:', browser.runtime.lastError);
     }
     
     const audioUrl = await getSuraAudioUrl(reciterId, suraId);
     console.log('Fetched audio URL:', audioUrl);
     
     console.log('Popup: Sending message to background script...');
-    const response = await chrome.runtime.sendMessage({
+    const response = await browser.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
       suraId: suraId,
@@ -862,9 +984,9 @@ async function playQuranAudio() {
 
     console.log('Popup: Received response from background:', response);
     
-    if (chrome.runtime.lastError) {
-      console.error('Popup: Chrome runtime error:', chrome.runtime.lastError);
-      throw new Error(`Chrome runtime error: ${chrome.runtime.lastError.message}`);
+    if (browser.runtime.lastError) {
+      console.error('Popup: Chrome runtime error:', browser.runtime.lastError);
+      throw new Error(`Chrome runtime error: ${browser.runtime.lastError.message}`);
     }
 
     if (!response?.success) {
@@ -954,10 +1076,10 @@ async function getSuraAudioUrl(reciterKey, suraId) {
 
 async function pauseQuranAudio() {
   try {
-    const response = await chrome.runtime.sendMessage({ action: 'pauseAudio' });
+    const response = await browser.runtime.sendMessage({ action: 'pauseAudio' });
     if (response?.success) {
       // Get current state to update UI with correct progress
-      const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
       if (stateResponse?.success) {
         updatePlayButtonUI(false, true, stateResponse.state.currentTime);
         updateProgressUI(stateResponse.state);
@@ -978,10 +1100,10 @@ async function pauseQuranAudio() {
 
 async function resumeQuranAudio() {
   try {
-    const response = await chrome.runtime.sendMessage({ action: 'resumeAudio' });
+    const response = await browser.runtime.sendMessage({ action: 'resumeAudio' });
     if (response?.success) {
       // Get the current state after resuming to update UI properly
-      const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
       if (stateResponse?.success) {
         updatePlayButtonUI(true, true, stateResponse.state.currentTime);
         updateProgressUI(stateResponse.state);
@@ -1001,10 +1123,10 @@ async function resumeQuranAudio() {
 
 async function seekAudio(percentage) {
   try {
-    const { success, state } = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+    const { success, state } = await browser.runtime.sendMessage({ action: 'getAudioState' });
     if (success && state?.duration) {
       const seekTime = (percentage / 100) * state.duration;
-      await chrome.runtime.sendMessage({ action: 'seekAudio', time: seekTime });
+      await browser.runtime.sendMessage({ action: 'seekAudio', time: seekTime });
     }
   } catch (error) {
     console.error('Failed to seek audio:', error);
@@ -1123,7 +1245,7 @@ function startProgressTracking() {
   
   progressTrackingInterval = setInterval(async () => {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+      const response = await browser.runtime.sendMessage({ action: 'getAudioState' });
       if (response?.success) {
         updateProgressUI(response.state);
         
@@ -1229,13 +1351,13 @@ async function toggleDhikrNotifications() {
       // Send message with robust timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage({
+          browser.runtime.sendMessage({
             action: 'startDhikrNotifications',
             interval: interval,
             mode: mode
           }, (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
+            if (browser.runtime.lastError) {
+              reject(new Error(browser.runtime.lastError.message));
             } else {
               resolve(response);
             }
@@ -1255,11 +1377,11 @@ async function toggleDhikrNotifications() {
       // Send message with robust timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage({
+          browser.runtime.sendMessage({
             action: 'stopDhikrNotifications'
           }, (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
+            if (browser.runtime.lastError) {
+              reject(new Error(browser.runtime.lastError.message));
             } else {
               resolve(response);
             }
@@ -1384,7 +1506,7 @@ function validateInterval() {
     // Update notifications if they're enabled
     const notificationsEnabled = document.getElementById('toggle-notifications').dataset.enabled === 'true';
     if (notificationsEnabled) {
-      chrome.runtime.sendMessage({
+      browser.runtime.sendMessage({
         action: 'updateDhikrInterval',
         interval: value
       });
@@ -1462,6 +1584,31 @@ const I18N = {
     invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
     notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
     clearReciter: "✖ مسح"
+  },
+  fr: {
+    appTitle: "Compagnon Coran & Sunnah",
+    quran: "Coran",
+    hadith: "Hadith",
+    dhikr: "Dhikr",
+    selectSura: "Sélectionner une sourate...",
+    reciterPlaceholder: "Sélectionner ou taper un récitateur...",
+    play: "▶ Lire",
+    resume: "▶ Reprendre",
+    pause: "⏸ Pause",
+    autoplayOn: "🔄 Lecture auto : ACTIVÉE",
+    autoplayOff: "🔄 Lecture auto : DÉSACTIVÉE",
+    loading: "Chargement...",
+    nextDhikr: "🔄 Dhikr suivant",
+    notificationsOn: "🔔 Notifications : ACTIVÉES",
+    notificationsOff: "🔔 Notifications : DÉSACTIVÉES",
+    playing: "▶ En cours",
+    reminderStyle: "Style de rappel :",
+    modeNotification: "📣 Notification système",
+    modePopup: "🗔 Fenêtre contextuelle",
+    reminderLabel: "Intervalle de rappel (secondes) :",
+    invalidInterval: "Veuillez entrer une valeur entre 5 et 3600 secondes.",
+    notificationError: "Une erreur s'est produite. Veuillez réessayer.",
+    clearReciter: "✖ Effacer"
   }
 };
 
@@ -1471,11 +1618,11 @@ function t(key) {
 
 async function initLanguage() {
   // Load saved preference or fall back to browser UI language
-  const { [LANG_STORAGE_KEY]: savedLang } = await chrome.storage.local.get(LANG_STORAGE_KEY);
+  const { [LANG_STORAGE_KEY]: savedLang } = await browser.storage.local.get(LANG_STORAGE_KEY);
   if (savedLang && I18N[savedLang]) {
     CURRENT_LANG = savedLang;
   } else {
-    const browserLang = (chrome.i18n?.getUILanguage?.() || navigator.language || 'en').split('-')[0];
+    const browserLang = (browser.i18n?.getUILanguage?.() || navigator.language || 'en').split('-')[0];
     CURRENT_LANG = I18N[browserLang] ? browserLang : 'en';
   }
 
@@ -1490,7 +1637,7 @@ async function initLanguage() {
       const newLang = e.target.value;
       if (I18N[newLang]) {
         CURRENT_LANG = newLang;
-        await chrome.storage.local.set({ [LANG_STORAGE_KEY]: newLang });
+        await browser.storage.local.set({ [LANG_STORAGE_KEY]: newLang });
         applyLanguage();
       }
     });
