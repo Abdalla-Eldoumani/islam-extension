@@ -28,7 +28,8 @@ const RECITER_LABEL_TO_KEY = {};
 
 function getReciterKey() {
   const input = document.getElementById('reciter-input');
-  return RECITER_LABEL_TO_KEY[input.value] || '';
+  if (!input.value) return '';
+  return RECITER_LABEL_TO_KEY[input.value];
 }
 
 function setReciterInputByKey(key) {
@@ -1619,8 +1620,8 @@ const I18N = {
     notificationsOff: "🔔 Notifications : DÉSACTIVÉES",
     playing: "▶ En cours de lecture",
     reminderStyle: "Style de rappel :",
-    modeNotification: "📣 Notification",
-    modePopup: "🗔 Pop-up",
+    modeNotification: "📣 Notification système",
+    modePopup: "🗔 Fenêtre contextuelle",
     reminderLabel: "Intervalle de rappel (secondes) :",
     invalidInterval: "Veuillez entrer une valeur entre 5 et 3600 secondes.",
     notificationError: "Une erreur s'est produite. Veuillez réessayer.",
