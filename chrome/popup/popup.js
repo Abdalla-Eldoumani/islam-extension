@@ -674,6 +674,42 @@ const dhikrCollection = [
     english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
     transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
     reward: "Dua for parents leading to Allah's mercy"
+  },
+  {
+    arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِيمَا أَعْطَيْتَنَا وَقِنَا عَذَابَ النَّارِ',
+    english: 'O Allah, bless us in what You have provided us and save us from the punishment of the Fire',
+    transliteration: 'Allahumma barik lana fima a’taytana wa qina adhab an-nar',
+    reward: 'Protection from Hellfire and blessing in sustenance'
+  },
+  {
+    arabic: 'اللَّهُمَّ إِنَّهُ لَا سَهْلَ إِلَّا مَا جَعَلْتَهُ سَهْلًا',
+    english: 'O Allah, there is nothing easy except what You make easy',
+    transliteration: 'Allahumma innahu la sahla illa ma ja’altahu sahla',
+    reward: 'Makes difficult matters easy through Allah’s grace'
+  },
+  {
+    arabic: 'اللَّهُمَّ عَافِنِي فِي بَدَنِي وَعَافِنِي فِي سَمْعِي وَعَافِنِي فِي بَصَرِي',
+    english: 'O Allah, grant me well-being in my body, grant me well-being in my hearing, and grant me well-being in my sight',
+    transliteration: 'Allahumma ’afini fi badani wa ’afini fi sam’i wa ’afini fi basari',
+    reward: 'Complete protection for body and senses'
+  },
+  {
+    arabic: 'اللَّهُمَّ أَكْثِرْ مَالِي وَأَغْنِنِي عَنِ النَّاسِ',
+    english: 'O Allah, increase my wealth and make me independent of people',
+    transliteration: 'Allahumma akthir mali wa aghninni ’an an-nas',
+    reward: 'Blessing in wealth and independence from people'
+  },
+  {
+    arabic: 'اللَّهُمَّ إِنَّكَ عُفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنَّي',
+    english: 'O Allah, You are Most Forgiving and You love forgiveness, so forgive me',
+    transliteration: 'Allahumma innaka ’afuwwun tuhibbul-’afwa fa’fu ’anni',
+    reward: 'The most beloved dua during Laylat al-Qadr (Night of Power)'
+  },
+  {
+    arabic: 'اللَّهُمَّ إِنَّا نَسْأَلُكَ مِنْ فَضْلِكَ وَرَحْمَتِكَ',
+    english: 'O Allah, we ask You for Your grace and mercy',
+    transliteration: 'Allahumma inna nas’aluka min fadlika wa rahmatik',
+    reward: 'Opens doors of divine grace and mercy'
   }
 ];
 
@@ -746,7 +782,24 @@ const DHIKR_REWARD_FR = {
   'Whoever recites it seven times morning and evening Allah will suffice him': 'Quiconque le récite sept fois matin et soir, Allah lui suffira',
   'Ease in tasks and removal of anxiety': 'Facilité dans les tâches et suppression de l’anxiété',
   "Dua for parents leading to Allah's mercy": 'Invocation pour les parents menant à la miséricorde d’Allah',
-  'Protection from loss of blessings': 'Protection contre la perte des bienfaits'
+  'Protection from loss of blessings': 'Protection contre la perte des bienfaits',
+  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'Début de Sayyid al-Istighfar - le maître de la demande de pardon',
+  "Powerful dua for seeking Allah's help and mercy": 'Invocation puissante pour demander l’aide et la miséricorde d’Allah',
+  'Dua for guidance and righteousness': 'Invocation pour la guidance et la droiture',
+  'Dua for gratitude and righteous deeds': 'Invocation pour la gratitude et les bonnes actions',
+  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'Le dire 100 fois équivaut à libérer 10 esclaves, 100 bonnes actions écrites et 100 péchés effacés, protection contre Satan toute la journée',
+  'More beloved to the Prophet than all the world and what it contains': 'Plus aimé du Prophète que tout le monde et ce qu’il contient',
+  'Protection from harm until morning': 'Protection contre le mal jusqu’au matin',
+  'Nothing will harm the one who says it three times in morning and evening': 'Rien ne nuira à celui qui le dit trois fois matin et soir',
+  'Whoever recites it seven times morning and evening Allah will suffice him': 'Quiconque le récite sept fois matin et soir, Allah lui suffira',
+  'Dua for the four pillars of a good life': 'Invocation pour les quatre piliers d’une bonne vie',
+  'Guarantees Paradise for the one who says it with conviction': 'Garantit le Paradis à celui qui le dit avec conviction',
+  'Protection from Hellfire and blessing in sustenance': 'Protection contre l’Enfer et bénédiction dans la subsistance',
+  'Makes difficult matters easy through Allah’s grace': 'Facilite les affaires difficiles par la grâce d’Allah',
+  'Complete protection for body and senses': 'Protection complète pour le corps et les sens',
+  'Blessing in wealth and independence from people': 'Bénédiction dans la richesse et indépendance des gens',
+  'The most beloved dua during Laylat al-Qadr (Night of Power)': 'L’invocation la plus aimée pendant Laylat al-Qadr (Nuit du Destin)',
+  'Opens doors of divine grace and mercy': 'Ouvre les portes de la grâce divine et de la miséricorde'
 };
 
 function getRewardText(rewardEn) {
