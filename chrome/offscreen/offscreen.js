@@ -204,22 +204,46 @@ function pauseAudio() {
 
 async function resumeAudio() {
   try {
-    // If we have no previous source, bail early
     if (!currentAudioState.audioUrl) {
       throw new Error('No audio loaded to resume');
     }
 
+    const savedTime = currentAudioState.currentTime;
+    console.log(`Offscreen: Attempting to resume from ${formatTime(savedTime)}`);
+
     const needsReload = (
       audioPlayer.readyState === 0 ||
-      audioPlayer.networkState === 3
+      audioPlayer.networkState === 3 ||
+      audioPlayer.src !== currentAudioState.audioUrl
     );
 
     if (needsReload) {
-      console.log('Offscreen: Audio element stale, reloading source before resume');
+      console.log('Offscreen: Audio element needs reload, restoring from saved position');
       await playAudio(currentAudioState.audioUrl, currentAudioState.suraId, currentAudioState.reciterKey);
-      if (currentAudioState.currentTime > 0 && audioPlayer.duration > currentAudioState.currentTime) {
-        audioPlayer.currentTime = currentAudioState.currentTime;
+      
+      if (savedTime > 0) {
+        await new Promise(resolve => {
+          const onCanSeek = () => {
+            if (audioPlayer.duration > savedTime) {
+              audioPlayer.currentTime = savedTime;
+              console.log(`Offscreen: Restored playback position to ${formatTime(savedTime)}`);
+            }
+            audioPlayer.removeEventListener('loadedmetadata', onCanSeek);
+            audioPlayer.removeEventListener('canplay', onCanSeek);
+            resolve();
+          };
+          
+          if (audioPlayer.readyState >= 1) {
+            onCanSeek();
+          } else {
+            audioPlayer.addEventListener('loadedmetadata', onCanSeek);
+            audioPlayer.addEventListener('canplay', onCanSeek);
+          }
+          
+          setTimeout(resolve, 3000);
+        });
       }
+      
       currentAudioState.isPlaying = true;
       await saveAudioState();
       return;
@@ -231,7 +255,7 @@ async function resumeAudio() {
     }
     currentAudioState.isPlaying = true;
     await saveAudioState();
-    console.log('Offscreen: Audio resumed successfully');
+    console.log(`Offscreen: Audio resumed successfully from ${formatTime(savedTime)}`);
   } catch (error) {
     console.error('Offscreen: Resume failed:', error);
     currentAudioState.isPlaying = false;
@@ -249,18 +273,33 @@ function seekAudio(time) {
 async function saveAudioState() {
   currentAudioState.currentTime = audioPlayer.currentTime;
   currentAudioState.duration = audioPlayer.duration || 0;
+  currentAudioState.timestamp = Date.now(); // Add timestamp for tracking when state was saved
   
   try {
     await chrome.storage.local.set({ audioState: currentAudioState });
+    console.log('Offscreen: Saved audio state at', formatTime(currentAudioState.currentTime));
   } catch (error) {
     console.error('Failed to save audio state:', error);
   }
 }
 
-// Update audio state periodically
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds < 0) return '0:00';
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+let lastSaveTime = 0;
 audioPlayer.addEventListener('timeupdate', () => {
   currentAudioState.currentTime = audioPlayer.currentTime;
   currentAudioState.duration = audioPlayer.duration || 0;
+  
+  const now = Date.now();
+  if (now - lastSaveTime > 10000) {
+    saveAudioState();
+    lastSaveTime = now;
+  }
 });
 
 audioPlayer.addEventListener('ended', () => {
