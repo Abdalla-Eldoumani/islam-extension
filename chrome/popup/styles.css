@@ -335,7 +335,7 @@ body[dir="rtl"] .popup__header {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 /* Scrollbar subtle styling for cards list */
@@ -345,4 +345,155 @@ body[dir="rtl"] .popup__header {
 .cards::-webkit-scrollbar-thumb {
   background: rgba(0,0,0,0.15);
   border-radius: 3px;
+}
+
+/* ================= LOADING ANIMATIONS ================= */
+
+/* Spinner animation */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--clr-primary);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--clr-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading dots animation */
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60% { content: '...'; }
+  80%, 100% { content: ''; }
+}
+
+/* Pulse animation for status messages */
+.card__availability-status {
+  transition: all 0.3s ease;
+  min-height: 1.2rem;
+}
+
+/* Enhanced button states */
+.card__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.card__button.loading {
+  position: relative;
+  color: transparent;
+}
+
+.card__button.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Success/Error animations */
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.status-success {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+.status-error {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+/* Progress bar enhancements */
+.card__progress-bar {
+  transition: width 0.2s ease;
+}
+
+.card__progress-bar::-webkit-slider-thumb {
+  transition: all 0.2s ease;
+}
+
+.card__progress-bar::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(20, 143, 119, 0.3);
+}
+
+/* Enhanced availability status styles */
+.card__availability-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Micro-interactions */
+.card__button, .card__select, .card__input {
+  transition: all 0.2s ease;
+}
+
+.card__button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card__button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Skeleton loading for selects */
+.skeleton-loader {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.1) 25%, 
+    rgba(255, 255, 255, 0.2) 50%, 
+    rgba(255, 255, 255, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 } 
