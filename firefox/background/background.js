@@ -1,6 +1,6 @@
 /**
- * Background service worker for Qur'an & Sunnah Companion
- * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
+ * Background script for Qur'an & Sunnah Companion (Firefox)
+ * Handles audio playback directly and Dhikr notifications.
  */
 
 // ---------------------------------------------------------------------------
@@ -46,16 +46,130 @@ const dhikrCollection = [
     reward: '100 sins erased, even if like foam on the sea'
   },
   {
-    arabic: 'أَسْتَغْفِرُ اللَّهَ',
-    english: 'I seek forgiveness from Allah',
-    transliteration: 'Astaghfirullah',
-    reward: 'Opens doors of mercy and provision'
+    arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ',
+    english: 'Glory be to Allah the Magnificent and praise be to Him',
+    transliteration: 'Subhan Allahil-Azeem wa bihamdihi',
+    reward: 'Beloved to Allah, light on the tongue, heavy on the scales'
   },
   {
     arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
     english: 'There is no power except with Allah',
     transliteration: 'La hawla wa la quwwata illa billah',
     reward: 'A treasure from the treasures of Paradise'
+  },
+  {
+    arabic: 'أَسْتَغْفِرُ اللَّهَ',
+    english: 'I seek forgiveness from Allah',
+    transliteration: 'Astaghfirullah',
+    reward: 'Opens doors of mercy and provision'
+  },
+  {
+    arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ',
+    english: 'O Allah, send blessings upon Muhammad',
+    transliteration: 'Allahumma salli ala Muhammad',
+    reward: 'Allah sends 10 blessings for each one sent'
+  },
+  {
+    arabic: 'رَبِّ اغْفِرْ لِي',
+    english: 'My Lord, forgive me',
+    transliteration: 'Rabbighfir li',
+    reward: 'Direct supplication for forgiveness'
+  },
+  {
+    arabic: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
+    english: 'O Allah, help me to remember You, thank You, and worship You excellently',
+    transliteration: 'Allahumma a\'inni ala dhikrika wa shukrika wa husni ibadatik',
+    reward: 'Comprehensive dua for spiritual improvement'
+  },
+  {
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+    english: 'Allah is sufficient for us and He is the best Guardian',
+    transliteration: 'Hasbunallahu wa ni\'mal-wakeel',
+    reward: 'Protection from all harms and anxieties'
+  },
+  {
+    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+    english: 'Our Lord, give us good in this world and good in the next world and save us from the punishment of the Fire',
+    transliteration: 'Rabbana atina fi\'d-dunya hasanatan wa fi\'l-akhirati hasanatan wa qina adhab an-nar',
+    reward: 'The most comprehensive dua for both worlds'
+  },
+  {
+    arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
+    english: 'O Allah, I ask You for guidance, piety, chastity and contentment',
+    transliteration: 'Allahumma inni as\'aluka\'l-huda wa\'t-tuqa wa\'l-\'afafa wa\'l-ghina',
+    reward: 'Dua for the four pillars of a good life'
+  },
+  {
+    arabic: 'رَضِيتُ بِاللَّهِ رَبًّا وَبِالْإِسْلَامِ دِينًا وَبِمُحَمَّدٍ رَسُولًا',
+    english: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad as my Messenger',
+    transliteration: 'Radeetu billahi rabban wa bil-Islami deenan wa bi Muhammadin rasoolan',
+    reward: 'Guarantees Paradise for the one who says it with conviction'
+  },
+  {
+    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ',
+    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
+    transliteration: 'Allahumma anta rabbi la ilaha illa anta khalaqtani wa ana \'abduk',
+    reward: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness'
+  },
+  {
+    arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
+    english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
+    transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
+    reward: "Powerful dua for seeking Allah's help and mercy"
+  },
+  {
+    arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
+    english: 'O Allah, guide me among those You have guided',
+    transliteration: 'Allahumma\'hdini fiman hadayt',
+    reward: 'Dua for guidance and righteousness'
+  },
+  {
+    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ',
+    english: 'My Lord, inspire me to be grateful for Your blessing',
+    transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
+    reward: 'Dua for gratitude and righteous deeds'
+  },
+  {
+    arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
+    transliteration: 'La ilaha illallahu wahdahu la sharika lah, lahul mulk wa lahul hamd, wa huwa ala kulli shay\'in qadir',
+    reward: 'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَٰهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ',
+    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
+    transliteration: 'Subhan Allah, walhamdulillah, wa la ilaha illallah, wallahu akbar',
+    reward: 'More beloved to the Prophet than all the world and what it contains'
+  },
+  {
+    arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
+    transliteration: 'A\'udhu bi kalimatillahi at-tammati min sharri ma khalaq',
+    reward: 'Protection from harm until morning'
+  },
+  {
+    arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
+    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
+    transliteration: 'Bismillahi alladhi la yadurru ma\'a ismihi shay\'un fil-ardi wa la fis-sama\'i wa huwa as-sami\'u al-alim',
+    reward: 'Nothing will harm the one who says it three times in morning and evening'
+  },
+  {
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
+    english: 'Allah is sufficient for me; there is no god but Him. Upon Him I rely and He is the Lord of the mighty throne',
+    transliteration: 'Hasbiyallahu la ilaha illa Huwa, alayhi tawakkaltu wa Huwa Rabbul-Arsh il-Azeem',
+    reward: 'Whoever recites it seven times morning and evening Allah will suffice him'
+  },
+  {
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
+    english: 'My Lord, expand for me my chest and ease for me my task',
+    transliteration: 'Rabbi shrah li sadri wa yassir li amri',
+    reward: 'Ease in tasks and removal of anxiety'
+  },
+  {
+    arabic: 'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
+    english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
+    transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
+    reward: "Dua for parents leading to Allah's mercy"
   }
 ];
 
@@ -79,9 +193,9 @@ function getNotificationPermissionLevel() {
   // supplied.  Detect this by checking the function length (expected
   // callback-arity of 1 in the classic API).
   try {
-    if (chrome.notifications.getPermissionLevel.length === 0) {
+    if (browser.notifications.getPermissionLevel.length === 0) {
       // Promise variant available.
-      return chrome.notifications.getPermissionLevel();
+      return browser.notifications.getPermissionLevel();
     }
   } catch (_) {
     // Fall back to callback style below.
@@ -90,7 +204,7 @@ function getNotificationPermissionLevel() {
   // Fallback for older Chrome versions – wrap the callback style.
   return new Promise((resolve) => {
     try {
-      chrome.notifications.getPermissionLevel((level) => {
+      browser.notifications.getPermissionLevel((level) => {
         // In very old versions the callback can be undefined; treat it as
         // 'denied' so we fail gracefully.
         resolve(level || 'denied');
@@ -102,7 +216,7 @@ function getNotificationPermissionLevel() {
   });
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background: Message received from:', sender.tab ? 'content script' : (sender.url?.includes('popup') ? 'popup' : 'offscreen'), message);
   console.log('Background: Sender details:', { tab: sender.tab, url: sender.url, origin: sender.origin });
   
@@ -238,46 +352,43 @@ async function handleDhikrMessage(message, sendResponse) {
   }
 }
 
+// Firefox audio state management
+let audioPlayer = null;
+let currentAudioState = {
+  audioUrl: null,
+  suraId: null,
+  reciterKey: null,
+  isPlaying: false,
+  currentTime: 0,
+  duration: 0,
+  timestamp: Date.now()
+};
+
 async function handleAudioMessage(message, sendResponse) {
   try {
-    // For any audio action, ensure the offscreen document exists.
-    console.log('Background: Creating offscreen document if needed...');
-    await createOffscreenDocumentIfNeeded();
-    console.log('Background: Offscreen document ready');
+    console.log('Background: Handling audio message:', message.action);
     
-    // Forward the message to the offscreen document.
-    console.log('Background: Forwarding message to offscreen document...');
-    
-    // Use a Promise to properly handle the async message passing
-    const offscreenResponse = await new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(message, response => {
-        if (chrome.runtime.lastError) {
-          console.error('Background: Error forwarding to offscreen:', chrome.runtime.lastError.message);
-          reject(new Error(`Offscreen communication failed: ${chrome.runtime.lastError.message}`));
-        } else {
-          console.log('Background: Received response from offscreen:', response);
-          resolve(response);
-        }
-      });
-    });
-    
-    // Check the response from offscreen document
-    if (!offscreenResponse) {
-      console.error('Background: No response received from offscreen document');
-      sendResponse({ success: false, error: 'No response from audio player' });
-    } else if (!offscreenResponse.success) {
-      console.error('Background: Offscreen document returned error:', offscreenResponse.error);
-      sendResponse({ success: false, error: offscreenResponse.error || 'Audio playback failed' });
-    } else {
-      console.log('Background: Sending successful response to popup');
-      
-      // Start audio monitoring for autoplay when audio starts playing
-      if (message.action === 'playAudio') {
-        startAudioMonitoring();
-      }
-      
-      sendResponse(offscreenResponse);
+    switch (message.action) {
+      case 'playAudio':
+        await playAudio(message.audioUrl, message.suraId, message.reciterKey);
+        break;
+      case 'pauseAudio':
+        pauseAudio();
+        break;
+      case 'resumeAudio':
+        resumeAudio();
+        break;
+      case 'seekAudio':
+        seekAudio(message.time);
+        break;
+      case 'getAudioState':
+        updateCurrentTime();
+        break;
+      default:
+        throw new Error(`Unknown audio action: ${message.action}`);
     }
+    
+    sendResponse({ success: true, state: currentAudioState });
     
   } catch (error) {
     console.error('Background: Error in handleAudioMessage:', error);
@@ -285,30 +396,95 @@ async function handleAudioMessage(message, sendResponse) {
   }
 }
 
-async function createOffscreenDocumentIfNeeded() {
+async function playAudio(audioUrl, suraId, reciterKey) {
   try {
-    const hasDocument = await chrome.offscreen.hasDocument();
-    if (hasDocument) {
-      console.log('Background: Offscreen document already exists.');
-      return;
+    // Stop any existing audio
+    if (audioPlayer) {
+      audioPlayer.pause();
+      audioPlayer.src = '';
     }
-
-    console.log('Background: Creating new offscreen document...');
-    await chrome.offscreen.createDocument({
-      url: 'offscreen/offscreen.html',
-      reasons: ['AUDIO_PLAYBACK'],
-      justification: 'Keep Qur\'an audio playing when popup closes'
-    });
-    console.log('Background: Offscreen document created successfully');
     
-    // Give the offscreen document a moment to initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Create new audio element
+    audioPlayer = new Audio(audioUrl);
+    audioPlayer.preload = 'auto';
+    
+    // Update state
+    currentAudioState = {
+      audioUrl,
+      suraId,
+      reciterKey,
+      isPlaying: false,
+      currentTime: 0,
+      duration: 0,
+      timestamp: Date.now()
+    };
+    
+    // Set up event listeners
+    audioPlayer.addEventListener('loadedmetadata', () => {
+      currentAudioState.duration = audioPlayer.duration;
+    });
+    
+    audioPlayer.addEventListener('timeupdate', () => {
+      currentAudioState.currentTime = audioPlayer.currentTime;
+      currentAudioState.timestamp = Date.now();
+    });
+    
+    audioPlayer.addEventListener('play', () => {
+      currentAudioState.isPlaying = true;
+    });
+    
+    audioPlayer.addEventListener('pause', () => {
+      currentAudioState.isPlaying = false;
+    });
+    
+    audioPlayer.addEventListener('ended', () => {
+      currentAudioState.isPlaying = false;
+    });
+    
+    // Start playback
+    await audioPlayer.play();
+    currentAudioState.isPlaying = true;
+    
+    console.log('Background: Audio playback started');
     
   } catch (error) {
-    console.error('Background: Failed to create offscreen document:', error);
-    throw new Error(`Failed to create audio player: ${error.message}`);
+    console.error('Background: Audio playback failed:', error);
+    throw new Error(`Audio playback failed: ${error.message}`);
   }
 }
+
+function pauseAudio() {
+  if (audioPlayer && !audioPlayer.paused) {
+    audioPlayer.pause();
+    currentAudioState.isPlaying = false;
+    console.log('Background: Audio paused');
+  }
+}
+
+function resumeAudio() {
+  if (audioPlayer && audioPlayer.paused) {
+    audioPlayer.play();
+    currentAudioState.isPlaying = true;
+    console.log('Background: Audio resumed');
+  }
+}
+
+function seekAudio(time) {
+  if (audioPlayer) {
+    audioPlayer.currentTime = time;
+    currentAudioState.currentTime = time;
+    console.log('Background: Audio seeked to', time);
+  }
+}
+
+function updateCurrentTime() {
+  if (audioPlayer) {
+    currentAudioState.currentTime = audioPlayer.currentTime;
+    currentAudioState.duration = audioPlayer.duration || 0;
+    currentAudioState.timestamp = Date.now();
+  }
+}
+
 
 // --- DHIKR NOTIFICATION FUNCTIONS ---
 
@@ -334,11 +510,11 @@ async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
     dhikrReminderMode = mode;
     
     if (intervalSeconds >= 60) {
-      // Use chrome.alarms for intervals >= 1 minute
+      // Use browser.alarms for intervals >= 1 minute
       const periodMinutes = intervalSeconds / 60;
-      console.log('Background: Using chrome.alarms with period:', periodMinutes, 'minutes');
+      console.log('Background: Using browser.alarms with period:', periodMinutes, 'minutes');
       
-      await chrome.alarms.create(dhikrAlarmName, {
+      await browser.alarms.create(dhikrAlarmName, {
         delayInMinutes: periodMinutes,
         periodInMinutes: periodMinutes,
       });
@@ -369,8 +545,8 @@ async function stopDhikrNotifications() {
     // Mark as inactive first
     dhikrNotificationsActive = false;
     
-    // Clear chrome.alarms
-    await chrome.alarms.clear(dhikrAlarmName);
+    // Clear browser.alarms
+    await browser.alarms.clear(dhikrAlarmName);
     console.log('Background: Dhikr alarm cleared successfully');
     
     // Clear setTimeout
@@ -408,11 +584,11 @@ function getRandomDhikr() {
 async function showDhikrPopup(dhikr, isTest = false) {
   try {
     // Store current dhikr so the popup page can read it
-    await chrome.storage.local.set({ currentDhikr: dhikr });
+    await browser.storage.local.set({ currentDhikr: dhikr });
 
     // Create a focused popup window
-    await chrome.windows.create({
-      url: chrome.runtime.getURL('popup/reminder.html'),
+    await browser.windows.create({
+      url: browser.runtime.getURL('popup/reminder.html'),
       type: 'popup',
       width: 420,
       height: 320,
@@ -425,7 +601,7 @@ async function showDhikrPopup(dhikr, isTest = false) {
 }
 
 // Handle alarms
-chrome.alarms.onAlarm.addListener((alarm) => {
+browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === dhikrAlarmName) {
     console.log('Background: Dhikr alarm triggered');
     showDhikrNotification();
@@ -451,16 +627,16 @@ async function showDhikrNotification(isTest = false) {
       return;
     }
     
-    // Use chrome.runtime.getURL to get the proper path to the icon
-    const iconUrl = chrome.runtime.getURL('assets/icon48.png');
+    // Use browser.runtime.getURL to get the proper path to the icon
+    const iconUrl = browser.runtime.getURL('assets/icon48.png');
     console.log('Background: Using icon URL:', iconUrl);
     
     // Try Chrome extension notification first (more reliable for popups)
     console.log('Background: Trying Chrome extension notification first...');
-    let chromeNotificationWorked = false;
+    let browserNotificationWorked = false;
     
     try {
-      const chromeNotificationId = await chrome.notifications.create({
+      const browserNotificationId = await browser.notifications.create({
         type: 'basic',
         iconUrl: iconUrl,
         title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
@@ -470,38 +646,31 @@ async function showDhikrNotification(isTest = false) {
         silent: false
       });
       
-      if (chromeNotificationId) {
-        console.log('Background: Chrome extension notification created:', chromeNotificationId);
-        chromeNotificationWorked = true;
+      if (browserNotificationId) {
+        console.log('Background: Chrome extension notification created:', browserNotificationId);
+        browserNotificationWorked = true;
       }
-    } catch (chromeError) {
-      console.error('Background: Chrome extension notification failed:', chromeError);
+    } catch (browserError) {
+      console.error('Background: Chrome extension notification failed:', browserError);
     }
     
     // Fallback to browser notification if Chrome notification failed
-    if (!chromeNotificationWorked) {
+    if (!browserNotificationWorked) {
       console.log('Background: Trying browser notification as fallback...');
       try {
-        await createOffscreenDocumentIfNeeded();
-        const browserNotificationResponse = await new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage({
-            action: 'showBrowserNotification',
+        // Create browser notification directly in Firefox
+        try {
+          await browser.notifications.create(`dhikr-${Date.now()}`, {
+            type: 'basic',
+            iconUrl: iconUrl,
             title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
-            body: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
-            icon: iconUrl,
+            message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
             requireInteraction: true
-          }, response => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              resolve(response);
-            }
           });
-        });
-        
-        if (browserNotificationResponse?.success) {
-          console.log('Background: Browser notification succeeded');
-          chromeNotificationWorked = true;
+          console.log('Background: Firefox notification created successfully');
+          browserNotificationWorked = true;
+        } catch (notificationError) {
+          console.error('Background: Firefox notification failed:', notificationError);
         }
       } catch (browserError) {
         console.error('Background: Browser notification failed:', browserError);
@@ -509,11 +678,11 @@ async function showDhikrNotification(isTest = false) {
     }
     
     // If neither worked, try creating a popup window as last resort
-    if (!chromeNotificationWorked && isTest) {
+    if (!browserNotificationWorked && isTest) {
       console.log('Background: Trying popup window as last resort for test...');
       try {
-        await chrome.windows.create({
-          url: chrome.runtime.getURL('popup/index.html') + '?notification_test=true',
+        await browser.windows.create({
+          url: browser.runtime.getURL('popup/index.html') + '?notification_test=true',
           type: 'popup',
           width: 400,
           height: 200,
@@ -526,15 +695,14 @@ async function showDhikrNotification(isTest = false) {
     }
     
     // As a final fallback, try audio notification
-    if (!chromeNotificationWorked && !isTest) {
+    if (!browserNotificationWorked && !isTest) {
       console.log('Background: Trying audio notification fallback...');
       try {
-        await createOffscreenDocumentIfNeeded();
-        await chrome.runtime.sendMessage({
-          action: 'playNotificationSound',
-          dhikr: dhikr
-        });
-        console.log('Background: Audio notification sent');
+        // Firefox can play audio directly in background
+        const notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBS6O2fPLeSsFJoHO8diJNwgcb7/x555NEA1VqePxuGEbBzuT2fHNeSsFJgAA');
+        notificationSound.volume = 0.3;
+        await notificationSound.play();
+        console.log('Background: Audio notification played');
       } catch (audioError) {
         console.error('Background: Audio notification failed:', audioError);
       }
@@ -557,9 +725,9 @@ async function showDhikrNotification(isTest = false) {
 }
 
 // Initialize Dhikr notifications on startup if enabled
-chrome.runtime.onStartup.addListener(async () => {
+browser.runtime.onStartup.addListener(async () => {
   try {
-    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    const { dhikrSettings } = await browser.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
       console.log('Background: Restoring Dhikr notifications on startup with interval:', dhikrSettings.interval || 60, 'and mode:', dhikrSettings.mode || 'notification');
       await startDhikrNotifications(dhikrSettings.interval || 60, dhikrSettings.mode || 'notification');
@@ -570,9 +738,9 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 // Also handle installation/update
-chrome.runtime.onInstalled.addListener(async () => {
+browser.runtime.onInstalled.addListener(async () => {
   try {
-    const { dhikrSettings } = await chrome.storage.local.get('dhikrSettings');
+    const { dhikrSettings } = await browser.storage.local.get('dhikrSettings');
     if (dhikrSettings?.notificationsEnabled) {
       console.log('Background: Restoring Dhikr notifications after install/update with interval:', dhikrSettings.interval || 60, 'and mode:', dhikrSettings.mode || 'notification');
       await startDhikrNotifications(dhikrSettings.interval || 60, dhikrSettings.mode || 'notification');
@@ -595,23 +763,16 @@ async function startAudioMonitoring() {
   
   audioMonitoringInterval = setInterval(async () => {
     try {
-      // Check if offscreen document exists
-      const hasDocument = await chrome.offscreen.hasDocument();
-      if (!hasDocument) {
-        console.log('Background: No offscreen document, stopping audio monitoring');
+      // Check if audio player exists
+      if (!audioPlayer || !currentAudioState.audioUrl) {
+        console.log('Background: No audio player, stopping audio monitoring');
         stopAudioMonitoring();
         return;
       }
       
-      // Get current audio state
-      const response = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-      if (!response?.success || !response.state?.audioUrl) {
-        // No active audio, stop monitoring
-        stopAudioMonitoring();
-        return;
-      }
-      
-      const state = response.state;
+      // Update current state
+      updateCurrentTime();
+      const state = currentAudioState;
       
       // Check if audio finished (not playing, current time >= duration, and duration > 0)
       if (!state.isPlaying && 
@@ -622,7 +783,7 @@ async function startAudioMonitoring() {
         console.log('Background: Audio finished, checking autoplay settings');
         
         // Get user settings to check if autoplay is enabled
-        const { userSelections } = await chrome.storage.local.get('userSelections');
+        const { userSelections } = await browser.storage.local.get('userSelections');
         
         if (userSelections?.autoplayEnabled) {
           console.log('Background: Autoplay enabled, triggering next sura');
@@ -662,7 +823,7 @@ async function handleAutoplayNext(currentSuraId, reciterKey) {
     const audioUrl = await getNextSuraAudioUrl(reciterKey, nextSuraId);
     
     // Play the next sura
-    const playResponse = await chrome.runtime.sendMessage({
+    const playResponse = await browser.runtime.sendMessage({
       action: 'playAudio',
       audioUrl: audioUrl,
       suraId: nextSuraId,
@@ -671,11 +832,11 @@ async function handleAutoplayNext(currentSuraId, reciterKey) {
     
     if (playResponse?.success) {
       // Update user selections to reflect the new sura
-      const { userSelections } = await chrome.storage.local.get('userSelections');
+      const { userSelections } = await browser.storage.local.get('userSelections');
       if (userSelections) {
         userSelections.suraId = nextSuraId;
         userSelections.timestamp = Date.now();
-        await chrome.storage.local.set({ userSelections });
+        await browser.storage.local.set({ userSelections });
         console.log('Background: Updated user selections for autoplay');
       }
       
