@@ -596,7 +596,7 @@ async function loadDhikr() {
   await loadDhikrSettings();
 }
 
-// --- Arabic translations for Dhikr rewards -----------------------------------
+// --- Translations for Dhikr rewards ----------------------------------------
 const DHIKR_REWARD_AR = {
   'Each recitation equals a tree planted in Paradise': 'تُغرس له شجرةٌ في الجنة',
   'Fills the scales of good deeds': 'تملأ ميزان الحسنات',
@@ -627,6 +627,38 @@ const DHIKR_REWARD_AR = {
   'Ease in tasks and removal of anxiety': 'تيسير الأمور وشرح الصدر',
   "Dua for parents leading to Allah's mercy": 'دعاء للوالدين يجلب رحمة الله',
   'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
+};
+
+const DHIKR_REWARD_FR = {
+  'Each recitation equals a tree planted in Paradise': 'Chaque récitation équivaut à un arbre planté au Paradis',
+  'Fills the scales of good deeds': 'Remplit la balance des bonnes actions',
+  'Fills what is between heaven and earth': 'Remplit ce qui se trouve entre le ciel et la terre',
+  'The best of remembrance, heaviest on the scales': 'Le meilleur des rappels, le plus lourd sur la balance',
+  '100 sins erased, even if like foam on the sea': '100 péchés effacés, même s’ils étaient comme l’écume de la mer',
+  'Beloved to Allah, light on the tongue, heavy on the scales': 'Aimées d’Allah, légères sur la langue, lourdes sur la balance',
+  'A treasure from the treasures of Paradise': 'Un trésor parmi les trésors du Paradis',
+  'Opens doors of mercy and provision': 'Ouvre les portes de la miséricorde et de la subsistance',
+  'Allah sends 10 blessings for each one sent': 'Allah envoie 10 bénédictions pour chacune envoyée',
+  'Protection and blessings in all affairs': 'Protection et bénédictions dans toutes les affaires',
+  'Direct supplication for forgiveness': 'Invocation directe pour le pardon',
+  'Comprehensive dua for spiritual improvement': 'Invocation globale pour l’amélioration spirituelle',
+  'Protection from all harms and anxieties': 'Protection contre tous les maux et angoisses',
+  'The most comprehensive dua for both worlds': 'L’invocation la plus globale pour les deux mondes',
+  'Dua for the four pillars of a good life': 'Invocation pour les quatre piliers d’une bonne vie',
+  'Guarantees Paradise for the one who says it with conviction': 'Garantit le Paradis à celui qui le dit avec conviction',
+  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'Début de Sayyid al-Istighfar - le maître de la demande de pardon',
+  "Powerful dua for seeking Allah's help and mercy": 'Invocation puissante pour demander l’aide et la miséricorde d’Allah',
+  'Dua for guidance and righteousness': 'Invocation pour la guidance et la droiture',
+  'Dua for gratitude and righteous deeds': 'Invocation pour la gratitude et les bonnes actions',
+  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'Le dire 100 fois équivaut à libérer 10 esclaves, 100 bonnes actions écrites et 100 péchés effacés, protection contre Satan toute la journée',
+  'More beloved to the Prophet than all the world and what it contains': 'Plus aimé du Prophète que tout le monde et ce qu’il contient',
+  'Relief from anxieties and debts': 'Soulagement des angoisses et des dettes',
+  'Protection from harm until morning': 'Protection contre le mal jusqu’au matin',
+  'Nothing will harm the one who says it three times in morning and evening': 'Rien ne nuira à celui qui le dit trois fois matin et soir',
+  'Whoever recites it seven times morning and evening Allah will suffice him': 'Quiconque le récite sept fois matin et soir, Allah lui suffira',
+  'Ease in tasks and removal of anxiety': 'Facilité dans les tâches et suppression de l’anxiété',
+  "Dua for parents leading to Allah's mercy": 'Invocation pour les parents menant à la miséricorde d’Allah',
+  'Protection from loss of blessings': 'Protection contre la perte des bienfaits'
 };
 
 function getRewardText(rewardEn) {
@@ -1461,7 +1493,68 @@ const I18N = {
     reminderLabel: "Reminder Interval (seconds):",
     invalidInterval: "Please enter a value between 5 and 3600 seconds.",
     notificationError: "An error occurred. Please try again.",
-    clearReciter: "✖ Clear"
+    clearReciter: "✖ Clear",
+    // New error messages
+    errorNetwork: "Network connection issue. Please check your internet.",
+    errorFormat: "Audio format not supported by your browser.",
+    errorAutoplay: "Click the play button to start audio (browser autoplay policy).",
+    errorTimeout: "Audio loading timed out. Please try again.",
+    errorNotFound: "Audio not available for this reciter/surah combination.",
+    errorGeneral: "Unable to play audio right now. Please try again.",
+    errorLoadingData: "Failed to load content",
+    errorOffline: "No internet connection",
+    // Loading states
+    loadingContent: "Loading",
+    loadingComplete: "Content loaded successfully",
+    loadingAudio: "Loading audio",
+    resumingFrom: "Resuming from",
+    resuming: "Resuming",
+    pausedAt: "Paused at",
+    paused: "Paused",
+    resumeFailed: "Failed to resume audio"
+  },
+  fr: {
+    appTitle: "Compagnon du Coran et de la Sunnah",
+    quran: "Coran",
+    hadith: "Hadith",
+    dhikr: "Dhikr",
+    selectSura: "Sélectionner une sourate...",
+    reciterPlaceholder: "Sélectionner ou taper un récitateur...",
+    play: "▶ Lire",
+    resume: "▶ Reprendre",
+    pause: "⏸ Pause",
+    autoplayOn: "🔄 Lecture auto : ACTIVÉE",
+    autoplayOff: "🔄 Lecture auto : DÉSACTIVÉE",
+    loading: "Chargement...",
+    nextDhikr: "🔄 Dhikr suivant",
+    notificationsOn: "🔔 Notifications : ACTIVÉES",
+    notificationsOff: "🔔 Notifications : DÉSACTIVÉES",
+    playing: "▶ En cours de lecture",
+    reminderStyle: "Style de rappel :",
+    modeNotification: "📣 Notification",
+    modePopup: "🗔 Pop-up",
+    reminderLabel: "Intervalle de rappel (secondes) :",
+    invalidInterval: "Veuillez entrer une valeur entre 5 et 3600 secondes.",
+    notificationError: "Une erreur s'est produite. Veuillez réessayer.",
+    clearReciter: "✖ Effacer",
+    // New error messages
+    errorNetwork: "Problème de connexion réseau. Vérifiez votre connexion internet.",
+    errorFormat: "Format audio non pris en charge par votre navigateur.",
+    errorAutoplay: "Cliquez sur le bouton de lecture pour démarrer l'audio (politique de lecture automatique du navigateur).",
+    errorTimeout: "Le chargement de l'audio a expiré. Veuillez réessayer.",
+    errorNotFound: "Audio non disponible pour cette combinaison récitateur/sourate.",
+    errorGeneral: "Impossible de lire l'audio en ce moment. Veuillez réessayer.",
+    errorLoadingData: "Échec du chargement du contenu",
+    errorOffline: "Aucune connexion internet",
+    // Loading states
+    loadingContent: "Chargement",
+    loadingComplete: "Contenu chargé avec succès",
+    loadingAudio: "Chargement de l'audio",
+    resumingFrom: "Reprise à partir de",
+    resuming: "Reprise",
+    pausedAt: "Mis en pause à",
+    paused: "En pause",
+    resumeFailed: "Échec de la reprise audio"
   },
   ar: {
     appTitle: "رفيق القرآن والسنة",
