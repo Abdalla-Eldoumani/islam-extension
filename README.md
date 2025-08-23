@@ -23,21 +23,25 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 ### 📚 Authentic Hadith
 * **9-book Arabic collection**
 * **Super-fast English translations** (30-item local cache for instant display)
+* **French language support** with authentic translations
 * Automatic fallback to secondary API if translation fails
 * New hadith each time you open the popup
 
 ### 🤲 Dhikr Reminders
-* **Dozens of authentic adhkār** — now with **Arabic, English & transliteration** side-by-side
+* **26 authentic adhkār** with **6 new high-reward entries** — Arabic, English & transliteration side-by-side
+* **Enhanced rewards explanations** translated into Arabic and French
 * **Reminder style selector:** 📣 *System Notification* **or** 🗔 *In-extension Pop-up*
-* **Smart cache** so English adhkār load instantly offline
+* **Smart cache** so adhkār load instantly offline
 * Custom interval (5 s – 1 h) + quick-preset buttons
-* Rewards displayed in both languages
+* Rewards displayed in all three languages
 
 ### 🔒 Privacy & Performance
 - **Zero personal data collection** - completely private
 - **No external accounts required** - works immediately
 - **Lightweight design** - minimal impact on browser performance
 - **Offline-ready** Dhikr collection
+- **Smart input handling** - Resume button changes to Play when selections change
+- **Enhanced UI/UX** - Modern glassmorphism design with better animations
 
 ## 🚀 Quick Start
 
@@ -86,12 +90,16 @@ A lightweight, privacy-respectful Chrome extension that brings Qur'an recitation
 
 ### Option 3: Firefox
 
-Full **feature-parity Firefox build** is included under `firefox/`.
+Full **feature-parity Firefox build** is included under `firefox/` with **native Manifest V2 support**.
 
 1. Download/clone the repo and open the `firefox` folder.
 2. In Firefox, visit `about:addons` → ⚙︎ **Install Add-on From File…** and select `manifest.json` (or use `about:debugging` → **Load Temporary Add-on** in developer mode).
 
-All Qurʼān playback, Dhikr reminders (including pop-up mode), Hadith loading, and UI enhancements work just like the Chrome version.
+**New Firefox features:**
+- **Direct audio playback** in background (no offscreen documents needed)
+- **French language support** for complete trilingual experience
+- **26 enhanced Dhikr** with comprehensive reward translations
+- All Chrome UI/UX improvements and smart input handling
 
 ## 📱 How to Use
 
@@ -241,13 +249,24 @@ SOFTWARE.
 
 *If this extension benefits you, please remember us in your duas and consider starring the repository to help others discover it.* 
 
+## Recent Updates & Improvements
+
+### ✨ Version 1.5.0 Highlights
+* **French language support** - Complete trilingual interface (English, Arabic, French)
+* **Enhanced Dhikr collection** - 6 new high-reward authentic supplications added
+* **Smart resume functionality** - Resume button intelligently changes to Play when selections change  
+* **Improved UI/UX** - Modern glassmorphism design with enhanced animations
+* **Firefox optimization** - Direct background audio playback without offscreen documents
+* **Comprehensive reward translations** - All Dhikr rewards available in all three languages
+
 ## Known Issues & Limitations
 
-1. **Firefox preview gaps**: Autoplay next-sura & Dhikr notifications are still under development.
-2. **Notification Toggle (Chrome)**: Occasionally unresponsive, requires persistence from users.
-3. **Audio Loading**: Some reciters may have limited sura availability.
-4. **Autoplay**: Requires user interaction for first play (browser autoplay policy).
+1. **Notification Toggle (Chrome)**: Occasionally unresponsive, requires persistence from users.
+2. **Audio Loading**: Some reciters may have limited sura availability.
+3. **Autoplay**: Requires user interaction for first play (browser autoplay policy).
 
-## 🌐 Bilingual Interface
-- **One-tap language switcher** (English ⇄ العربية) right in the header
-- Direction, fonts, labels, Surah names & Dhikr rewards localise instantly
+## 🌐 Trilingual Interface
+- **One-tap language switcher** (English ⇄ Français ⇄ العربية) right in the header
+- Direction, fonts, labels, Surah names & Dhikr rewards localize instantly
+- **Complete French support** - Hadiths, Dhikr rewards, and UI elements
+- **RTL support** for Arabic with proper font rendering
