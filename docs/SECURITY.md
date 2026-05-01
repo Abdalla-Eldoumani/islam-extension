@@ -22,7 +22,7 @@ The extension runs in the popup, the background service worker (Chrome) or persi
 | `verses.quran.com` | Quran.com audio CDN. | Same. |
 | `www.mp3quran.net`, `*.mp3quran.net` | Reciter catalogue and audio mirrors. | Same. |
 | `cdn.islamic.network` | Audio for the four built-in Islamic.network slugs. | Same. |
-| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1` | English and French hadith editions. | JSDelivr serves whatever the upstream tag points at. We pin to the `@1` tag today; the next release will pin to a specific commit SHA. The response is shape-validated before reaching the popup. |
+| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@<sha>` | English and French hadith editions. | JSDelivr serves a specific commit. We pin to the SHA recorded in `shared/hadith.js`. To bump, look up the commit on the upstream repo and update both the constant and the note here. The response is shape-validated before reaching the popup. |
 | `api.hadith.gading.dev` | Arabic hadith. | Treated as untrusted; shape-validated. |
 | `hadeethenc.com` | Hadith fallback. | Treated as untrusted; shape-validated. |
 
@@ -87,7 +87,7 @@ The following items from the last audit are documented rather than fixed in the 
 
 ## Audit items closed in the current release
 
-- JSDelivr response shape validation (commit SHA pin still pending).
+- JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
 - `innerHTML` writes replaced with `textContent` and `replaceChildren` everywhere.
 - `console.warn` and `console.error` silenced in the production gate.
 - Offscreen test buttons and the debug-info div removed.
