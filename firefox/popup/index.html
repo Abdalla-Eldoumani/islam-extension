@@ -73,13 +73,21 @@
         <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
         <datalist id="reciter-list"></datalist>
         <!-- Clear selection button for better UX -->
-        <button class="card__button card__button--secondary" id="clear-reciter" title="Clear reciter selection">✖ Clear</button>
+        <button class="card__button card__button--secondary" id="clear-reciter" title="Clear reciter selection" aria-label="Clear reciter selection">
+          <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg> Clear
+        </button>
 
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
-          <button class="card__button" id="play-quran" data-action="play" disabled>▶ Play</button>
-          <button class="card__button card__button--secondary hidden" id="pause-quran" data-action="pause" disabled>⏸ Pause</button>
-          <button class="card__button card__button--secondary" id="autoplay-toggle" data-autoplay="false" disabled>🔄 Autoplay: OFF</button>
+          <button class="card__button" id="play-quran" data-action="play" aria-label="Play recitation" disabled>
+            <svg width="14" height="14" aria-hidden="true"><use href="#play-triangle"/></svg> Play
+          </button>
+          <button class="card__button card__button--secondary hidden" id="pause-quran" data-action="pause" aria-label="Pause recitation" disabled>
+            <svg width="14" height="14" aria-hidden="true"><use href="#pause-bars"/></svg> Pause
+          </button>
+          <button class="card__button card__button--secondary" id="autoplay-toggle" data-autoplay="false" aria-pressed="false" aria-label="Toggle autoplay" disabled>
+            <svg width="14" height="14" aria-hidden="true"><use href="#cycle-arrow"/></svg> Autoplay: OFF
+          </button>
         </div>
         <div class="card__progress hidden" id="progress-container">
           <input type="range" id="progress-bar" min="0" max="100" value="0" class="card__progress-bar">
@@ -100,8 +108,12 @@
         <p class="card__content" id="dhikr-text" dir="auto" lang="ar">Loading...</p>
         <div class="card__dhikr-info" id="dhikr-info"></div>
         <div class="card__controls">
-          <button class="card__button" id="next-dhikr">🔄 Next Dhikr</button>
-          <button class="card__button card__button--secondary" id="toggle-notifications" data-enabled="false">🔔 Notifications: OFF</button>
+          <button class="card__button" id="next-dhikr" aria-label="Show next dhikr">
+            <svg width="14" height="14" aria-hidden="true"><use href="#next-arrow"/></svg> Next Dhikr
+          </button>
+          <button class="card__button card__button--secondary" id="toggle-notifications" data-enabled="false" aria-pressed="false" aria-label="Toggle dhikr notifications">
+            <svg width="14" height="14" aria-hidden="true"><use href="#bell-line"/></svg> Notifications: OFF
+          </button>
         </div>
         <div class="card__notification-settings hidden" id="notification-settings">
           <label class="card__label" id="reminder-label">
@@ -119,8 +131,8 @@
           <label class="card__label" id="reminder-style-label">
             Reminder Style:
             <select id="reminder-mode" class="card__select">
-              <option value="notification">📣 Notification</option>
-              <option value="popup">🗔 Pop-up</option>
+              <option value="notification">Notification</option>
+              <option value="popup">Pop-up</option>
             </select>
           </label>
         </div>
