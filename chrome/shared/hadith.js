@@ -38,10 +38,10 @@ export const FR_EDITIONS = [
   { edition: 'fra-dehlawi', count: 40 }
 ];
 
-// JSDelivr base. Currently pinned to the @1 release tag. The maintainer
-// should swap this for an explicit commit SHA before the next release —
-// docs/SECURITY.md tracks the pending pin.
-const JSDELIVR_HADITH_BASE = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
+// JSDelivr base, pinned to a specific commit SHA on
+// github.com/fawazahmed0/hadith-api. To bump, look up the new commit and
+// update both this constant and the pin notes in docs/SECURITY.md.
+const JSDELIVR_HADITH_BASE = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@4733920603e4661084a77095de0681a40d13cec7/editions';
 const HADEETHENC_BASE = 'https://hadeethenc.com/api/v1/hadeeths/one';
 const GADING_BASE = 'https://api.hadith.gading.dev/books';
 
