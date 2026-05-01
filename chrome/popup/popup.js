@@ -7,6 +7,19 @@
 import { dhikrCollection, DHIKR_REWARD_AR } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
 
+// Silence verbose logs in production. Flip ENV_PROD to false when debugging.
+if (typeof console !== 'undefined') {
+  console._log = console.log;
+  console._warn = console.warn;
+  console._error = console.error;
+  const ENV_PROD = true;
+  if (ENV_PROD) {
+    console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
+  }
+}
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
