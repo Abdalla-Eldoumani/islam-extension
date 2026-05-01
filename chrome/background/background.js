@@ -11,9 +11,13 @@ import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.j
 // ---------------------------------------------------------------------------
 if (typeof console !== 'undefined') {
   console._log = console.log;
+  console._warn = console.warn;
+  console._error = console.error;
   const ENV_PROD = true;
   if (ENV_PROD) {
     console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
   }
 }
 
