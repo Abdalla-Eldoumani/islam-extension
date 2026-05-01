@@ -3,6 +3,8 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
+import { dhikrCollection, getRandomDhikr } from '../shared/dhikr.js';
+
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
 // ---------------------------------------------------------------------------
@@ -13,51 +15,6 @@ if (typeof console !== 'undefined') {
     console.log = () => {};
   }
 }
-
-const dhikrCollection = [
-  {
-    arabic: 'سُبْحَانَ اللَّهِ',
-    english: 'Glory be to Allah',
-    transliteration: 'Subhan Allah',
-    reward: 'Each recitation equals a tree planted in Paradise'
-  },
-  {
-    arabic: 'الْحَمْدُ لِلَّهِ',
-    english: 'Praise be to Allah',
-    transliteration: 'Alhamdulillah',
-    reward: 'Fills the scales of good deeds'
-  },
-  {
-    arabic: 'اللَّهُ أَكْبَرُ',
-    english: 'Allah is the Greatest',
-    transliteration: 'Allahu Akbar',
-    reward: 'Fills what is between heaven and earth'
-  },
-  {
-    arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
-    english: 'There is no god but Allah',
-    transliteration: 'La ilaha illa Allah',
-    reward: 'The best of remembrance, heaviest on the scales'
-  },
-  {
-    arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
-    english: 'Glory be to Allah and praise be to Him',
-    transliteration: 'Subhan Allahi wa bihamdihi',
-    reward: '100 sins erased, even if like foam on the sea'
-  },
-  {
-    arabic: 'أَسْتَغْفِرُ اللَّهَ',
-    english: 'I seek forgiveness from Allah',
-    transliteration: 'Astaghfirullah',
-    reward: 'Opens doors of mercy and provision'
-  },
-  {
-    arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
-    english: 'There is no power except with Allah',
-    transliteration: 'La hawla wa la quwwata illa billah',
-    reward: 'A treasure from the treasures of Paradise'
-  }
-];
 
 let dhikrAlarmName = 'dhikr-reminder';
 let dhikrTimeoutId = null;
@@ -370,10 +327,6 @@ async function updateDhikrInterval(intervalSeconds) {
     console.error('Background: Failed to update Dhikr interval:', error);
     throw error;
   }
-}
-
-function getRandomDhikr() {
-  return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
 }
 
 // Show Dhikr in a small extension popup window ------------------------------
