@@ -8,8 +8,18 @@
   <link rel="stylesheet" href="reminder.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="clear-cross" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="4" y1="4" x2="12" y2="12"/>
+        <line x1="12" y1="4" x2="4" y2="12"/>
+      </symbol>
+    </defs>
+  </svg>
   <div class="reminder-card">
-    <button class="close-btn" id="close-btn">✖</button>
+    <button class="close-btn" id="close-btn" aria-label="Close reminder">
+      <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg>
+    </button>
     <div class="dhikr-arabic" id="arabic"></div>
     <div class="dhikr-translit" id="translit"></div>
     <div class="dhikr-english" id="english"></div>
