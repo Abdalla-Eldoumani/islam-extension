@@ -98,4 +98,4 @@ The following items from the last audit are documented rather than fixed in the 
 
 ## Self-hosted fonts
 
-The current release expects WOFF2 files in `assets/fonts/`. Until the maintainer adds them, the popup falls back to system serif and sans-serif. Visual regression is acceptable until the WOFF2 set lands; the feature behaviour is unchanged.
+WOFF2 files for Cormorant Garamond, Plus Jakarta Sans, and Amiri ship in `chrome/assets/fonts/` and `firefox/assets/fonts/`. The popup loads them via `@font-face` declarations with `font-display: swap`. No third-party font CDN is contacted at runtime. Total font payload is around 315 KB.
