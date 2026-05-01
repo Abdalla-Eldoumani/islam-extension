@@ -3,6 +3,8 @@
  * Handles audio playback directly and Dhikr notifications.
  */
 
+import { getRandomDhikr } from '../shared/dhikr.js';
+
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
 // ---------------------------------------------------------------------------
@@ -14,164 +16,6 @@ if (typeof console !== 'undefined') {
   }
 }
 
-const dhikrCollection = [
-  {
-    arabic: 'سُبْحَانَ اللَّهِ',
-    english: 'Glory be to Allah',
-    transliteration: 'Subhan Allah',
-    reward: 'Each recitation equals a tree planted in Paradise'
-  },
-  {
-    arabic: 'الْحَمْدُ لِلَّهِ',
-    english: 'Praise be to Allah',
-    transliteration: 'Alhamdulillah',
-    reward: 'Fills the scales of good deeds'
-  },
-  {
-    arabic: 'اللَّهُ أَكْبَرُ',
-    english: 'Allah is the Greatest',
-    transliteration: 'Allahu Akbar',
-    reward: 'Fills what is between heaven and earth'
-  },
-  {
-    arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
-    english: 'There is no god but Allah',
-    transliteration: 'La ilaha illa Allah',
-    reward: 'The best of remembrance, heaviest on the scales'
-  },
-  {
-    arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
-    english: 'Glory be to Allah and praise be to Him',
-    transliteration: 'Subhan Allahi wa bihamdihi',
-    reward: '100 sins erased, even if like foam on the sea'
-  },
-  {
-    arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ',
-    english: 'Glory be to Allah the Magnificent and praise be to Him',
-    transliteration: 'Subhan Allahil-Azeem wa bihamdihi',
-    reward: 'Beloved to Allah, light on the tongue, heavy on the scales'
-  },
-  {
-    arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
-    english: 'There is no power except with Allah',
-    transliteration: 'La hawla wa la quwwata illa billah',
-    reward: 'A treasure from the treasures of Paradise'
-  },
-  {
-    arabic: 'أَسْتَغْفِرُ اللَّهَ',
-    english: 'I seek forgiveness from Allah',
-    transliteration: 'Astaghfirullah',
-    reward: 'Opens doors of mercy and provision'
-  },
-  {
-    arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ',
-    english: 'O Allah, send blessings upon Muhammad',
-    transliteration: 'Allahumma salli ala Muhammad',
-    reward: 'Allah sends 10 blessings for each one sent'
-  },
-  {
-    arabic: 'رَبِّ اغْفِرْ لِي',
-    english: 'My Lord, forgive me',
-    transliteration: 'Rabbighfir li',
-    reward: 'Direct supplication for forgiveness'
-  },
-  {
-    arabic: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
-    english: 'O Allah, help me to remember You, thank You, and worship You excellently',
-    transliteration: 'Allahumma a\'inni ala dhikrika wa shukrika wa husni ibadatik',
-    reward: 'Comprehensive dua for spiritual improvement'
-  },
-  {
-    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
-    english: 'Allah is sufficient for us and He is the best Guardian',
-    transliteration: 'Hasbunallahu wa ni\'mal-wakeel',
-    reward: 'Protection from all harms and anxieties'
-  },
-  {
-    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
-    english: 'Our Lord, give us good in this world and good in the next world and save us from the punishment of the Fire',
-    transliteration: 'Rabbana atina fi\'d-dunya hasanatan wa fi\'l-akhirati hasanatan wa qina adhab an-nar',
-    reward: 'The most comprehensive dua for both worlds'
-  },
-  {
-    arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
-    english: 'O Allah, I ask You for guidance, piety, chastity and contentment',
-    transliteration: 'Allahumma inni as\'aluka\'l-huda wa\'t-tuqa wa\'l-\'afafa wa\'l-ghina',
-    reward: 'Dua for the four pillars of a good life'
-  },
-  {
-    arabic: 'رَضِيتُ بِاللَّهِ رَبًّا وَبِالْإِسْلَامِ دِينًا وَبِمُحَمَّدٍ رَسُولًا',
-    english: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad as my Messenger',
-    transliteration: 'Radeetu billahi rabban wa bil-Islami deenan wa bi Muhammadin rasoolan',
-    reward: 'Guarantees Paradise for the one who says it with conviction'
-  },
-  {
-    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ',
-    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
-    transliteration: 'Allahumma anta rabbi la ilaha illa anta khalaqtani wa ana \'abduk',
-    reward: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness'
-  },
-  {
-    arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
-    english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
-    transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
-    reward: "Powerful dua for seeking Allah's help and mercy"
-  },
-  {
-    arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
-    english: 'O Allah, guide me among those You have guided',
-    transliteration: 'Allahumma\'hdini fiman hadayt',
-    reward: 'Dua for guidance and righteousness'
-  },
-  {
-    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ',
-    english: 'My Lord, inspire me to be grateful for Your blessing',
-    transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
-    reward: 'Dua for gratitude and righteous deeds'
-  },
-  {
-    arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
-    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
-    transliteration: 'La ilaha illallahu wahdahu la sharika lah, lahul mulk wa lahul hamd, wa huwa ala kulli shay\'in qadir',
-    reward: 'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day'
-  },
-  {
-    arabic: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَٰهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ',
-    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
-    transliteration: 'Subhan Allah, walhamdulillah, wa la ilaha illallah, wallahu akbar',
-    reward: 'More beloved to the Prophet than all the world and what it contains'
-  },
-  {
-    arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
-    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
-    transliteration: 'A\'udhu bi kalimatillahi at-tammati min sharri ma khalaq',
-    reward: 'Protection from harm until morning'
-  },
-  {
-    arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
-    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
-    transliteration: 'Bismillahi alladhi la yadurru ma\'a ismihi shay\'un fil-ardi wa la fis-sama\'i wa huwa as-sami\'u al-alim',
-    reward: 'Nothing will harm the one who says it three times in morning and evening'
-  },
-  {
-    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
-    english: 'Allah is sufficient for me; there is no god but Him. Upon Him I rely and He is the Lord of the mighty throne',
-    transliteration: 'Hasbiyallahu la ilaha illa Huwa, alayhi tawakkaltu wa Huwa Rabbul-Arsh il-Azeem',
-    reward: 'Whoever recites it seven times morning and evening Allah will suffice him'
-  },
-  {
-    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
-    english: 'My Lord, expand for me my chest and ease for me my task',
-    transliteration: 'Rabbi shrah li sadri wa yassir li amri',
-    reward: 'Ease in tasks and removal of anxiety'
-  },
-  {
-    arabic: 'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
-    english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
-    transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
-    reward: "Dua for parents leading to Allah's mercy"
-  }
-];
 
 let dhikrAlarmName = 'dhikr-reminder';
 let dhikrTimeoutId = null;
@@ -574,10 +418,6 @@ async function updateDhikrInterval(intervalSeconds) {
     console.error('Background: Failed to update Dhikr interval:', error);
     throw error;
   }
-}
-
-function getRandomDhikr() {
-  return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
 }
 
 // Show Dhikr in a small extension popup window ------------------------------
