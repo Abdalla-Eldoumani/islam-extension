@@ -1,0 +1,19 @@
+{
+  "name": "quran-sunnah-companion",
+  "version": "1.5.0",
+  "description": "Cross-browser companion extension that surfaces Quran recitation, authentic Hadith, and Dhikr reminders in a popup.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "check-sync": "node scripts/check-sync.mjs",
+    "lint:chrome": "web-ext lint --source-dir=chrome --self-hosted",
+    "lint:firefox": "web-ext lint --source-dir=firefox",
+    "build:chrome": "cd chrome && zip -r ../chrome-build.zip . -x \"*.DS_Store\"",
+    "build:firefox": "cd firefox && zip -r ../firefox-build.zip . -x \"*.DS_Store\""
+  },
+  "devDependencies": {
+    "web-ext": "^10.1.0"
+  }
+}
