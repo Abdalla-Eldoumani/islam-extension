@@ -484,7 +484,7 @@ async function showDhikrNotification(isTest = false) {
       const browserNotificationId = await browser.notifications.create({
         type: 'basic',
         iconUrl: iconUrl,
-        title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+        title: isTest ? 'Test - Dhikr Reminder' : 'Dhikr Reminder',
         message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
         priority: 2, // High priority
         requireInteraction: true, // Stay visible until user interacts
@@ -513,7 +513,7 @@ async function showDhikrNotification(isTest = false) {
           await browser.notifications.create(fallbackId, {
             type: 'basic',
             iconUrl: iconUrl,
-            title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+            title: isTest ? 'Test - Dhikr Reminder' : 'Dhikr Reminder',
             message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
             requireInteraction: true
           });

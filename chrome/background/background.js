@@ -388,7 +388,7 @@ async function showDhikrNotification(isTest = false) {
       const chromeNotificationId = await chrome.notifications.create({
         type: 'basic',
         iconUrl: iconUrl,
-        title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+        title: isTest ? 'Test - Dhikr Reminder' : 'Dhikr Reminder',
         message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
         priority: 2,
         requireInteraction: true,
@@ -415,7 +415,7 @@ async function showDhikrNotification(isTest = false) {
         const browserNotificationResponse = await new Promise((resolve, reject) => {
           chrome.runtime.sendMessage({
             action: 'showBrowserNotification',
-            title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
+            title: isTest ? 'Test - Dhikr Reminder' : 'Dhikr Reminder',
             body: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
             icon: iconUrl,
             requireInteraction: true
