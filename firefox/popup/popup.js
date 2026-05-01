@@ -691,8 +691,30 @@ async function fetchIslamicNetworkReciters() {
   });
 }
 
+const RECITER_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+async function loadCachedReciters() {
+  try {
+    const { reciterCache } = await browser.storage.local.get('reciterCache');
+    if (!reciterCache?.timestamp || !Array.isArray(reciterCache.reciters)) return null;
+    if (Date.now() - reciterCache.timestamp > RECITER_CACHE_TTL_MS) return null;
+    return reciterCache.reciters;
+  } catch (_) {
+    return null;
+  }
+}
+
 // Aggregate loader ----------------------------------------------------------------
 async function fetchReciters() {
+  const cached = await loadCachedReciters();
+  if (cached) {
+    cached.forEach(r => {
+      RECITER_CATALOG[r.id] = r;
+      (r.altIds || []).forEach(alt => (RECITER_CATALOG[alt] = r));
+    });
+    return [...cached].sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
+  }
+
   const combined = (await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
