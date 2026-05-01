@@ -835,14 +835,14 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
-    availabilityStatus.textContent = '✅ Playing...';
-    availabilityStatus.style.color = 'green';
+    availabilityStatus.textContent = 'Playing...';
+    availabilityStatus.style.color = 'var(--status-positive)';
     updatePlayButtonUI(true, true, 0);
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    availabilityStatus.textContent = '❌ Reciter not available right now.';
-    availabilityStatus.style.color = 'red';
+    availabilityStatus.textContent = 'Reciter not available right now.';
+    availabilityStatus.style.color = 'var(--status-negative)';
     updatePlayButtonUI(false, true);
   } finally {
     setUILoading(false);
