@@ -394,6 +394,11 @@ async function showDhikrNotification(isTest = false) {
       if (chromeNotificationId) {
         console.log('Background: Chrome extension notification created:', chromeNotificationId);
         chromeNotificationWorked = true;
+        // Auto-dismiss after 60 seconds even with requireInteraction set, so a
+        // forgotten reminder does not pile up on screen.
+        setTimeout(() => {
+          chrome.notifications.clear(chromeNotificationId).catch(() => {});
+        }, 60_000);
       }
     } catch (chromeError) {
       console.error('Background: Chrome extension notification failed:', chromeError);
