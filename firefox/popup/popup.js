@@ -1107,7 +1107,7 @@ async function toggleDhikrNotifications() {
   // Disable button during operation and show loading state
   button.disabled = true;
   const originalText = button.textContent;
-  button.textContent = newState ? '🔄 Enabling...' : '🔄 Disabling...';
+  setIconLabel(button, 'cycle-arrow', newState ? 'Enabling...' : 'Disabling...');
   
   try {
     let response;
