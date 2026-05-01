@@ -3,7 +3,7 @@
  * Handles offscreen document creation, message forwarding for audio playback, and Dhikr notifications.
  */
 
-import { dhikrCollection, getRandomDhikr } from '../shared/dhikr.js';
+import { getRandomDhikr } from '../shared/dhikr.js';
 
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
