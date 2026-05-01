@@ -962,6 +962,7 @@ async function toggleAutoplay() {
 function updateAutoplayButton(isEnabled) {
   const autoplayButton = document.getElementById('autoplay-toggle');
   autoplayButton.dataset.autoplay = isEnabled.toString();
+  autoplayButton.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
   setIconLabel(autoplayButton, 'cycle-arrow', isEnabled ? t('autoplayOn') : t('autoplayOff'));
 }
 
@@ -1227,6 +1228,7 @@ async function toggleDhikrNotifications() {
     }
     
     button.dataset.enabled = newState.toString();
+    button.setAttribute('aria-pressed', newState ? 'true' : 'false');
     setIconLabel(button, 'bell-line', newState ? t('notificationsOn') : t('notificationsOff'));
     
     await saveDhikrSettings();
