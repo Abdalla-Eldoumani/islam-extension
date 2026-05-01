@@ -7,6 +7,50 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="play-triangle" viewBox="0 0 16 16">
+        <polygon points="4,3 13,8 4,13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="pause-bars" viewBox="0 0 16 16">
+        <line x1="5" y1="3" x2="5" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="11" y1="3" x2="11" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="cycle-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 8a5 5 0 0 1 8.5-3.5L13 6"/>
+        <polyline points="13,2 13,6 9,6"/>
+        <path d="M13 8a5 5 0 0 1-8.5 3.5L3 10"/>
+        <polyline points="3,14 3,10 7,10"/>
+      </symbol>
+      <symbol id="bell-line" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v1"/>
+        <path d="M4 11V8a4 4 0 0 1 8 0v3l1 1H3l1-1z"/>
+        <path d="M7 13a1 1 0 0 0 2 0"/>
+      </symbol>
+      <symbol id="clear-cross" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="4" y1="4" x2="12" y2="12"/>
+        <line x1="12" y1="4" x2="4" y2="12"/>
+      </symbol>
+      <symbol id="chevron-down" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4,6 8,10 12,6"/>
+      </symbol>
+      <symbol id="next-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="8" x2="13" y2="8"/>
+        <polyline points="9,4 13,8 9,12"/>
+      </symbol>
+      <symbol id="notification-rhombus" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+        <polygon points="8,3 13,8 8,13 3,8"/>
+      </symbol>
+      <symbol id="window-frame" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+        <rect x="3" y="4" width="10" height="9"/>
+        <line x1="3" y1="6.5" x2="13" y2="6.5"/>
+      </symbol>
+      <symbol id="rosette" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1">
+        <circle cx="8" cy="8" r="1.5"/>
+        <path d="M8 2 L9.5 6.5 L14 8 L9.5 9.5 L8 14 L6.5 9.5 L2 8 L6.5 6.5 Z"/>
+      </symbol>
+    </defs>
+  </svg>
   <main class="popup">
     <header class="popup__header">
       <h1 class="popup__title" id="app-title">Qur'an & Sunnah Companion</h1>
