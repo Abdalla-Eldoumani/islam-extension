@@ -18,10 +18,11 @@ A browser extension that brings Qur'an recitation, authentic Hadith, and Dhikr r
 - New hadith each time you open the popup
 
 ### Dhikr Reminders
-- 26+ authentic adhkar with Arabic, English, and transliteration
+- 32 authentic adhkar with Arabic, English, and transliteration
 - Reward explanations in English, Arabic, and French
-- Configurable interval (5 seconds to 1 hour) with preset buttons
+- Configurable interval (30 seconds to 1 hour) with preset buttons
 - Two reminder styles: system notification or in-extension popup
+- Notifications auto-dismiss after 60 seconds so a forgotten reminder cannot pile up
 
 ### Privacy
 No personal data is collected. No accounts, tracking, or ads. The extension uses storage for preferences, alarms for Dhikr scheduling, and network access for Qur'an audio and Hadith APIs. The Dhikr collection works offline.
@@ -71,12 +72,26 @@ One-tap language switcher (English / Francais / Arabic) with full RTL support. A
 
 ## Contributing
 
-Contributions are welcome. Open an issue or submit a pull request.
+Contributions are welcome. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup, conventions, and how to add a reciter or a language.
 
 ```bash
 git clone https://github.com/Abdalla-Eldoumani/islam-extension.git
 cd islam-extension
+npm install
+npm run sync
 ```
+
+The Chrome and Firefox builds share their non-platform code via a `shared/` directory. Edit files there, then run `npm run sync` to copy them into both `chrome/shared/` and `firefox/shared/` before reloading the extension.
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — message passing, storage schema, the Chrome MV3 + offscreen pattern, the Firefox MV2 background page pattern.
+- [docs/INSTALLATION.md](docs/INSTALLATION.md) — install steps for Chrome, Firefox, Edge, Brave.
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — development workflow, atomic commits, religious-content rules, adding reciters and locales.
+- [docs/I18N.md](docs/I18N.md) — translation tables, RTL handling, the read-only rule for religious text.
+- [docs/PRIVACY.md](docs/PRIVACY.md) — permissions table, what data is stored where, what is sent to which third party.
+- [docs/SECURITY.md](docs/SECURITY.md) — third-party dependencies, vulnerability reporting, the deferred audit items.
+- [docs/MV3_MIGRATION.md](docs/MV3_MIGRATION.md) — the Firefox MV3 path, gated on Mozilla resolving background audio playback.
 
 ## Troubleshooting
 
