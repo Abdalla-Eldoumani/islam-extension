@@ -20,6 +20,24 @@ if (typeof console !== 'undefined') {
   }
 }
 
+// Build an inline SVG node referencing a sprite symbol by id.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function makeIconSvg(iconId) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '14');
+  svg.setAttribute('height', '14');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(SVG_NS, 'use');
+  use.setAttribute('href', `#${iconId}`);
+  svg.appendChild(use);
+  return svg;
+}
+
+function setIconLabel(el, iconId, label) {
+  if (!el) return;
+  el.replaceChildren(makeIconSvg(iconId), document.createTextNode(' ' + label));
+}
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
@@ -172,7 +190,7 @@ function handleInputChange() {
 function resetPlaybackState() {
   // Reset the button to "Play" mode
   const playButton = document.getElementById('play-quran');
-  playButton.textContent = t('play');
+  setIconLabel(playButton, 'play-triangle', t('play'));
   playButton.dataset.action = 'play';
   
   // Hide progress container since we're starting fresh
@@ -528,7 +546,7 @@ async function loadDhikrSettings() {
       const mode = dhikrSettings.mode || 'notification';
       
       document.getElementById('toggle-notifications').dataset.enabled = notificationsEnabled.toString();
-      document.getElementById('toggle-notifications').textContent = notificationsEnabled ? t('notificationsOn') : t('notificationsOff');
+      setIconLabel(document.getElementById('toggle-notifications'), 'bell-line', notificationsEnabled ? t('notificationsOn') : t('notificationsOff'));
       document.getElementById('dhikr-interval').value = interval;
       
       // Set reminder mode selector
@@ -909,7 +927,7 @@ async function toggleAutoplay() {
 function updateAutoplayButton(isEnabled) {
   const autoplayButton = document.getElementById('autoplay-toggle');
   autoplayButton.dataset.autoplay = isEnabled.toString();
-  autoplayButton.textContent = isEnabled ? t('autoplayOn') : t('autoplayOff');
+  setIconLabel(autoplayButton, 'cycle-arrow', isEnabled ? t('autoplayOn') : t('autoplayOff'));
 }
 
 function getNextSuraId(currentSuraId) {
@@ -936,7 +954,7 @@ async function playNextSura() {
   
   // Ensure UI is in clean state before starting new sura
   updatePlayButtonUI(false, true, 0);
-  document.getElementById('play-quran').textContent = t('play');
+  setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
   document.getElementById('play-quran').dataset.action = 'play';
   
   // Start playing the next sura
@@ -964,15 +982,15 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
     // Audio currently playing ---------------------------------------------
     playButton.classList.remove('hidden');
     playButton.disabled = true;
-    playButton.textContent = t('playing');
+    setIconLabel(playButton, 'play-triangle', t('playing'));
     playButton.dataset.action = '';
     pauseButton.classList.remove('hidden');
-    pauseButton.textContent = t('pause');
+    setIconLabel(pauseButton, 'pause-bars', t('pause'));
   } else {
     // Audio not playing (stopped or paused) --------------------------------
     playButton.classList.remove('hidden');
     playButton.disabled = !isEnabled;
-    playButton.textContent = hasProgress ? t('resume') : t('play');
+    setIconLabel(playButton, 'play-triangle', hasProgress ? t('resume') : t('play'));
     playButton.dataset.action = hasProgress ? 'resume' : 'play';
     pauseButton.classList.add('hidden');
   }
@@ -1022,7 +1040,7 @@ function startProgressTracking() {
             console.log('Sura finished, autoplay is enabled - playing next sura');
             // Reset UI to fresh state before autoplay
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = t('play');
+            setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -1034,7 +1052,7 @@ function startProgressTracking() {
           } else {
             console.log('Sura finished, autoplay is disabled - stopping playback');
             updatePlayButtonUI(false, true, 0);
-            document.getElementById('play-quran').textContent = t('play');
+            setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -1440,20 +1458,20 @@ function applyLanguage() {
 
   // Buttons that exist at load
   const playBtn = document.getElementById('play-quran');
-  if (playBtn && playBtn.dataset.action === 'play') playBtn.textContent = t('play');
+  if (playBtn && playBtn.dataset.action === 'play') setIconLabel(playBtn, 'play-triangle', t('play'));
   const pauseBtn = document.getElementById('pause-quran');
-  if (pauseBtn) pauseBtn.textContent = t('pause');
+  if (pauseBtn) setIconLabel(pauseBtn, 'pause-bars', t('pause'));
   const autoplayBtn = document.getElementById('autoplay-toggle');
   if (autoplayBtn) {
     const on = autoplayBtn.dataset.autoplay === 'true';
-    autoplayBtn.textContent = on ? t('autoplayOn') : t('autoplayOff');
+    setIconLabel(autoplayBtn, 'cycle-arrow', on ? t('autoplayOn') : t('autoplayOff'));
   }
   const nextDhikrBtn = document.getElementById('next-dhikr');
-  if (nextDhikrBtn) nextDhikrBtn.textContent = t('nextDhikr');
+  if (nextDhikrBtn) setIconLabel(nextDhikrBtn, 'next-arrow', t('nextDhikr'));
   const notifBtn = document.getElementById('toggle-notifications');
   if (notifBtn) {
     const en = notifBtn.dataset.enabled === 'true';
-    notifBtn.textContent = en ? t('notificationsOn') : t('notificationsOff');
+    setIconLabel(notifBtn, 'bell-line', en ? t('notificationsOn') : t('notificationsOff'));
   }
 
   // Loading text
@@ -1468,7 +1486,7 @@ function applyLanguage() {
 
   // Update clear reciter button
   const clearReciterBtn = document.getElementById('clear-reciter');
-  if (clearReciterBtn) clearReciterBtn.textContent = t('clearReciter');
+  if (clearReciterBtn) setIconLabel(clearReciterBtn, 'clear-cross', t('clearReciter'));
 
   // Update current time and total time
   const currentTimeEl = document.getElementById('current-time');
