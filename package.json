@@ -10,8 +10,8 @@
     "check-sync": "node scripts/check-sync.mjs",
     "lint:chrome": "web-ext lint --source-dir=chrome --self-hosted",
     "lint:firefox": "web-ext lint --source-dir=firefox",
-    "build:chrome": "cd chrome && zip -r ../chrome-build.zip . -x \"*.DS_Store\"",
-    "build:firefox": "cd firefox && zip -r ../firefox-build.zip . -x \"*.DS_Store\""
+    "build:chrome": "web-ext build --source-dir=chrome --artifacts-dir=. --overwrite-dest --ignore-files **/CLAUDE.md CLAUDE.md",
+    "build:firefox": "web-ext build --source-dir=firefox --artifacts-dir=. --overwrite-dest --ignore-files **/CLAUDE.md CLAUDE.md"
   },
   "devDependencies": {
     "web-ext": "^10.1.0"
