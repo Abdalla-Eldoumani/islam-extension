@@ -6,6 +6,7 @@
 
 import { dhikrCollection, DHIKR_REWARD_AR, DHIKR_REWARD_FR } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
+import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
 
 // Silence verbose logs in production. Flip ENV_PROD to false when debugging.
 if (typeof console !== 'undefined') {
@@ -1313,86 +1314,7 @@ function updatePresetButtons(currentInterval) {
 // 🗺️  BASIC I18N SUPPORT
 // ---------------------------
 
-const LANG_STORAGE_KEY = 'uiLanguage';
 let CURRENT_LANG = 'en';
-
-const I18N = {
-  en: {
-    appTitle: "Qur'an & Sunnah Companion",
-    quran: "Qur'an",
-    hadith: "Hadith",
-    dhikr: "Dhikr",
-    selectSura: "Select Sura...",
-    reciterPlaceholder: "Select or type a reciter...",
-    play: "▶ Play",
-    resume: "▶ Resume",
-    pause: "⏸ Pause",
-    autoplayOn: "🔄 Autoplay: ON",
-    autoplayOff: "🔄 Autoplay: OFF",
-    loading: "Loading...",
-    nextDhikr: "🔄 Next Dhikr",
-    notificationsOn: "🔔 Notifications: ON",
-    notificationsOff: "🔔 Notifications: OFF",
-    playing: "▶ Playing",
-    reminderStyle: "Reminder Style:",
-    modeNotification: "📣 Notification",
-    modePopup: "🗔 Pop-up",
-    reminderLabel: "Reminder Interval (seconds):",
-    invalidInterval: "Please enter a value between 5 and 3600 seconds.",
-    notificationError: "An error occurred. Please try again.",
-    clearReciter: "✖ Clear"
-  },
-  ar: {
-    appTitle: "رفيق القرآن والسنة",
-    quran: "القرآن",
-    hadith: "حديث",
-    dhikr: "ذِكر",
-    selectSura: "اختر السورة...",
-    reciterPlaceholder: "اختر أو اكتب اسم القارئ...",
-    play: "▶ تشغيل",
-    resume: "▶ استئناف",
-    pause: "⏸ إيقاف",
-    autoplayOn: "🔄 التشغيل التلقائي: مفعل",
-    autoplayOff: "🔄 التشغيل التلقائي: معطل",
-    loading: "جارٍ التحميل...",
-    nextDhikr: "🔄 الذكر التالي",
-    notificationsOn: "🔔 الإشعارات: مفعلة",
-    notificationsOff: "🔔 الإشعارات: معطلة",
-    playing: "▶ قيد التشغيل",
-    reminderStyle: "نوع التذكير:",
-    modeNotification: "📣 إشعار",
-    modePopup: "🗔 نافذة منبثقة",
-    reminderLabel: "فاصل التذكير (ثوان):",
-    invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
-    notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
-    clearReciter: "✖ مسح"
-  },
-  fr: {
-    appTitle: "Compagnon Coran & Sunnah",
-    quran: "Coran",
-    hadith: "Hadith",
-    dhikr: "Dhikr",
-    selectSura: "Sélectionner une sourate...",
-    reciterPlaceholder: "Sélectionner ou taper un récitateur...",
-    play: "▶ Lire",
-    resume: "▶ Reprendre",
-    pause: "⏸ Pause",
-    autoplayOn: "🔄 Lecture auto : ACTIVÉE",
-    autoplayOff: "🔄 Lecture auto : DÉSACTIVÉE",
-    loading: "Chargement...",
-    nextDhikr: "🔄 Dhikr suivant",
-    notificationsOn: "🔔 Notifications : ACTIVÉES",
-    notificationsOff: "🔔 Notifications : DÉSACTIVÉES",
-    playing: "▶ En cours",
-    reminderStyle: "Style de rappel :",
-    modeNotification: "📣 Notification système",
-    modePopup: "🗔 Fenêtre contextuelle",
-    reminderLabel: "Intervalle de rappel (secondes) :",
-    invalidInterval: "Veuillez entrer une valeur entre 5 et 3600 secondes.",
-    notificationError: "Une erreur s'est produite. Veuillez réessayer.",
-    clearReciter: "✖ Effacer"
-  }
-};
 
 function t(key) {
   return (I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) || key;
