@@ -927,6 +927,7 @@ async function toggleAutoplay() {
 function updateAutoplayButton(isEnabled) {
   const autoplayButton = document.getElementById('autoplay-toggle');
   autoplayButton.dataset.autoplay = isEnabled.toString();
+  autoplayButton.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
   setIconLabel(autoplayButton, 'cycle-arrow', isEnabled ? t('autoplayOn') : t('autoplayOff'));
 }
 
@@ -1190,7 +1191,8 @@ async function toggleDhikrNotifications() {
     
     // Update UI only after successful response
     button.dataset.enabled = newState.toString();
-    button.textContent = newState ? t('notificationsOn') : t('notificationsOff');
+    button.setAttribute('aria-pressed', newState ? 'true' : 'false');
+    setIconLabel(button, 'bell-line', newState ? t('notificationsOn') : t('notificationsOff'));
     
     // // Show success message
     // if (newState) {
