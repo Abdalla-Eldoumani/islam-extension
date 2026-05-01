@@ -20,6 +20,26 @@ if (typeof console !== 'undefined') {
   }
 }
 
+// Build an inline SVG node that references a sprite symbol by id. Used by
+// setIconLabel below so that buttons render an icon next to a text label
+// without ever assigning an HTML string.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function makeIconSvg(iconId) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', '14');
+  svg.setAttribute('height', '14');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(SVG_NS, 'use');
+  use.setAttribute('href', `#${iconId}`);
+  svg.appendChild(use);
+  return svg;
+}
+
+function setIconLabel(el, iconId, label) {
+  if (!el) return;
+  el.replaceChildren(makeIconSvg(iconId), document.createTextNode(' ' + label));
+}
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
