@@ -19,7 +19,7 @@
     "https://cdn.jsdelivr.net/*"
   ],
   "background": {
-    "scripts": ["background/background.js"],
+    "page": "background/background.html",
     "persistent": true
   },
   "browser_action": {
