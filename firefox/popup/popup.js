@@ -590,7 +590,7 @@ async function setupQuranSelectors() {
     errorOption.value = '';
     errorOption.textContent = 'Error';
     suraSelect.replaceChildren(errorOption);
-    reciterInput.placeholder = 'Error loading reciters';
+    reciterInput.placeholder = 'Reciters unavailable. Check connection.';
   }
 }
 
