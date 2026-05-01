@@ -4,6 +4,7 @@
  */
 
 import { getRandomDhikr } from '../shared/dhikr.js';
+import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
 
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
@@ -622,69 +623,9 @@ async function getMp3QuranReciterById(id) {
 }
 
 async function getNextSuraAudioUrl(reciterKey, suraId) {
-  let provider = 'qc';
-  let rawId = reciterKey;
-  if (reciterKey.includes(':')) {
-    const parts = reciterKey.split(':');
-    provider = parts[0];
-    rawId = parts.slice(1).join(':');
-  }
-
-  // MP3Quran provider -----------------------------------------------------------
-  if (provider === 'mp3') {
-    const reciter = await getMp3QuranReciterById(rawId);
-    if (!reciter) throw new Error('Reciter not found in MP3Quran catalogue');
-    const base = reciter.Server.endsWith('/') ? reciter.Server : reciter.Server + '/';
-    const suraStr = String(suraId).padStart(3, '0');
-    return `${base}${suraStr}.mp3`;
-  }
-
-  // Islamic.network provider ----------------------------------------------------
-  if (provider === 'islamic') {
-    const slug = rawId; // e.g. ar.alafasy
-    return `https://cdn.islamic.network/quran/audio/128/${slug}/${suraId}.mp3`;
-  }
-
-  // Default: Quran.com -----------------------------------------------------------
-  const reciterId = rawId;
-
-  // Try to get full chapter audio first
-  const chapterUrl = `https://api.quran.com/api/v4/chapter_recitations/${reciterId}/${suraId}`;
-  console.log('Background: Fetching chapter audio from:', chapterUrl);
-  try {
-    const chapterResponse = await fetch(chapterUrl);
-    if (chapterResponse.ok) {
-      const chapterData = await chapterResponse.json();
-      if (chapterData.audio_file?.audio_url) {
-        const audioUrl = chapterData.audio_file.audio_url;
-        return audioUrl.startsWith('http') ? audioUrl : `https://verses.quran.com/${audioUrl}`;
-      }
-    }
-  } catch (error) {
-    console.log('Background: Chapter audio not available, trying verse-by-verse approach:', error.message);
-  }
-
-  // Fallback to verse-by-verse audio
-  const versesUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${suraId}`;
-  console.log('Background: Fetching verse audio from:', versesUrl);
-  const response = await fetch(versesUrl);
-  if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
-  }
-  const data = await response.json();
-  if (!data.audio_files || data.audio_files.length === 0) {
-    throw new Error('No audio files found in API response.');
-  }
-  const firstAudio = data.audio_files[0];
-  let audioUrl = firstAudio.url || firstAudio.audio_url;
-  if (!audioUrl) throw new Error('Audio URL not found in API response.');
-  if (audioUrl.startsWith('//')) {
-    return `https:${audioUrl}`;
-  } else if (audioUrl.startsWith('http')) {
-    return audioUrl;
-  } else {
-    return `https://verses.quran.com/${audioUrl}`;
-  }
+  return getSuraAudioUrlShared(reciterKey, suraId, {
+    resolveMp3Reciter: async (_key, rawId) => getMp3QuranReciterById(rawId)
+  });
 }
 
 // Add new function to handle setTimeout-based notifications
