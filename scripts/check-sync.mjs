@@ -17,10 +17,14 @@ const targets = [
   join(repoRoot, 'firefox', 'shared')
 ];
 
+// Same skip rules as scripts/sync.mjs so the check matches what got copied.
+const SKIP_NAMES = new Set(['CLAUDE.md', '.DS_Store']);
+
 async function listFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
+    if (SKIP_NAMES.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await listFiles(full)));
