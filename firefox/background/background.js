@@ -490,6 +490,10 @@ async function showDhikrNotification(isTest = false) {
       if (browserNotificationId) {
         console.log('Background: Chrome extension notification created:', browserNotificationId);
         browserNotificationWorked = true;
+        // Auto-dismiss after 60 seconds even with requireInteraction set.
+        setTimeout(() => {
+          browser.notifications.clear(browserNotificationId).catch(() => {});
+        }, 60_000);
       }
     } catch (browserError) {
       console.error('Background: Chrome extension notification failed:', browserError);
@@ -501,13 +505,17 @@ async function showDhikrNotification(isTest = false) {
       try {
         // Create browser notification directly in Firefox
         try {
-          await browser.notifications.create(`dhikr-${Date.now()}`, {
+          const fallbackId = `dhikr-${Date.now()}`;
+          await browser.notifications.create(fallbackId, {
             type: 'basic',
             iconUrl: iconUrl,
             title: isTest ? 'Test - Dhikr Reminder 🤲' : 'Dhikr Reminder 🤲',
             message: `${dhikr.arabic}\n${dhikr.english}\n\nReward: ${dhikr.reward}`,
             requireInteraction: true
           });
+          setTimeout(() => {
+            browser.notifications.clear(fallbackId).catch(() => {});
+          }, 60_000);
           console.log('Background: Firefox notification created successfully');
           browserNotificationWorked = true;
         } catch (notificationError) {
