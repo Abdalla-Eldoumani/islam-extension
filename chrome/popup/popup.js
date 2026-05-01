@@ -180,7 +180,7 @@ function resetPlaybackState() {
   
   // Clear availability status
   const availabilityStatus = document.getElementById('quran-availability');
-  availabilityStatus.innerHTML = '';
+  availabilityStatus.textContent = '';
   availabilityStatus.style.color = '';
   
   // Reset last known state
@@ -295,10 +295,10 @@ async function loadSavedAudioState() {
         
         // Show resume indicator if there's significant progress
         if (stateResponse.state.currentTime > 30) {
-          availabilityStatus.innerHTML = `⏯ Ready to resume from ${formatTime(stateResponse.state.currentTime)}`;
+          availabilityStatus.textContent = `⏯ Ready to resume from ${formatTime(stateResponse.state.currentTime)}`;
           availabilityStatus.style.color = '#007bff';
         } else if (stateResponse.state.currentTime > 5) {
-          availabilityStatus.innerHTML = `⏯ Previous session available`;
+          availabilityStatus.textContent = `⏯ Previous session available`;
           availabilityStatus.style.color = '#007bff';
         }
         
@@ -621,7 +621,7 @@ async function setupQuranSelectors() {
     const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
     populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
     ALL_RECITERS = reciters;
-    reciterDatalist.innerHTML = '';
+    reciterDatalist.replaceChildren();
     reciters.forEach(r => {
       const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`;
       RECITER_LABEL_TO_KEY[label] = r.id;
@@ -631,13 +631,19 @@ async function setupQuranSelectors() {
     });
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
-    suraSelect.innerHTML = '<option value="">Error</option>';
+    const errorOption = document.createElement('option');
+    errorOption.value = '';
+    errorOption.textContent = 'Error';
+    suraSelect.replaceChildren(errorOption);
     reciterInput.placeholder = 'Error loading reciters';
   }
 }
 
 function populateSelect(selectEl, items, defaultOptionText, mapper) {
-  selectEl.innerHTML = `<option value="">${defaultOptionText}</option>`;
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = defaultOptionText;
+  selectEl.replaceChildren(placeholder);
   items.forEach(item => {
     const { value, text } = mapper(item);
     const option = document.createElement('option');
@@ -819,14 +825,14 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
     
-    availabilityStatus.innerHTML = '&#x2705; Playing...';
+    availabilityStatus.textContent = '✅ Playing...';
     availabilityStatus.style.color = 'green';
     updatePlayButtonUI(true, true, 0);
     lastKnownAudioState.isPlaying = true;
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
-    availabilityStatus.innerHTML = '&#x274C; Reciter not available right now.';
+    availabilityStatus.textContent = '❌ Reciter not available right now.';
     availabilityStatus.style.color = 'red';
     updatePlayButtonUI(false, true);
   } finally {
