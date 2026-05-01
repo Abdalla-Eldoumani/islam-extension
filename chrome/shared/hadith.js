@@ -38,11 +38,22 @@ export const FR_EDITIONS = [
   { edition: 'fra-dehlawi', count: 40 }
 ];
 
-// Pinned to the @1 release tag today; Phase C item 1 swaps this for a commit
-// SHA once we record the upstream commit we trust.
+// JSDelivr base. Currently pinned to the @1 release tag. The maintainer
+// should swap this for an explicit commit SHA before the next release —
+// docs/SECURITY.md tracks the pending pin.
 const JSDELIVR_HADITH_BASE = 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions';
 const HADEETHENC_BASE = 'https://hadeethenc.com/api/v1/hadeeths/one';
 const GADING_BASE = 'https://api.hadith.gading.dev/books';
+
+// Reject responses that look unsafe to render. We do not retranslate or alter
+// the religious text; we only validate the response shape and refuse anything
+// containing markup before passing the string to the popup.
+function isSafeHadithText(text) {
+  if (typeof text !== 'string') return false;
+  if (text.length === 0 || text.length > 4096) return false;
+  if (/<script|<iframe|<object|<embed/i.test(text)) return false;
+  return true;
+}
 
 export async function fetchRandomArabicHadith() {
   const picked = AR_BOOKS[Math.floor(Math.random() * AR_BOOKS.length)];
@@ -50,7 +61,8 @@ export async function fetchRandomArabicHadith() {
   const res = await fetch(`${GADING_BASE}/${picked.id}?range=${rand}-${rand}`);
   if (!res.ok) throw new Error('Hadith API failed');
   const data = await res.json();
-  return data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
+  const text = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
+  return isSafeHadithText(text) ? text : '';
 }
 
 export async function fetchRandomEnglishHadith() {
@@ -63,7 +75,7 @@ export async function fetchRandomEnglishHadith() {
       if (res.ok) {
         const data = await res.json();
         const text = data.hadith?.english || data.english;
-        if (text) return text;
+        if (isSafeHadithText(text)) return text;
       }
     } catch (_) {}
   }
@@ -75,7 +87,7 @@ export async function fetchRandomEnglishHadith() {
       if (res.ok) {
         const data = await res.json();
         const txt = data?.hadeeth || data?.title;
-        if (txt) return txt;
+        if (isSafeHadithText(txt)) return txt;
       }
     } catch (_) {}
   }
@@ -101,7 +113,7 @@ export async function fetchRandomFrenchHadith() {
       if (res.ok) {
         const data = await res.json();
         const text = data.hadiths?.[0]?.text || data.hadith?.french || data.french;
-        if (text && text.trim()) {
+        if (text && text.trim() && isSafeHadithText(text)) {
           return text.length > 500 ? text.substring(0, 497) + '...' : text;
         }
       }
