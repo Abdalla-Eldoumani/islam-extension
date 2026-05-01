@@ -7,6 +7,34 @@ const QURAN_COM_API = 'https://api.quran.com/api/v4';
 const VERSES_BASE = 'https://verses.quran.com';
 const ISLAMIC_NETWORK_BASE = 'https://cdn.islamic.network/quran/audio/128';
 
+// Hosts the manifest's media-src enumerates. Any URL we hand to <audio> must
+// resolve to one of these. Anything else is a misconfiguration we should fail
+// fast on rather than letting the audio element fail silently.
+const ALLOWED_MEDIA_HOSTS = new Set([
+  'verses.quran.com',
+  'cdn.islamic.network',
+  'mirrors.quranicaudio.com',
+  'download.quranicaudio.com',
+  'www.mp3quran.net'
+]);
+
+function isAllowedAudioHost(url) {
+  try {
+    const u = new URL(url);
+    if (ALLOWED_MEDIA_HOSTS.has(u.hostname)) return true;
+    return u.hostname.endsWith('.mp3quran.net');
+  } catch (_) {
+    return false;
+  }
+}
+
+function ensureAllowedAudioHost(url) {
+  if (!isAllowedAudioHost(url)) {
+    throw new Error('Audio source unavailable for this combination');
+  }
+  return url;
+}
+
 export function parseReciterKey(reciterKey) {
   if (reciterKey.includes(':')) {
     const parts = reciterKey.split(':');
@@ -36,11 +64,11 @@ export async function getSuraAudioUrl(reciterKey, suraId, { resolveMp3Reciter } 
     if (!server) throw new Error('Reciter entry missing server URL');
     const base = server.endsWith('/') ? server : server + '/';
     const suraStr = String(suraId).padStart(3, '0');
-    return `${base}${suraStr}.mp3`;
+    return ensureAllowedAudioHost(`${base}${suraStr}.mp3`);
   }
 
   if (provider === 'islamic') {
-    return `${ISLAMIC_NETWORK_BASE}/${rawId}/${suraId}.mp3`;
+    return ensureAllowedAudioHost(`${ISLAMIC_NETWORK_BASE}/${rawId}/${suraId}.mp3`);
   }
 
   // Default: Quran.com. Try chapter recitations first, fall back to first
@@ -53,7 +81,8 @@ export async function getSuraAudioUrl(reciterKey, suraId, { resolveMp3Reciter } 
       const chapterData = await chapterResponse.json();
       if (chapterData.audio_file?.audio_url) {
         const audioUrl = chapterData.audio_file.audio_url;
-        return audioUrl.startsWith('http') ? audioUrl : `${VERSES_BASE}/${audioUrl}`;
+        const resolved = audioUrl.startsWith('http') ? audioUrl : `${VERSES_BASE}/${audioUrl}`;
+        return ensureAllowedAudioHost(resolved);
       }
     }
   } catch (_) {
@@ -72,7 +101,9 @@ export async function getSuraAudioUrl(reciterKey, suraId, { resolveMp3Reciter } 
   const firstAudio = data.audio_files[0];
   const audioUrl = firstAudio.url || firstAudio.audio_url;
   if (!audioUrl) throw new Error('Audio URL not found in API response.');
-  if (audioUrl.startsWith('//')) return `https:${audioUrl}`;
-  if (audioUrl.startsWith('http')) return audioUrl;
-  return `${VERSES_BASE}/${audioUrl}`;
+  let resolved;
+  if (audioUrl.startsWith('//')) resolved = `https:${audioUrl}`;
+  else if (audioUrl.startsWith('http')) resolved = audioUrl;
+  else resolved = `${VERSES_BASE}/${audioUrl}`;
+  return ensureAllowedAudioHost(resolved);
 }
