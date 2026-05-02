@@ -129,6 +129,8 @@ A background coverage probe HEAD-tests four sample surahs (1, 50, 87, 114) per r
 
 The popup reads `audioState` from `chrome.storage.local` directly on open. It does not depend on a runtime round-trip to the background to recover the resume position. If the saved state indicates active playback, the popup follows up with a `getAudioState` message to refresh the in-flight currentTime; otherwise the storage state is authoritative. This pattern survives Chrome's service-worker termination during long idle and Firefox browser restarts.
 
+The popup renders Resume whenever the offscreen document (Chrome) or background page (Firefox) holds a live or paused audio with non-zero progress, regardless of whether the surah and reciter inputs currently match the saved selections. The semantics are: as long as audio is alive somewhere, the popup must always offer a way to control it. Clicking Resume issues a keyless `resumeAudio` message; the offscreen document or background page resumes from its own internal state, so the popup's input fields can drift out of match without breaking the control surface.
+
 ## Sync mechanism
 
 `scripts/sync.mjs` walks the repo-root `shared/` and copies every file (excluding `CLAUDE.md` and `.DS_Store`) into `chrome/shared/` and `firefox/shared/`. The destination is wiped and rewritten on each run so removed files do not linger.
