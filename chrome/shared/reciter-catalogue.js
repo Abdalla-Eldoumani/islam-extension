@@ -1,4 +1,4 @@
-// Reciter catalogue across three providers. The orchestrator returns a single
+// Reciter catalogue across four providers. The orchestrator returns a single
 // deduplicated, sorted list. Caller is responsible for caching the result if
 // desired (the popup writes to chrome.storage.local; the background fetches
 // fresh as needed).
@@ -40,26 +40,38 @@ export async function fetchMp3QuranReciters() {
   }
 }
 
-export async function fetchIslamicNetworkReciters() {
-  const slugs = ['ar.alafasy', 'ar.husary', 'ar.shuraym', 'ar.tablawee'];
-  return slugs.map((slug) => {
-    const prettyName = slug.split('.')[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    return {
-      id: `islamic:${slug}`,
-      reciter_name: prettyName,
-      style: 'Default',
-      source: 'islamic',
-      slug,
-      bitrate: 128
-    };
-  });
+// Al-Quran Cloud curates audio editions, most pointing at cdn.islamic.network
+// with the same slug-shaped identifier. The slug becomes the reciter
+// identifier; getSuraAudioUrl already handles `islamic:<slug>` keys.
+export async function fetchAlquranCloudReciters() {
+  const url = 'https://api.alquran.cloud/v1/edition/format/audio';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!Array.isArray(json?.data)) return [];
+
+    return json.data
+      .filter((e) => e.format === 'audio' && typeof e.identifier === 'string')
+      .map((e) => ({
+        id: `islamic:${e.identifier}`,
+        reciter_name: e.englishName || e.name || e.identifier,
+        style: e.type === 'translation' ? 'Translation' : 'Default',
+        source: 'alquran-cloud',
+        slug: e.identifier,
+        language: e.language || 'ar',
+        bitrate: 128
+      }));
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function fetchReciters() {
   const combined = (await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
-    fetchIslamicNetworkReciters()
+    fetchAlquranCloudReciters()
   ])).flat();
 
   const dedupedMap = new Map();

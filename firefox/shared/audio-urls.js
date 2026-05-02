@@ -18,7 +18,7 @@ const ALLOWED_MEDIA_HOSTS = new Set([
   'www.mp3quran.net'
 ]);
 
-function isAllowedAudioHost(url) {
+export function isAllowedAudioHost(url) {
   try {
     const u = new URL(url);
     if (ALLOWED_MEDIA_HOSTS.has(u.hostname)) return true;
@@ -28,7 +28,7 @@ function isAllowedAudioHost(url) {
   }
 }
 
-function ensureAllowedAudioHost(url) {
+export function ensureAllowedAudioHost(url) {
   if (!isAllowedAudioHost(url)) {
     throw new Error('Audio source unavailable for this combination');
   }
