@@ -7,6 +7,7 @@
 import { dhikrCollection, DHIKR_REWARD_AR, DHIKR_REWARD_FR } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
 import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
+import { getCoverageLabel } from '../shared/reciter-coverage.js';
 
 // Silence verbose logs in production. Flip ENV_PROD to false when debugging.
 if (typeof console !== 'undefined') {
@@ -595,14 +596,17 @@ async function setupQuranSelectors() {
   const reciterDatalist = document.getElementById('reciter-list');
 
   try {
-    const [suras, reciters] = await Promise.all([fetchSuras(), fetchReciters()]);
+    const [suras, reciters, { reciterCoverage }] = await Promise.all([
+      fetchSuras(),
+      fetchReciters(),
+      browser.storage.local.get('reciterCoverage')
+    ]);
     populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
-    // Store for filtering
     ALL_RECITERS = reciters;
-    // Build datalist
     reciterDatalist.replaceChildren();
     reciters.forEach(r => {
-      const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps)`;
+      const coverage = getCoverageLabel(reciterCoverage, r.id);
+      const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps, ${coverage})`;
       RECITER_LABEL_TO_KEY[label] = r.id;
       const option = document.createElement('option');
       option.value = label;
