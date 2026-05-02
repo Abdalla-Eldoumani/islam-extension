@@ -345,21 +345,38 @@ async function loadSavedAudioState() {
       validateQuranSelection();
     }
 
-    // Storage is the source of truth for restoration. The offscreen document
-    // may not be alive yet when the popup opens; relying on a runtime round
-    // trip to background here used to lose the resume position.
-    let restoredState = (audioState && audioState.audioUrl) ? audioState : null;
+    // Storage is the source of truth for restoration. Restore whenever
+    // audioState carries any indicator that audio is alive: an audioUrl, an
+    // isPlaying flag, or a non-zero currentTime. Older releases occasionally
+    // wrote audioState without an audioUrl, so a strict check on audioUrl
+    // would silently skip restoration and leave the popup looking empty.
+    const hasLiveAudio = !!(audioState && (
+      audioState.audioUrl ||
+      audioState.isPlaying ||
+      (typeof audioState.currentTime === 'number' && audioState.currentTime > 0)
+    ));
+    let restoredState = hasLiveAudio ? { ...audioState } : null;
 
     // If the saved state suggests playback was active, refresh from runtime to
     // catch any progress made between the last storage write and now.
     if (restoredState?.isPlaying) {
       try {
         const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-        if (stateResponse?.success && stateResponse.state?.audioUrl) {
-          restoredState = stateResponse.state;
+        if (stateResponse?.success && stateResponse.state) {
+          restoredState = { ...restoredState, ...stateResponse.state };
         }
       } catch (_) {
         // Service worker not yet awake; storage state is good enough.
+      }
+    }
+
+    // If the URL is still unknown but we have keys, derive it locally so
+    // updateProgressUI and the resume affordance both have what they need.
+    if (restoredState && !restoredState.audioUrl && restoredState.suraId && restoredState.reciterKey) {
+      try {
+        restoredState.audioUrl = await getSuraAudioUrl(restoredState.reciterKey, restoredState.suraId);
+      } catch (_) {
+        // Could not resolve URL; restoration still proceeds with isPlaying state.
       }
     }
 

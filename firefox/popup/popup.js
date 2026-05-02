@@ -346,19 +346,34 @@ async function loadSavedAudioState() {
       validateQuranSelection();
     }
 
-    // Storage is the source of truth for restoration. The background page
-    // persists audioState on pause / seek / ended / throttled timeupdate so a
-    // browser restart still recovers position.
-    let restoredState = (audioState && audioState.audioUrl) ? audioState : null;
+    // Storage is the source of truth for restoration. Restore whenever
+    // audioState carries any indicator that audio is alive: an audioUrl, an
+    // isPlaying flag, or a non-zero currentTime. Older releases occasionally
+    // wrote audioState without an audioUrl, so a strict check on audioUrl
+    // would silently skip restoration and leave the popup looking empty.
+    const hasLiveAudio = !!(audioState && (
+      audioState.audioUrl ||
+      audioState.isPlaying ||
+      (typeof audioState.currentTime === 'number' && audioState.currentTime > 0)
+    ));
+    let restoredState = hasLiveAudio ? { ...audioState } : null;
 
     if (restoredState?.isPlaying) {
       try {
         const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
-        if (stateResponse?.success && stateResponse.state?.audioUrl) {
-          restoredState = stateResponse.state;
+        if (stateResponse?.success && stateResponse.state) {
+          restoredState = { ...restoredState, ...stateResponse.state };
         }
       } catch (_) {
         // Background not yet wired up; storage state is good enough.
+      }
+    }
+
+    if (restoredState && !restoredState.audioUrl && restoredState.suraId && restoredState.reciterKey) {
+      try {
+        restoredState.audioUrl = await getSuraAudioUrl(restoredState.reciterKey, restoredState.suraId);
+      } catch (_) {
+        // Could not resolve URL; restoration still proceeds with isPlaying state.
       }
     }
 
