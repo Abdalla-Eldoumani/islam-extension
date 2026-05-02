@@ -329,29 +329,12 @@ async function loadSavedAudioState() {
   try {
     const { audioState, userSelections } = await browser.storage.local.get(['audioState', 'userSelections']);
 
+    // setupQuranSelectors is awaited before this runs, so the catalogue is
+    // already hydrated. RECITER_CATALOG covers canonical and alt ids.
     if (userSelections?.suraId || userSelections?.reciterKey) {
       if (userSelections.suraId) {
         setSelectedSuraById(userSelections.suraId);
       }
-
-      const waitForReciters = new Promise(resolve => {
-        const reciterDatalist = document.getElementById('reciter-list');
-        if (reciterDatalist.options.length > 0) {
-          resolve();
-          return;
-        }
-        const observer = new MutationObserver(() => {
-          if (reciterDatalist.options.length > 0) {
-            observer.disconnect();
-            resolve();
-          }
-        });
-        observer.observe(reciterDatalist, { childList: true });
-        setTimeout(() => { observer.disconnect(); resolve(); }, 3000);
-      });
-
-      await waitForReciters;
-
       if (userSelections.reciterKey) {
         setReciterInputByKey(userSelections.reciterKey);
       }
