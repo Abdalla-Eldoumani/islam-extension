@@ -336,6 +336,7 @@ function seekAudio(time) {
   if (audioPlayer) {
     audioPlayer.currentTime = time;
     currentAudioState.currentTime = time;
+    saveAudioState();
     console.log('Background: Audio seeked to', time);
   }
 }
