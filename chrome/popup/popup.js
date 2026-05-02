@@ -8,6 +8,7 @@ import { dhikrCollection, DHIKR_REWARD_AR } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
 import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
 import { getCoverageLabel } from '../shared/reciter-coverage.js';
+import { fetchReciters } from '../shared/reciter-catalogue.js';
 
 // Silence verbose logs in production. Flip ENV_PROD to false when debugging.
 if (typeof console !== 'undefined') {
@@ -698,7 +699,7 @@ async function setupQuranSelectors() {
   try {
     const [suras, reciters, { reciterCoverage }] = await Promise.all([
       fetchSuras(),
-      fetchReciters(),
+      fetchAndCacheReciters(),
       chrome.storage.local.get('reciterCoverage')
     ]);
 
@@ -749,6 +750,50 @@ async function fetchSuras(lang = CURRENT_LANG || 'en') {
   if (!response.ok) throw new Error('Failed to fetch suras');
   const { chapters } = await response.json();
   return chapters;
+}
+
+// Reciter catalogue --- cache and hydration are popup-side; provider fetches and
+// dedup live in shared/reciter-catalogue.js. Alt-id registration in
+// RECITER_CATALOG lets setReciterInputByKey resolve keys saved under previous
+// catalogue revisions.
+const RECITER_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+async function loadCachedReciters() {
+  try {
+    const { reciterCache } = await chrome.storage.local.get('reciterCache');
+    if (!reciterCache?.timestamp || !Array.isArray(reciterCache.reciters)) return null;
+    if (Date.now() - reciterCache.timestamp > RECITER_CACHE_TTL_MS) return null;
+    return reciterCache.reciters;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function cacheReciters(deduped) {
+  try {
+    await chrome.storage.local.set({ reciterCache: { reciters: deduped, timestamp: Date.now() } });
+  } catch (err) {
+    console.warn('Failed to save reciter cache:', err);
+  }
+}
+
+function hydrateCatalog(deduped) {
+  deduped.forEach(r => {
+    RECITER_CATALOG[r.id] = r;
+    (r.altIds || []).forEach(alt => (RECITER_CATALOG[alt] = r));
+  });
+}
+
+async function fetchAndCacheReciters() {
+  const cached = await loadCachedReciters();
+  if (cached) {
+    hydrateCatalog(cached);
+    return [...cached].sort((a, b) => a.reciter_name.localeCompare(b.reciter_name));
+  }
+  const deduped = await fetchReciters();
+  hydrateCatalog(deduped);
+  await cacheReciters(deduped);
+  return deduped;
 }
 
 // --- AUDIO LOGIC ---
