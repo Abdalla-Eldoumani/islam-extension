@@ -88,6 +88,7 @@ All messages between popup, background, and offscreen go through `chrome.runtime
 | `startDhikrNotifications` | popup -> background | `{ intervalSeconds }` |
 | `stopDhikrNotifications` | popup -> background | none |
 | `updateDhikrInterval` | popup -> background | `{ intervalSeconds }` |
+| `setSleepTimer` | popup -> background | `{ minutes }` (0 cancels) |
 | `showBrowserNotification` | background -> offscreen | `{ title, body, icon }` |
 
 Background returns `true` from `onMessage` to signal an async response.
@@ -98,16 +99,35 @@ Everything lives in `chrome.storage.local` (Firefox: `browser.storage.local`). K
 
 | key | shape | lifetime |
 | --- | --- | --- |
-| `audioState` | `{ audioUrl, suraId, reciterKey, currentTime, duration, isPlaying }` | until manually cleared |
+| `audioState` | `{ audioUrl, suraId, reciterKey, currentTime, duration, isPlaying, timestamp }` | written by the offscreen (Chrome) and the persistent background (Firefox) on play / pause / seek / ended / throttled timeupdate. The popup reads this on open as the primary restoration source. |
 | `userSelections` | `{ suraId, reciterKey, autoplayEnabled, timestamp }` | until manually cleared |
 | `dhikrSettings` | `{ enabled, intervalSeconds, reminderMode }` | until manually cleared |
 | `currentDhikr` | one entry from `dhikrCollection` | overwritten on each reminder |
 | `reciterCache` | `{ reciters: [...], timestamp }` | refreshed every 6 hours |
+| `reciterCoverage` | `{ timestamp, map: { [reciterId]: 'complete' \| 'limited' } }` | refreshed every 24 hours by the background coverage probe; 30-day TTL when read |
+| `sleepTimer` | `{ minutes: 0 \| 15 \| 30 \| 45 \| 60 }` | persists across sessions; 0 means off |
 | `hadithCacheEn` | `string[]` | up to 30 entries, replenished asynchronously |
 | `hadithCacheFr` | `string[]` | same |
 | `uiLanguage` | `'en' \| 'fr' \| 'ar'` | until manually cleared |
 
 The 10MB quota is far above realistic usage (well under 1MB even pessimistically).
+
+## Reciter catalogue
+
+Four providers feed the catalogue:
+
+- **Quran.com** (`api.quran.com`) — verse-by-verse and chapter recitations.
+- **MP3Quran.net** — additional reciters with their own server URL pattern.
+- **Islamic.network** (`cdn.islamic.network`) — audio CDN; reciters keyed by slug.
+- **Al-Quran Cloud** (`api.alquran.cloud`) — curated audio editions whose `identifier` is an Islamic.network slug. Replaces the hardcoded slug list 2.0.0 carried.
+
+Results are deduplicated by `name + style`. The popup caches the deduped list under `reciterCache` for six hours.
+
+A background coverage probe HEAD-tests four sample surahs (1, 50, 87, 114) per reciter and writes results to `reciterCoverage` with a 30-day TTL. Reciters with at least two passes are `complete`; one or zero passes are `limited`. The picker label surfaces this so users can choose reliable reciters confidently. The probe runs once on install/startup with a 30-second delay, then every 24 hours via `chrome.alarms`. Every probed URL passes through `ensureAllowedAudioHost` before any HEAD request.
+
+## Resume behaviour
+
+The popup reads `audioState` from `chrome.storage.local` directly on open. It does not depend on a runtime round-trip to the background to recover the resume position. If the saved state indicates active playback, the popup follows up with a `getAudioState` message to refresh the in-flight currentTime; otherwise the storage state is authoritative. This pattern survives Chrome's service-worker termination during long idle and Firefox browser restarts.
 
 ## Sync mechanism
 
