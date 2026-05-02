@@ -21,7 +21,8 @@ The extension runs in the popup, the background service worker (Chrome) or persi
 | `api.quran.com` | Surah metadata and recitations catalogue. | Operated by the Quran.com Foundation. We treat their JSON as untrusted: every URL is validated against the media-host allowlist before reaching the audio element. |
 | `verses.quran.com` | Quran.com audio CDN. | Same. |
 | `www.mp3quran.net`, `*.mp3quran.net` | Reciter catalogue and audio mirrors. | Same. |
-| `cdn.islamic.network` | Audio for the four built-in Islamic.network slugs. | Same. |
+| `cdn.islamic.network` | Audio for Islamic.network reciter slugs. | Same. |
+| `api.alquran.cloud` | Curated audio editions catalogue. The 2.1.0 fourth provider. | Treated as untrusted; we filter responses to `format === 'audio'` and use the returned `identifier` as a slug. The resulting audio URLs still resolve to `cdn.islamic.network` and pass through `ensureAllowedAudioHost`. |
 | `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@<sha>` | English and French hadith editions. | JSDelivr serves a specific commit. We pin to the SHA recorded in `shared/hadith.js`. To bump, look up the commit on the upstream repo and update both the constant and the note here. The response is shape-validated before reaching the popup. |
 | `api.hadith.gading.dev` | Arabic hadith. | Treated as untrusted; shape-validated. |
 | `hadeethenc.com` | Hadith fallback. | Treated as untrusted; shape-validated. |
@@ -84,6 +85,12 @@ The following items from the last audit are documented rather than fixed in the 
 - **Request rate-limiting** — rapidly opening and closing the popup fires repeated API requests. Adding deduplication is a behaviour change that needs separate testing.
 - **Storage quota** — `chrome.storage.local` allows 10MB. Realistic usage is well under 1MB.
 - **Firefox MV3 migration** — pending Mozilla's resolution of background audio playback in MV3. Tracked in `MV3_MIGRATION.md`.
+
+## 2.1.0 audit summary
+
+The 2.1.0 release added one third-party host (`api.alquran.cloud`) and one in-extension probe (`shared/reciter-coverage.js`) that issues HEAD requests against the existing media CDNs. We re-swept the codebase for the dangerous DOM-string-write and dynamic-evaluation primitives flagged in the 2.0.0 audit; none have returned. We re-confirmed that the popup's restoration path now reads `audioState` from storage rather than relying on a runtime round-trip, which closes a race condition that was not a vulnerability but did surface as a regression-class bug. Both `web-ext lint` runs are at the same steady state as 2.0.0.
+
+The coverage probe deserves explicit mention: every URL it constructs is checked against `ensureAllowedAudioHost` before any HEAD request is issued. Off-allowlist URLs are dropped without a network call. Probe results are stored under `chrome.storage.local.reciterCoverage` with a 30-day TTL.
 
 ## Audit items closed in the current release
 
