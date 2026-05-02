@@ -1,6 +1,6 @@
 {
   "name": "quran-sunnah-companion",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Cross-browser companion extension that surfaces Quran recitation, authentic Hadith, and Dhikr reminders in a popup.",
   "private": true,
   "type": "module",
