@@ -98,10 +98,11 @@ function getSelectedSuraId() {
 function setSelectedSuraById(id) {
   if (suraCombobox) {
     suraCombobox.setValue(String(id));
-    return;
+  } else {
+    const input = document.getElementById('sura-input');
+    if (input) input.value = SURA_ID_TO_LABEL[id] || '';
   }
-  const input = document.getElementById('sura-input');
-  if (input) input.value = SURA_ID_TO_LABEL[id] || '';
+  refreshClearButtonVisibility('clear-sura', document.getElementById('sura-input'));
 }
 
 function getReciterKey() {
@@ -154,9 +155,11 @@ function setupEventHandlers() {
 
   suraInput.addEventListener('input', () => {
     handleInputChange();
+    refreshClearButtonVisibility('clear-sura', suraInput);
   });
   suraInput.addEventListener('change', () => {
     handleInputChange();
+    refreshClearButtonVisibility('clear-sura', suraInput);
   });
   reciterInput.addEventListener('input', () => {
     handleInputChange();
@@ -194,6 +197,16 @@ function setupEventHandlers() {
       else reciterInput.value = '';
       handleInputChange();
       reciterInput.focus();
+    });
+  }
+
+  const clearSuraBtn = document.getElementById('clear-sura');
+  if (clearSuraBtn) {
+    clearSuraBtn.addEventListener('click', () => {
+      if (suraCombobox) suraCombobox.clear();
+      else suraInput.value = '';
+      handleInputChange();
+      suraInput.focus();
     });
   }
 
@@ -727,8 +740,9 @@ async function setupQuranSelectors() {
       SURA_ID_TO_LABEL[String(s.id)] = label;
     });
 
+    const suraInputEl = document.getElementById('sura-input');
     suraCombobox = createCombobox({
-      inputEl: document.getElementById('sura-input'),
+      inputEl: suraInputEl,
       panelEl: document.getElementById('sura-panel'),
       getOptions: () => ALL_SURAS.map(s => {
         const altName = CURRENT_LANG === 'ar' ? s.name_simple : s.name_arabic;
@@ -739,10 +753,14 @@ async function setupQuranSelectors() {
         };
       }),
       onSelect: () => {
+        refreshClearButtonVisibility('clear-sura', suraInputEl);
         handleInputChange();
         saveUserSelections().catch(() => {});
       },
-      onClear: () => handleInputChange(),
+      onClear: () => {
+        refreshClearButtonVisibility('clear-sura', suraInputEl);
+        handleInputChange();
+      },
       name: 'sura'
     });
 
