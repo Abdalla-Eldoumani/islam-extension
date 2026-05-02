@@ -13,6 +13,7 @@ let outsideClickRegistered = false;
 function handleDocumentMouseDown(event) {
   if (!openInstance) return;
   const { inputEl, panelEl } = openInstance;
+  if (!inputEl || !panelEl) return;
   if (inputEl.contains(event.target) || panelEl.contains(event.target)) return;
   openInstance.close();
 }
@@ -215,6 +216,8 @@ export function createCombobox({ inputEl, panelEl, getOptions, onSelect, onClear
   inputEl.addEventListener('click', handleClick);
 
   const api = {
+    inputEl,
+    panelEl,
     setValue(id) {
       const all = getOptions() || [];
       const found = all.find((o) => o.id === id);
