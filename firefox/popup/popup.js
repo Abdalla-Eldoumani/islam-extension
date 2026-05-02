@@ -613,19 +613,40 @@ function displayCurrentDhikr() {
   const dhikr = dhikrCollection[currentDhikrIndex];
   const textEl = document.getElementById('dhikr-text');
   const infoEl = document.getElementById('dhikr-info');
-  
+
   if (CURRENT_LANG === 'ar') {
     textEl.textContent = dhikr.arabic;
     const reward = getRewardText(dhikr.reward);
     infoEl.textContent = reward ? `الأجر: ${reward}` : '';
-  } else if (CURRENT_LANG === 'fr') {
-    textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
-    const reward = getRewardText(dhikr.reward);
+    return;
+  }
+
+  // Mixed-direction line. textContent of a single string with Arabic at the
+  // start and Latin parens after it lets the bidi algorithm walk the closing
+  // paren past the Arabic. Building DOM nodes with explicit dir keeps each
+  // run on the side it belongs to.
+  const arSpan = document.createElement('span');
+  arSpan.dir = 'rtl';
+  arSpan.lang = 'ar';
+  arSpan.textContent = dhikr.arabic;
+  const tlSpan = document.createElement('span');
+  tlSpan.dir = 'ltr';
+  tlSpan.textContent = `(${dhikr.transliteration || ''})`;
+  const enSpan = document.createElement('span');
+  enSpan.dir = 'ltr';
+  enSpan.textContent = dhikr.english;
+  textEl.replaceChildren(
+    arSpan,
+    document.createTextNode(' '),
+    tlSpan,
+    document.createTextNode(' - '),
+    enSpan
+  );
+
+  const reward = getRewardText(dhikr.reward);
+  if (CURRENT_LANG === 'fr') {
     infoEl.textContent = reward ? `Récompense : ${reward}` : '';
   } else {
-    // Default to English
-    textEl.textContent = `${dhikr.arabic} (${dhikr.transliteration || ''}) - ${dhikr.english}`;
-    const reward = getRewardText(dhikr.reward);
     infoEl.textContent = reward ? `Reward: ${reward}` : '';
   }
 }
