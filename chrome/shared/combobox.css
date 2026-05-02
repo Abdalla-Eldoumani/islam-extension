@@ -1,0 +1,104 @@
+/* Parchment combobox. Inherits design tokens from chrome/popup/styles.css and
+   firefox/popup/styles.css; the dark-mode :root overrides cascade through. */
+
+.combobox {
+  position: relative;
+  width: 100%;
+}
+
+.combobox__input {
+  padding-inline-end: 32px;
+}
+
+.combobox__clear {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 8px;
+  margin-block: auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-tertiary);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.combobox__clear[data-visible="true"] {
+  display: inline-flex;
+}
+
+.combobox__clear:hover,
+.combobox__clear:focus-visible {
+  color: var(--ink-primary);
+  background: rgba(184, 137, 62, 0.08);
+  outline: none;
+}
+
+.combobox__panel {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--rule-hairline);
+  border-radius: 4px;
+  box-shadow: var(--shadow-page);
+  max-height: 280px;
+  overflow-y: auto;
+  color: var(--ink-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.combobox__panel[hidden] {
+  display: none;
+}
+
+.combobox__option {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-inline-start: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.combobox__option:hover,
+.combobox__option[data-highlighted="true"] {
+  background: rgba(184, 137, 62, 0.08);
+}
+
+.combobox__option[aria-selected="true"] {
+  border-inline-start-color: var(--gold-primary);
+}
+
+.combobox__option[lang="ar"] {
+  font-family: var(--font-arabic);
+  direction: rtl;
+}
+
+.combobox__option__label {
+  color: var(--ink-primary);
+}
+
+.combobox__option__secondary {
+  color: var(--ink-tertiary);
+  font-size: 12px;
+}
+
+.combobox__panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.combobox__panel::-webkit-scrollbar-thumb {
+  background: var(--rule-soft);
+  border-radius: 3px;
+}
