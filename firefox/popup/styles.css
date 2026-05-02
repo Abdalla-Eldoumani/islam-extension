@@ -68,8 +68,8 @@
 
   /* Ink */
   --ink-primary: #1A1410;
-  --ink-secondary: #574A3A;
-  --ink-tertiary: #8C7A66;
+  --ink-secondary: #3F352A;
+  --ink-tertiary: #6E5E4D;
 
   /* Accent — gold */
   --gold-primary: #B8893E;
@@ -78,7 +78,7 @@
 
   /* Edges */
   --rule-hairline: rgba(184, 137, 62, 0.35);
-  --rule-soft: rgba(26, 20, 16, 0.08);
+  --rule-soft: rgba(26, 20, 16, 0.16);
 
   /* Status */
   --status-positive: #5D7C3F;
@@ -124,15 +124,15 @@
     --surface-sunken: #1C1812;
 
     --ink-primary: #ECE3D2;
-    --ink-secondary: #B8A78D;
-    --ink-tertiary: #8C7A66;
+    --ink-secondary: #C9B89D;
+    --ink-tertiary: #A29076;
 
     --gold-primary: #D4A843;
     --gold-soft: #E0BC5D;
     --gold-deep: #B8893E;
 
     --rule-hairline: rgba(212, 168, 67, 0.3);
-    --rule-soft: rgba(236, 227, 210, 0.06);
+    --rule-soft: rgba(236, 227, 210, 0.14);
 
     --status-positive: #8AA85F;
     --status-negative: #C45757;
