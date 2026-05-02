@@ -343,13 +343,19 @@ body[dir="rtl"] .card__controls {
   color: var(--ink-primary);
 }
 
-/* ON state: gold underline, no background swap */
+/* ON state: gold left rule plus a faint gold tint. RTL flips to right rule. */
 .card__button[data-autoplay="true"],
 .card__button[data-enabled="true"] {
-  background: transparent;
+  background: rgba(184, 137, 62, 0.08);
   color: var(--ink-primary);
   border: 1px solid var(--rule-soft);
-  border-bottom: 1px solid var(--gold-primary);
+  border-left: 3px solid var(--gold-primary);
+}
+
+body[dir="rtl"] .card__button[data-autoplay="true"],
+body[dir="rtl"] .card__button[data-enabled="true"] {
+  border-left: 1px solid var(--rule-soft);
+  border-right: 3px solid var(--gold-primary);
 }
 
 /* ----------------------------------------------------------------------------
