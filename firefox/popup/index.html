@@ -76,13 +76,21 @@
           <ul role="listbox" id="sura-panel" class="combobox__panel" hidden></ul>
         </div>
 
-        <!-- Combined reciter picker with inline search -->
-        <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
-        <datalist id="reciter-list"></datalist>
-        <!-- Clear selection button for better UX -->
-        <button class="card__button card__button--secondary" id="clear-reciter" title="Clear reciter selection" aria-label="Clear reciter selection">
-          <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg> Clear
-        </button>
+        <div class="combobox" data-combobox="reciter">
+          <input type="text"
+                 class="card__input combobox__input"
+                 id="reciter-input"
+                 autocomplete="off"
+                 spellcheck="false"
+                 placeholder="Select or type a reciter">
+          <button type="button"
+                  class="combobox__clear"
+                  id="clear-reciter"
+                  aria-label="Clear reciter selection">
+            <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg>
+          </button>
+          <ul role="listbox" id="reciter-panel" class="combobox__panel" hidden></ul>
+        </div>
         <label class="card__label" id="sleep-timer-label" for="sleep-timer">
           Sleep timer
           <select id="sleep-timer" class="card__select">

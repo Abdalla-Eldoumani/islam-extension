@@ -42,6 +42,12 @@ function setIconLabel(el, iconId, label) {
   el.replaceChildren(makeIconSvg(iconId), document.createTextNode(' ' + label));
 }
 
+function refreshClearButtonVisibility(buttonId, inputEl) {
+  const btn = document.getElementById(buttonId);
+  if (!btn || !inputEl) return;
+  btn.dataset.visible = inputEl.value ? 'true' : 'false';
+}
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
@@ -113,6 +119,7 @@ function setReciterInputByKey(key) {
   const canonicalId = entry.id;
   const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === canonicalId);
   if (label) input.value = label;
+  refreshClearButtonVisibility('clear-reciter', input);
   if (canonicalId !== key) {
     saveUserSelections().catch(() => {});
   }
@@ -151,6 +158,7 @@ function setupEventHandlers() {
   });
   reciterInput.addEventListener('input', () => {
     handleInputChange();
+    refreshClearButtonVisibility('clear-reciter', reciterInput);
   });
 
   document.getElementById('progress-bar').addEventListener('change', (e) => {
@@ -183,7 +191,8 @@ function setupEventHandlers() {
   const clearReciterBtn = document.getElementById('clear-reciter');
   if (clearReciterBtn) {
     clearReciterBtn.addEventListener('click', () => {
-      reciterInput.value = '';
+      if (reciterCombobox) reciterCombobox.clear();
+      else reciterInput.value = '';
       handleInputChange();
       reciterInput.focus();
     });
@@ -657,7 +666,6 @@ async function saveDhikrSettings() {
 
 async function setupQuranSelectors() {
   const reciterInput = document.getElementById('reciter-input');
-  const reciterDatalist = document.getElementById('reciter-list');
 
   try {
     const [suras, reciters, { reciterCoverage }] = await Promise.all([
@@ -693,14 +701,32 @@ async function setupQuranSelectors() {
     });
 
     ALL_RECITERS = reciters;
-    reciterDatalist.replaceChildren();
     reciters.forEach(r => {
       const coverage = getCoverageLabel(reciterCoverage, r.id);
       const label = `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps, ${coverage})`;
       RECITER_LABEL_TO_KEY[label] = r.id;
-      const option = document.createElement('option');
-      option.value = label;
-      reciterDatalist.appendChild(option);
+    });
+
+    reciterCombobox = createCombobox({
+      inputEl: document.getElementById('reciter-input'),
+      panelEl: document.getElementById('reciter-panel'),
+      getOptions: () => ALL_RECITERS.map(r => {
+        const coverage = getCoverageLabel(reciterCoverage, r.id);
+        return {
+          id: r.id,
+          label: `${r.reciter_name} (${r.style}, ${r.bitrate || 128}kbps, ${coverage})`
+        };
+      }),
+      onSelect: () => {
+        refreshClearButtonVisibility('clear-reciter', reciterInput);
+        handleInputChange();
+        saveUserSelections().catch(() => {});
+      },
+      onClear: () => {
+        refreshClearButtonVisibility('clear-reciter', reciterInput);
+        handleInputChange();
+      },
+      name: 'reciter'
     });
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
