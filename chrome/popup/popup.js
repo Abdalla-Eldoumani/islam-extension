@@ -51,10 +51,12 @@ let progressTrackingInterval = null;
 // Keep full list of reciters for quick filtering
 let ALL_RECITERS = [];
 
-// Track the last known audio state to detect input changes
+// Track the offscreen document's audio state so the popup can render Resume
+// across reopens regardless of whether the inputs match the saved keys.
 let lastKnownAudioState = {
   suraId: null,
   reciterKey: null,
+  audioUrl: null,
   currentTime: 0,
   isPlaying: false
 };
@@ -239,31 +241,19 @@ function handleInputChange() {
   }
 }
 
-// Function to reset playback state when inputs change
+// On input change the popup clears the in-popup status banner and re-renders
+// the play button. lastKnownAudioState is intentionally preserved: as long as
+// the offscreen document still holds audio, the popup must keep offering a
+// way to control it (Resume) even after the user picks a different surah.
 function resetPlaybackState() {
-  // Reset the button to "Play" mode
-  const playButton = document.getElementById('play-quran');
-  setIconLabel(playButton, 'play-triangle', t('play'));
-  playButton.dataset.action = 'play';
-  
-  // Hide progress container since we're starting fresh
-  document.getElementById('progress-container').classList.add('hidden');
-  document.getElementById('progress-bar').value = 0;
-  document.getElementById('current-time').textContent = formatTime(0);
-  document.getElementById('total-time').textContent = formatTime(0);
-  
-  // Clear availability status
   const availabilityStatus = document.getElementById('quran-availability');
   availabilityStatus.textContent = '';
   availabilityStatus.style.color = '';
-  
-  // Reset last known state
-  lastKnownAudioState = {
-    suraId: null,
-    reciterKey: null, 
-    currentTime: 0,
-    isPlaying: false
-  };
+  updatePlayButtonUI(
+    lastKnownAudioState.isPlaying,
+    true,
+    lastKnownAudioState.currentTime
+  );
 }
 
 async function handlePlayPauseResume(event) {
@@ -388,6 +378,7 @@ async function applyRestoredAudioState(state) {
   lastKnownAudioState = {
     suraId: state.suraId,
     reciterKey: state.reciterKey,
+    audioUrl: state.audioUrl || null,
     currentTime: state.currentTime,
     isPlaying: state.isPlaying
   };
@@ -842,7 +833,8 @@ async function playQuranAudio() {
     
     const audioUrl = await getSuraAudioUrl(reciterId, suraId);
     console.log('Fetched audio URL:', audioUrl);
-    
+    lastKnownAudioState.audioUrl = audioUrl;
+
     console.log('Popup: Sending message to background script...');
     const response = await chrome.runtime.sendMessage({
       action: 'playAudio',
@@ -999,21 +991,16 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
 
-  // Enable/disable interactions depending on allowed state
   pauseButton.disabled = !isEnabled;
 
-  // Check if we should show resume based on stored state and current selections
-  const currentSuraId = getSelectedSuraId();
-  const currentReciterKey = getReciterKey();
-  const hasMatchingSelection = (
-    lastKnownAudioState.suraId === currentSuraId && 
-    lastKnownAudioState.reciterKey === currentReciterKey
-  );
-  
-  const hasProgress = (currentTime > 0 || document.getElementById('progress-bar').value > 0) && hasMatchingSelection;
+  // Resume is offered whenever the offscreen document holds an audio URL
+  // with non-zero progress. The inputs do not need to match the saved keys;
+  // clicking Resume controls whatever is alive in the offscreen document.
+  const hasLiveAudio = !!lastKnownAudioState.audioUrl;
+  const progress = currentTime || lastKnownAudioState.currentTime || 0;
+  const showResume = hasLiveAudio && progress > 0 && !isPlaying;
 
   if (isPlaying) {
-    // Audio currently playing ---------------------------------------------
     playButton.classList.remove('hidden');
     playButton.disabled = true;
     setIconLabel(playButton, 'play-triangle', t('playing'));
@@ -1021,18 +1008,17 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
     pauseButton.classList.remove('hidden');
     setIconLabel(pauseButton, 'pause-bars', t('pause'));
   } else {
-    // Audio not playing (stopped or paused) --------------------------------
     playButton.classList.remove('hidden');
-    playButton.disabled = !isEnabled;
-
-    if (hasProgress && hasMatchingSelection) {
-      setIconLabel(playButton, 'play-triangle', `${t('resume')} (${formatTime(currentTime)})`);
+    // Resume is clickable even when the inputs would not validate, because
+    // the click resumes the offscreen audio rather than the current selection.
+    playButton.disabled = !isEnabled && !showResume;
+    if (showResume) {
+      setIconLabel(playButton, 'play-triangle', `${t('resume')} (${formatTime(progress)})`);
       playButton.dataset.action = 'resume';
     } else {
       setIconLabel(playButton, 'play-triangle', t('play'));
       playButton.dataset.action = 'play';
     }
-
     pauseButton.classList.add('hidden');
   }
 }
