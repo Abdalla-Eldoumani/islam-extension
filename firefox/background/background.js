@@ -213,6 +213,17 @@ let currentAudioState = {
   timestamp: Date.now()
 };
 
+// Persist current audio state so the popup can restore position after a
+// browser restart. The popup is the source of truth for restoration; runtime
+// round-trips are only used for live state during active playback.
+function saveAudioState() {
+  try {
+    browser.storage.local.set({ audioState: { ...currentAudioState } }).catch(() => {});
+  } catch (_) {
+    // Storage may be unavailable during shutdown; swallow.
+  }
+}
+
 async function handleAudioMessage(message, sendResponse) {
   try {
     console.log('Background: Handling audio message:', message.action);
@@ -284,10 +295,12 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     
     audioPlayer.addEventListener('pause', () => {
       currentAudioState.isPlaying = false;
+      saveAudioState();
     });
-    
+
     audioPlayer.addEventListener('ended', () => {
       currentAudioState.isPlaying = false;
+      saveAudioState();
     });
     
     // Start playback
@@ -306,6 +319,7 @@ function pauseAudio() {
   if (audioPlayer && !audioPlayer.paused) {
     audioPlayer.pause();
     currentAudioState.isPlaying = false;
+    saveAudioState();
     console.log('Background: Audio paused');
   }
 }
