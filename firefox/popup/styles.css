@@ -234,17 +234,16 @@ body[dir="rtl"] .popup__header {
   position: relative;
   background: var(--surface-raised);
   padding: var(--space-4);
+  border-radius: 4px;
   box-shadow: var(--shadow-page);
 }
 
 .card__title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   margin-bottom: var(--space-3);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--rule-hairline);
-  text-align: center;
+  text-align: start;
   color: var(--ink-primary);
 }
 
