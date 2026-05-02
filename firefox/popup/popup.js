@@ -1478,7 +1478,10 @@ function applyLanguage() {
 
   // Update clear reciter button
   const clearReciterBtn = document.getElementById('clear-reciter');
-  if (clearReciterBtn) setIconLabel(clearReciterBtn, 'clear-cross', t('clearReciter'));
+  if (clearReciterBtn) clearReciterBtn.setAttribute('aria-label', t('clearReciter'));
+
+  const clearSuraBtn = document.getElementById('clear-sura');
+  if (clearSuraBtn) clearSuraBtn.setAttribute('aria-label', t('clearSurah'));
 
   // Update current time and total time
   const currentTimeEl = document.getElementById('current-time');
