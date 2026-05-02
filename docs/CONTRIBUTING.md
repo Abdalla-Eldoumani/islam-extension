@@ -21,7 +21,7 @@ If you spot something that looks off in religious text, open an issue and link t
 
 ## Adding a reciter
 
-Edit `shared/reciter-catalogue.js`. The three existing fetchers (`fetchQuranComReciters`, `fetchMp3QuranReciters`, `fetchIslamicNetworkReciters`) each return entries shaped like:
+Edit `shared/reciter-catalogue.js`. The four existing fetchers (`fetchQuranComReciters`, `fetchMp3QuranReciters`, `fetchAlquranCloudReciters`, `fetchIslamicNetworkReciters`) each return entries shaped like:
 
 ```js
 {
@@ -38,6 +38,22 @@ Edit `shared/reciter-catalogue.js`. The three existing fetchers (`fetchQuranComR
 To add an Islamic.network slug, append it to the `slugs` array in `fetchIslamicNetworkReciters`. To add a Quran.com or MP3Quran reciter, those providers' APIs already serve the catalogue; the deduplication logic merges duplicates.
 
 After editing, run `npm run sync` and reload both builds. Smoke test: pick the new reciter, hit Play, listen to a surah end-to-end.
+
+## Adding a provider
+
+A new audio provider goes in three places:
+
+1. A `fetchXxxReciters` function in `shared/reciter-catalogue.js` returning the entry shape above. Add it to the orchestrator `fetchReciters`.
+2. A new media host in the manifest CSP `media-src` (and possibly `connect-src`) plus the allowlist in `shared/audio-urls.js#ALLOWED_MEDIA_HOSTS`. Provide a paragraph in `docs/SECURITY.md` describing the trust posture.
+3. Coverage probe support in `shared/reciter-coverage.js#buildProbeUrls` if the provider's URL pattern differs from the existing ones.
+
+The probe can be run once locally to confirm a fresh provider works:
+
+```
+node scripts/probe-reciter-coverage.mjs
+```
+
+It prints `complete` / `limited` / other for every reciter. Use `--json` to dump a machine-readable map.
 
 ## Adding a language
 
