@@ -166,6 +166,22 @@ function setupEventHandlers() {
     });
   }
 
+  const sleepTimer = document.getElementById('sleep-timer');
+  if (sleepTimer) {
+    browser.storage.local.get('sleepTimer').then(({ sleepTimer: saved }) => {
+      if (typeof saved?.minutes === 'number') sleepTimer.value = String(saved.minutes);
+    });
+    sleepTimer.addEventListener('change', async () => {
+      const minutes = parseInt(sleepTimer.value, 10) || 0;
+      await browser.storage.local.set({ sleepTimer: { minutes } });
+      try {
+        await browser.runtime.sendMessage({ action: 'setSleepTimer', minutes });
+      } catch (err) {
+        console.warn('Failed to set sleep timer:', err);
+      }
+    });
+  }
+
   // Reminder mode selector change ------------------------------------------
   const modeSelect = document.getElementById('reminder-mode');
   if (modeSelect) {
@@ -1458,6 +1474,19 @@ function applyLanguage() {
 
   const suraInput = document.getElementById('sura-input');
   if (suraInput) suraInput.placeholder = t('searchSura');
+
+  const sleepTimerLabel = document.getElementById('sleep-timer-label');
+  if (sleepTimerLabel) {
+    const select = document.getElementById('sleep-timer');
+    sleepTimerLabel.childNodes[0].nodeValue = t('sleepTimerLabel') + ' ';
+    if (select) {
+      [['0', 'sleepTimerOff'], ['15', 'sleepTimer15'], ['30', 'sleepTimer30'], ['45', 'sleepTimer45'], ['60', 'sleepTimer60']]
+        .forEach(([value, key]) => {
+          const opt = select.querySelector(`option[value="${value}"]`);
+          if (opt) opt.textContent = t(key);
+        });
+    }
+  }
 
   // Update clear reciter button
   const clearReciterBtn = document.getElementById('clear-reciter');
