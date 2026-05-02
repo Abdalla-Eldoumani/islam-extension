@@ -5,6 +5,8 @@
 
 import { getRandomDhikr } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
+import { fetchReciters } from '../shared/reciter-catalogue.js';
+import { probeCoverage } from '../shared/reciter-coverage.js';
 
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
@@ -23,6 +25,26 @@ if (typeof console !== 'undefined') {
 
 
 let dhikrAlarmName = 'dhikr-reminder';
+const COVERAGE_PROBE_ALARM = 'reciter-coverage-probe';
+
+async function runCoverageProbe() {
+  try {
+    const reciters = await fetchReciters();
+    if (!reciters?.length) return;
+    const coverage = await probeCoverage(reciters);
+    await browser.storage.local.set({ reciterCoverage: coverage });
+  } catch (err) {
+    console.error('Background: Coverage probe failed:', err);
+  }
+}
+
+function scheduleCoverageProbe() {
+  browser.alarms.create(COVERAGE_PROBE_ALARM, {
+    delayInMinutes: 0.5,
+    periodInMinutes: 24 * 60
+  });
+}
+
 let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
@@ -477,6 +499,9 @@ browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === dhikrAlarmName) {
     console.log('Background: Dhikr alarm triggered');
     showDhikrNotification();
+  } else if (alarm.name === COVERAGE_PROBE_ALARM) {
+    console.log('Background: Coverage probe alarm triggered');
+    runCoverageProbe();
   }
 });
 
@@ -615,6 +640,7 @@ browser.runtime.onStartup.addListener(async () => {
   } catch (error) {
     console.error('Background: Failed to restore Dhikr notifications on startup:', error);
   }
+  scheduleCoverageProbe();
 });
 
 // Also handle installation/update
@@ -628,6 +654,7 @@ browser.runtime.onInstalled.addListener(async () => {
   } catch (error) {
     console.error('Background: Failed to restore Dhikr notifications after install/update:', error);
   }
+  scheduleCoverageProbe();
 });
 
 // --- AUDIO MONITORING FOR AUTOPLAY ---
