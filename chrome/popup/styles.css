@@ -156,7 +156,7 @@ body {
   background: var(--surface-base);
   color: var(--ink-primary);
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: 0.9375rem;
   letter-spacing: -0.01em;
   line-height: 1.5;
 }
