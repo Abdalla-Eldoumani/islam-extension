@@ -109,6 +109,14 @@ All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the r
 
 ## Changelog
 
+### 2.1.1
+
+- Audio control persistence. Play, Pause, and Resume now render on every popup reopen as long as the offscreen document or background page still holds audio, regardless of whether the inputs match the saved keys. Saved reciter ids from previous catalogue revisions resolve to the canonical entry via the alt-id index.
+- Combobox redesign. The surah and reciter pickers ship as a parchment panel inside the existing design system. Type-to-filter is case-insensitive and accent-insensitive, including for Arabic tashkeel and tatweel.
+- Clear-surah button. The surah picker has its own inline clear icon, mirroring the clear-reciter affordance.
+- Dhikr bracket rendering. Mixed Arabic and Latin dhikr lines no longer flip the closing parenthesis past the Arabic word.
+- Shared reciter catalogue in the popup. The popup migrated to `shared/reciter-catalogue.js`, removing the popup-local copies and bringing the popup and background paths back into agreement on canonical ids.
+
 ### 2.1.0
 
 - Resume bug fix. Pause, close the popup, reopen later — the play button now correctly shows `Resume` with the saved timestamp on both Chrome and Firefox. Firefox also persists position across full browser restarts.
