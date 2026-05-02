@@ -111,11 +111,12 @@ All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the r
 
 ### 2.1.1
 
-- Audio control persistence. Play, Pause, and Resume now render on every popup reopen as long as the offscreen document or background page still holds audio, regardless of whether the inputs match the saved keys. Saved reciter ids from previous catalogue revisions resolve to the canonical entry via the alt-id index.
-- Combobox redesign. The surah and reciter pickers ship as a parchment panel inside the existing design system. Type-to-filter is case-insensitive and accent-insensitive, including for Arabic tashkeel and tatweel.
+- Audio control persistence. Play, Pause, and Resume now render on every popup reopen as long as the offscreen document or background page still holds audio, regardless of whether the inputs match the saved keys. Restoration polls the runtime first (the offscreen always sets `audioUrl` on play) and falls back to `chrome.storage.local.audioState` if the service worker is asleep or slow to wake. Saved reciter ids from previous catalogue revisions resolve to the canonical entry via the alt-id index.
+- Combobox redesign. The surah and reciter pickers ship as a parchment panel inside the existing design system. Type-to-filter is case-insensitive and accent-insensitive, including for Arabic tashkeel and tatweel. Outside-click closes the panel even when clicking on a different card inside the popup.
 - Clear-surah button. The surah picker has its own inline clear icon, mirroring the clear-reciter affordance.
 - Dhikr bracket rendering. Mixed Arabic and Latin dhikr lines no longer flip the closing parenthesis past the Arabic word.
 - Shared reciter catalogue in the popup. The popup migrated to `shared/reciter-catalogue.js`, removing the popup-local copies and bringing the popup and background paths back into agreement on canonical ids.
+- Polling tracker no longer wipes the Resume affordance when a surah ends naturally with autoplay off. The end-of-track render now defers to the same logic the popup uses on a cold reopen, so the timestamp and progress bar stay visible instead of collapsing to zero.
 
 ### 2.1.0
 

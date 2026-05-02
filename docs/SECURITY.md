@@ -98,6 +98,8 @@ The 2.1.1 release adds no third-party hosts. The popup migrated to `shared/recit
 
 The combobox normalises a comparison key for filtering (NFKD strip, Arabic tashkeel and tatweel removed, lowercase). The displayed label is never modified, preserving the religious-content-immutable rule for surah names and reciter names alike.
 
+Audio-state restoration polls `chrome.runtime.sendMessage({ action: 'getAudioState' })` with a 1500 ms timeout. The cap prevents a slow or stuck service-worker wakeup from leaving the popup in an indeterminate state; on timeout the popup falls back to `chrome.storage.local.audioState`. No new attack surface: the message contract is unchanged from 2.1.0 and `ensureAllowedAudioHost` still gates every URL the offscreen document loads.
+
 ## Audit items closed in the current release
 
 - JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
