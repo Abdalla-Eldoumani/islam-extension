@@ -46,6 +46,32 @@ function scheduleCoverageProbe() {
   });
 }
 
+// Sleep timer: pauses audio after the user-chosen duration. setTimeout is
+// safe here because active playback keeps the service worker alive.
+let sleepTimerHandle = null;
+
+function cancelSleepTimer() {
+  if (sleepTimerHandle) {
+    clearTimeout(sleepTimerHandle);
+    sleepTimerHandle = null;
+  }
+}
+
+function setSleepTimer(minutes) {
+  cancelSleepTimer();
+  const m = Number(minutes);
+  if (!m || m <= 0) return;
+  sleepTimerHandle = setTimeout(async () => {
+    sleepTimerHandle = null;
+    try {
+      await createOffscreenDocumentIfNeeded();
+      await chrome.runtime.sendMessage({ action: 'pauseAudio' });
+    } catch (err) {
+      console.error('Background: Sleep timer pause failed:', err);
+    }
+  }, m * 60_000);
+}
+
 let dhikrTimeoutId = null;
 let dhikrIntervalSeconds = 60;
 let dhikrNotificationsActive = false;
@@ -137,14 +163,22 @@ async function handleMessage(message, sender, sendResponse) {
     }
 
     // Route audio messages
-    if (message.action === 'playAudio' || 
-        message.action === 'pauseAudio' || 
-        message.action === 'resumeAudio' || 
-        message.action === 'seekAudio' || 
+    if (message.action === 'playAudio' ||
+        message.action === 'pauseAudio' ||
+        message.action === 'resumeAudio' ||
+        message.action === 'seekAudio' ||
         message.action === 'getAudioState') {
-      
+
       console.log(`Background received message: ${message.action}`, message);
+      // Any user-initiated pause cancels a pending sleep timer.
+      if (message.action === 'pauseAudio') cancelSleepTimer();
       await handleAudioMessage(message, sendResponse);
+      return;
+    }
+
+    if (message.action === 'setSleepTimer') {
+      setSleepTimer(message.minutes);
+      sendResponse({ success: true });
       return;
     }
 
