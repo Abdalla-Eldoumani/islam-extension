@@ -64,6 +64,28 @@ const RECITER_CATALOG = {};
 // Map display label -> reciterKey for the datalist picker
 const RECITER_LABEL_TO_KEY = {};
 
+// Sura search: maps for the datalist filter on `sura-input`. Filled in
+// setupQuranSelectors. The label looks like "67. Al-Mulk".
+const SURA_LABEL_TO_ID = {};
+const SURA_ID_TO_LABEL = {};
+
+function getSelectedSuraId() {
+  const input = document.getElementById('sura-input');
+  if (!input || !input.value) return '';
+  const val = input.value.trim();
+  if (SURA_LABEL_TO_ID[val]) return SURA_LABEL_TO_ID[val];
+  // Fallback: a bare number 1-114 resolves to that surah id directly.
+  const n = parseInt(val, 10);
+  if (!Number.isNaN(n) && n >= 1 && n <= 114) return String(n);
+  return '';
+}
+
+function setSelectedSuraById(id) {
+  const input = document.getElementById('sura-input');
+  if (!input) return;
+  input.value = SURA_ID_TO_LABEL[id] || '';
+}
+
 function getReciterKey() {
   const input = document.getElementById('reciter-input');
   if (!input.value) return '';
@@ -94,14 +116,17 @@ function setupEventHandlers() {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
-  const suraSelect = document.getElementById('sura-select');
+  const suraInput = document.getElementById('sura-input');
   const reciterInput = document.getElementById('reciter-input');
 
   playButton.addEventListener('click', handlePlayPauseResume);
   pauseButton.addEventListener('click', handlePlayPauseResume);
   autoplayButton.addEventListener('click', toggleAutoplay);
-  
-  suraSelect.addEventListener('change', () => {
+
+  suraInput.addEventListener('input', () => {
+    handleInputChange();
+  });
+  suraInput.addEventListener('change', () => {
     handleInputChange();
   });
   reciterInput.addEventListener('input', () => {
@@ -171,7 +196,7 @@ function handleInputChange() {
   saveUserSelections();
   
   // Check if current selections differ from active audio state
-  const currentSuraId = document.getElementById('sura-select').value;
+  const currentSuraId = getSelectedSuraId();
   const currentReciterKey = getReciterKey();
   
   if (lastKnownAudioState.suraId && lastKnownAudioState.reciterKey) {
@@ -233,7 +258,7 @@ async function handlePlayPauseResume(event) {
 
 async function saveUserSelections() {
   try {
-    const suraId = document.getElementById('sura-select').value;
+    const suraId = getSelectedSuraId();
     const reciterKey = getReciterKey();
     const autoplayEnabled = document.getElementById('autoplay-toggle').dataset.autoplay === 'true';
     
@@ -259,7 +284,7 @@ async function loadSavedAudioState() {
     // First, restore user selections (even if no audio is playing)
     if (userSelections?.suraId || userSelections?.reciterKey) {
       if (userSelections.suraId) {
-        document.getElementById('sura-select').value = userSelections.suraId;
+        setSelectedSuraById(userSelections.suraId);
       }
 
       // Wait for reciters to load before setting reciter selection
@@ -320,13 +345,13 @@ async function loadSavedAudioState() {
 
 async function applyRestoredAudioState(state) {
   const availabilityStatus = document.getElementById('quran-availability');
-  const currentSuraId = document.getElementById('sura-select').value;
+  const currentSuraId = getSelectedSuraId();
   const currentReciterKey = getReciterKey();
   const matchesCurrent = state.reciterKey === currentReciterKey && state.suraId === currentSuraId;
 
   if (!matchesCurrent && state.reciterKey && state.suraId) {
-    if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === state.suraId)) {
-      document.getElementById('sura-select').value = state.suraId;
+    if (SURA_ID_TO_LABEL[state.suraId]) {
+      setSelectedSuraById(state.suraId);
     }
     setReciterInputByKey(state.reciterKey);
     validateQuranSelection();
@@ -634,7 +659,7 @@ async function saveDhikrSettings() {
 }
 
 async function setupQuranSelectors() {
-  const suraSelect = document.getElementById('sura-select');
+  const suraDatalist = document.getElementById('sura-list');
   const reciterInput = document.getElementById('reciter-input');
   const reciterDatalist = document.getElementById('reciter-list');
 
@@ -644,7 +669,17 @@ async function setupQuranSelectors() {
       fetchReciters(),
       chrome.storage.local.get('reciterCoverage')
     ]);
-    populateSelect(suraSelect, suras, t('selectSura'), s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` }));
+
+    suraDatalist.replaceChildren();
+    suras.forEach((s) => {
+      const label = `${s.id}. ${getSuraName(s)}`;
+      SURA_LABEL_TO_ID[label] = String(s.id);
+      SURA_ID_TO_LABEL[String(s.id)] = label;
+      const option = document.createElement('option');
+      option.value = label;
+      suraDatalist.appendChild(option);
+    });
+
     ALL_RECITERS = reciters;
     reciterDatalist.replaceChildren();
     reciters.forEach(r => {
@@ -657,10 +692,8 @@ async function setupQuranSelectors() {
     });
   } catch (error) {
     console.error("Failed to setup Qur'an selectors:", error);
-    const errorOption = document.createElement('option');
-    errorOption.value = '';
-    errorOption.textContent = 'Error';
-    suraSelect.replaceChildren(errorOption);
+    const suraInput = document.getElementById('sura-input');
+    if (suraInput) suraInput.placeholder = 'Surahs unavailable. Check connection.';
     reciterInput.placeholder = 'Reciters unavailable. Check connection.';
   }
 }
@@ -820,7 +853,7 @@ async function fetchReciters() {
 // --- AUDIO LOGIC ---
 
 function validateQuranSelection() {
-  const suraId = document.getElementById('sura-select').value;
+  const suraId = getSelectedSuraId();
   const reciterId = getReciterKey();
   const playButton = document.getElementById('play-quran');
   const autoplayButton = document.getElementById('autoplay-toggle');
@@ -833,7 +866,7 @@ function validateQuranSelection() {
 
 async function playQuranAudio() {
   setUILoading(true);
-  const suraId = document.getElementById('sura-select').value;
+  const suraId = getSelectedSuraId();
   const reciterId = getReciterKey();
   const availabilityStatus = document.getElementById('quran-availability');
   
@@ -977,7 +1010,7 @@ function getNextSuraId(currentSuraId) {
 }
 
 async function playNextSura() {
-  const currentSuraId = document.getElementById('sura-select').value;
+  const currentSuraId = getSelectedSuraId();
   const reciterKey = getReciterKey();
   
   if (!currentSuraId || !reciterKey) {
@@ -988,7 +1021,7 @@ async function playNextSura() {
   const nextSuraId = getNextSuraId(currentSuraId);
   console.log(`Autoplay: Moving from Sura ${currentSuraId} to Sura ${nextSuraId}`);
   
-  document.getElementById('sura-select').value = nextSuraId;
+  setSelectedSuraById(nextSuraId);
   await saveUserSelections();
   
   updatePlayButtonUI(false, true, 0);
@@ -1014,7 +1047,7 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   pauseButton.disabled = !isEnabled;
 
   // Check if we should show resume based on stored state and current selections
-  const currentSuraId = document.getElementById('sura-select').value;
+  const currentSuraId = getSelectedSuraId();
   const currentReciterKey = getReciterKey();
   const hasMatchingSelection = (
     lastKnownAudioState.suraId === currentSuraId && 
@@ -1430,10 +1463,8 @@ function applyLanguage() {
   const loadingEl = document.getElementById('quran-loading');
   if (loadingEl) loadingEl.textContent = t('loading');
 
-  const suraSelect = document.getElementById('sura-select');
-  if (suraSelect && suraSelect.options.length > 0 && suraSelect.options[0].value === '') {
-    suraSelect.options[0].textContent = t('selectSura');
-  }
+  const suraInput = document.getElementById('sura-input');
+  if (suraInput) suraInput.placeholder = t('searchSura');
 
   const clearReciterBtn = document.getElementById('clear-reciter');
   if (clearReciterBtn) setIconLabel(clearReciterBtn, 'clear-cross', t('clearReciter'));
@@ -1463,16 +1494,26 @@ function applyLanguage() {
   displayCurrentDhikr();
   loadHadith();
   fetchSuras().then(suras => {
-    const suraSelect = document.getElementById('sura-select');
-    const currentVal = suraSelect.value;
-    populateSelect(
-      suraSelect,
-      suras,
-      t('selectSura'),
-      s => ({ value: s.id, text: `${s.id}. ${getSuraName(s)}` })
-    );
-    if (currentVal) {
-      suraSelect.value = currentVal;
+    const datalist = document.getElementById('sura-list');
+    const currentSelected = getSelectedSuraId();
+
+    // Wipe and rebuild the lookup maps + datalist with locale-appropriate names.
+    Object.keys(SURA_LABEL_TO_ID).forEach((k) => delete SURA_LABEL_TO_ID[k]);
+    Object.keys(SURA_ID_TO_LABEL).forEach((k) => delete SURA_ID_TO_LABEL[k]);
+    if (datalist) datalist.replaceChildren();
+    suras.forEach((s) => {
+      const label = `${s.id}. ${getSuraName(s)}`;
+      SURA_LABEL_TO_ID[label] = String(s.id);
+      SURA_ID_TO_LABEL[String(s.id)] = label;
+      if (datalist) {
+        const option = document.createElement('option');
+        option.value = label;
+        datalist.appendChild(option);
+      }
+    });
+
+    if (currentSelected) {
+      setSelectedSuraById(currentSelected);
     }
   }).catch(err => console.error('Failed to refresh suras for lang', CURRENT_LANG, err));
 }
