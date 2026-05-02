@@ -254,11 +254,9 @@ async function loadSavedAudioState() {
   try {
     // Load both user selections and audio state
     const { audioState, userSelections } = await chrome.storage.local.get(['audioState', 'userSelections']);
-    
+
     // First, restore user selections (even if no audio is playing)
     if (userSelections?.suraId || userSelections?.reciterKey) {
-      // console.log('Restoring user selections:', userSelections);
-      
       if (userSelections.suraId) {
         document.getElementById('sura-select').value = userSelections.suraId;
       }
@@ -266,7 +264,7 @@ async function loadSavedAudioState() {
       // Wait for reciters to load before setting reciter selection
       const waitForReciters = new Promise(resolve => {
         const reciterDatalist = document.getElementById('reciter-list');
-        if (reciterDatalist.options.length > 0) { // Already populated
+        if (reciterDatalist.options.length > 0) {
           resolve();
           return;
         }
@@ -281,81 +279,81 @@ async function loadSavedAudioState() {
       });
 
       await waitForReciters;
-      
+
       if (userSelections.reciterKey) {
         setReciterInputByKey(userSelections.reciterKey);
       }
-      
-      // Restore autoplay setting
+
       if (typeof userSelections.autoplayEnabled === 'boolean') {
         updateAutoplayButton(userSelections.autoplayEnabled);
       }
-      
+
       validateQuranSelection();
     }
 
-    // Then, restore audio state - check if there's any active audio session
-    const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
-    if (stateResponse?.success && stateResponse.state?.audioUrl) {
-      const currentSuraId = document.getElementById('sura-select').value;
-      const currentReciterKey = getReciterKey();
-      
-      // If the audio state matches current selections, restore the playback UI
-      if (stateResponse.state.reciterKey === currentReciterKey && stateResponse.state.suraId === currentSuraId) {
-        
-        // console.log('Restoring audio playback state:', stateResponse.state);
-        lastKnownAudioState = {
-          suraId: stateResponse.state.suraId,
-          reciterKey: stateResponse.state.reciterKey,
-          currentTime: stateResponse.state.currentTime,
-          isPlaying: stateResponse.state.isPlaying
-        };
-        
-        updateProgressUI(stateResponse.state);
-        updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
-        
-        // Show resume indicator if there's significant progress
-        if (stateResponse.state.currentTime > 30) {
-          availabilityStatus.textContent = `Ready to resume from ${formatTime(stateResponse.state.currentTime)}`;
-          availabilityStatus.style.color = '#007bff';
-        } else if (stateResponse.state.currentTime > 5) {
-          availabilityStatus.textContent = `Previous session available`;
-          availabilityStatus.style.color = '#007bff';
+    // Storage is the source of truth for restoration. The offscreen document
+    // may not be alive yet when the popup opens; relying on a runtime round
+    // trip to background here used to lose the resume position.
+    let restoredState = (audioState && audioState.audioUrl) ? audioState : null;
+
+    // If the saved state suggests playback was active, refresh from runtime to
+    // catch any progress made between the last storage write and now.
+    if (restoredState?.isPlaying) {
+      try {
+        const stateResponse = await chrome.runtime.sendMessage({ action: 'getAudioState' });
+        if (stateResponse?.success && stateResponse.state?.audioUrl) {
+          restoredState = stateResponse.state;
         }
-        
-        if (stateResponse.state.isPlaying) {
-          startProgressTracking();
-        }
-      } else if (stateResponse.state.reciterKey && stateResponse.state.suraId) {
-        // If there's an active audio session but it doesn't match current selections, update the selections to match the active session
-        // console.log('Updating selections to match active audio session');
-        
-        if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === stateResponse.state.suraId)) {
-          document.getElementById('sura-select').value = stateResponse.state.suraId;
-        }
-        
-        setReciterInputByKey(stateResponse.state.reciterKey);
-        
-        validateQuranSelection();
-        lastKnownAudioState = {
-          suraId: stateResponse.state.suraId,
-          reciterKey: stateResponse.state.reciterKey,
-          currentTime: stateResponse.state.currentTime,
-          isPlaying: stateResponse.state.isPlaying
-        };
-        
-        updateProgressUI(stateResponse.state);
-        updatePlayButtonUI(stateResponse.state.isPlaying, true, stateResponse.state.currentTime);
-        
-        if (stateResponse.state.isPlaying) {
-          startProgressTracking();
-        }
-        
-        await saveUserSelections();
+      } catch (_) {
+        // Service worker not yet awake; storage state is good enough.
       }
+    }
+
+    if (restoredState) {
+      await applyRestoredAudioState(restoredState);
     }
   } catch (error) {
     console.error('Failed to load saved audio state:', error);
+  }
+}
+
+async function applyRestoredAudioState(state) {
+  const availabilityStatus = document.getElementById('quran-availability');
+  const currentSuraId = document.getElementById('sura-select').value;
+  const currentReciterKey = getReciterKey();
+  const matchesCurrent = state.reciterKey === currentReciterKey && state.suraId === currentSuraId;
+
+  if (!matchesCurrent && state.reciterKey && state.suraId) {
+    if (Array.from(document.getElementById('sura-select').options).some(opt => opt.value === state.suraId)) {
+      document.getElementById('sura-select').value = state.suraId;
+    }
+    setReciterInputByKey(state.reciterKey);
+    validateQuranSelection();
+    await saveUserSelections();
+  }
+
+  lastKnownAudioState = {
+    suraId: state.suraId,
+    reciterKey: state.reciterKey,
+    currentTime: state.currentTime,
+    isPlaying: state.isPlaying
+  };
+
+  updateProgressUI(state);
+  updatePlayButtonUI(state.isPlaying, true, state.currentTime);
+
+  if (availabilityStatus) {
+    if (state.currentTime > 30) {
+      availabilityStatus.textContent = `Ready to resume from ${formatTime(state.currentTime)}`;
+      availabilityStatus.style.color = 'var(--status-info)';
+    } else if (state.currentTime > 5) {
+      availabilityStatus.textContent = `Previous session available`;
+      availabilityStatus.style.color = 'var(--status-info)';
+    }
+  }
+
+  if (state.isPlaying) {
+    startProgressTracking();
   }
 }
 
