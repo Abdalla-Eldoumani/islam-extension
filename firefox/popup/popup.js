@@ -346,27 +346,27 @@ async function loadSavedAudioState() {
       validateQuranSelection();
     }
 
-    // Storage is the source of truth for restoration. Restore whenever
-    // audioState carries any indicator that audio is alive: an audioUrl, an
-    // isPlaying flag, or a non-zero currentTime. Older releases occasionally
-    // wrote audioState without an audioUrl, so a strict check on audioUrl
-    // would silently skip restoration and leave the popup looking empty.
-    const hasLiveAudio = !!(audioState && (
+    // Restore audio state. Runtime is the source of truth when audio is alive
+    // in the background page (Firefox keeps the Audio element here directly),
+    // because the background always sets audioUrl on play. Storage is the
+    // fallback for cold reopens after a long idle. This mirrors the v2.0.0
+    // behaviour, which was the last known-good restoration path.
+    let restoredState = null;
+    try {
+      const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
+      if (stateResponse?.success && stateResponse.state?.audioUrl) {
+        restoredState = stateResponse.state;
+      }
+    } catch (_) {
+      // Background not awake; fall through to storage.
+    }
+
+    if (!restoredState && audioState && (
       audioState.audioUrl ||
       audioState.isPlaying ||
       (typeof audioState.currentTime === 'number' && audioState.currentTime > 0)
-    ));
-    let restoredState = hasLiveAudio ? { ...audioState } : null;
-
-    if (restoredState?.isPlaying) {
-      try {
-        const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
-        if (stateResponse?.success && stateResponse.state) {
-          restoredState = { ...restoredState, ...stateResponse.state };
-        }
-      } catch (_) {
-        // Background not yet wired up; storage state is good enough.
-      }
+    )) {
+      restoredState = { ...audioState };
     }
 
     if (restoredState && !restoredState.audioUrl && restoredState.suraId && restoredState.reciterKey) {
