@@ -349,16 +349,19 @@ async function loadSavedAudioState() {
     // Restore audio state. Runtime is the source of truth when audio is alive
     // in the background page (Firefox keeps the Audio element here directly),
     // because the background always sets audioUrl on play. Storage is the
-    // fallback for cold reopens after a long idle. This mirrors the v2.0.0
-    // behaviour, which was the last known-good restoration path.
+    // fallback for cold reopens after a long idle. The 1500 ms cap prevents a
+    // slow background wakeup from blocking the popup paint indefinitely.
     let restoredState = null;
     try {
-      const stateResponse = await browser.runtime.sendMessage({ action: 'getAudioState' });
+      const stateResponse = await Promise.race([
+        browser.runtime.sendMessage({ action: 'getAudioState' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('runtime poll timeout')), 1500))
+      ]);
       if (stateResponse?.success && stateResponse.state?.audioUrl) {
         restoredState = stateResponse.state;
       }
     } catch (_) {
-      // Background not awake; fall through to storage.
+      // Background asleep, slow, or no responder; fall through to storage.
     }
 
     if (!restoredState && audioState && (
@@ -1129,12 +1132,12 @@ function startProgressTracking() {
               playNextSura();
             }, 1000);
           } else {
-            console.log('Sura finished, autoplay is disabled - stopping playback');
-            updatePlayButtonUI(false, true, 0);
-            setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
-            document.getElementById('play-quran').dataset.action = 'play';
-            document.getElementById('progress-bar').value = 0;
-            document.getElementById('current-time').textContent = formatTime(0);
+            // Autoplay off: surah finished. Defer to updatePlayButtonUI so the
+            // Resume affordance with the end-of-track timestamp shows; that
+            // matches what the popup would render on a cold reopen of the
+            // same state. Progress UI keeps the final timestamp instead of
+            // collapsing to zero.
+            updatePlayButtonUI(false, true, response.state.currentTime);
           }
         } else if (!response.state.isPlaying) {
           // Audio paused - but don't clear the interval immediately
