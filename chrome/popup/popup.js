@@ -329,39 +329,19 @@ async function loadSavedAudioState() {
     // Load both user selections and audio state
     const { audioState, userSelections } = await chrome.storage.local.get(['audioState', 'userSelections']);
 
-    // First, restore user selections (even if no audio is playing)
+    // First, restore user selections (even if no audio is playing).
+    // setupQuranSelectors is awaited before this runs, so the catalogue is
+    // already hydrated. RECITER_CATALOG covers canonical and alt ids.
     if (userSelections?.suraId || userSelections?.reciterKey) {
       if (userSelections.suraId) {
         setSelectedSuraById(userSelections.suraId);
       }
-
-      // Wait for reciters to load before setting reciter selection
-      const waitForReciters = new Promise(resolve => {
-        const reciterDatalist = document.getElementById('reciter-list');
-        if (reciterDatalist.options.length > 0) {
-          resolve();
-          return;
-        }
-        const observer = new MutationObserver(() => {
-          if (reciterDatalist.options.length > 0) {
-            observer.disconnect();
-            resolve();
-          }
-        });
-        observer.observe(reciterDatalist, { childList: true });
-        setTimeout(() => { observer.disconnect(); resolve(); }, 3000);
-      });
-
-      await waitForReciters;
-
       if (userSelections.reciterKey) {
         setReciterInputByKey(userSelections.reciterKey);
       }
-
       if (typeof userSelections.autoplayEnabled === 'boolean') {
         updateAutoplayButton(userSelections.autoplayEnabled);
       }
-
       validateQuranSelection();
     }
 
