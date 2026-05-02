@@ -95,8 +95,18 @@ function getReciterKey() {
 
 function setReciterInputByKey(key) {
   const input = document.getElementById('reciter-input');
-  const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === key);
+  if (!input) return;
+  // Forward lookup in RECITER_CATALOG covers both canonical ids and alt ids
+  // registered during dedup. The reverse map only holds canonical ids, so
+  // hitting it directly with a saved alt id would leave the input empty.
+  const entry = RECITER_CATALOG[key];
+  if (!entry) return;
+  const canonicalId = entry.id;
+  const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === canonicalId);
   if (label) input.value = label;
+  if (canonicalId !== key) {
+    saveUserSelections().catch(() => {});
+  }
 }
 
 // --- LIFECYCLE ---
