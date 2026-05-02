@@ -92,6 +92,12 @@ The 2.1.0 release added one third-party host (`api.alquran.cloud`) and one in-ex
 
 The coverage probe deserves explicit mention: every URL it constructs is checked against `ensureAllowedAudioHost` before any HEAD request is issued. Off-allowlist URLs are dropped without a network call. Probe results are stored under `chrome.storage.local.reciterCoverage` with a 30-day TTL.
 
+## 2.1.1 audit summary
+
+The 2.1.1 release adds no third-party hosts. The popup migrated to `shared/reciter-catalogue.js`, which means the popup and the background service worker (or persistent background page on Firefox) now share a single allowlist enforcement path through `ensureAllowedAudioHost`. The new `shared/combobox.js` module renders option labels via `textContent` and `replaceChildren` only; no `innerHTML` is introduced. The dhikr bracket fix likewise builds DOM nodes with explicit `dir` and `lang` attributes rather than concatenating into a single string. Both `web-ext lint` runs are at the same steady state as 2.1.0.
+
+The combobox normalises a comparison key for filtering (NFKD strip, Arabic tashkeel and tatweel removed, lowercase). The displayed label is never modified, preserving the religious-content-immutable rule for surah names and reciter names alike.
+
 ## Audit items closed in the current release
 
 - JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
