@@ -1490,7 +1490,10 @@ function applyLanguage() {
   }
 
   const clearReciterBtn = document.getElementById('clear-reciter');
-  if (clearReciterBtn) setIconLabel(clearReciterBtn, 'clear-cross', t('clearReciter'));
+  if (clearReciterBtn) clearReciterBtn.setAttribute('aria-label', t('clearReciter'));
+
+  const clearSuraBtn = document.getElementById('clear-sura');
+  if (clearSuraBtn) clearSuraBtn.setAttribute('aria-label', t('clearSurah'));
 
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
