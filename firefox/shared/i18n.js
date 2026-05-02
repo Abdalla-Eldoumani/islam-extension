@@ -45,7 +45,15 @@ export const I18N = {
     pausedAt: "Paused at",
     paused: "Paused",
     resumeFailed: "Failed to resume audio",
-    audioConnectionLost: "Audio connection lost. Try refreshing if playback stops working."
+    audioConnectionLost: "Audio connection lost. Try refreshing if playback stops working.",
+    searchSura: "Search a surah by name or number",
+    continueAffordance: "Continue {name} from {time}",
+    sleepTimerLabel: "Sleep timer",
+    sleepTimerOff: "Off",
+    sleepTimer15: "15 minutes",
+    sleepTimer30: "30 minutes",
+    sleepTimer45: "45 minutes",
+    sleepTimer60: "60 minutes"
   },
   fr: {
     appTitle: "Compagnon du Coran et de la Sunnah",
@@ -87,7 +95,15 @@ export const I18N = {
     pausedAt: "Mis en pause à",
     paused: "En pause",
     resumeFailed: "Échec de la reprise audio",
-    audioConnectionLost: "Connexion audio perdue. Essayez de rafraîchir si la lecture s'arrête."
+    audioConnectionLost: "Connexion audio perdue. Essayez de rafraîchir si la lecture s'arrête.",
+    searchSura: "Rechercher une sourate par nom ou numéro",
+    continueAffordance: "Reprendre {name} à {time}",
+    sleepTimerLabel: "Minuteur de veille",
+    sleepTimerOff: "Désactivé",
+    sleepTimer15: "15 minutes",
+    sleepTimer30: "30 minutes",
+    sleepTimer45: "45 minutes",
+    sleepTimer60: "60 minutes"
   },
   ar: {
     appTitle: "رفيق القرآن والسنة",
@@ -112,7 +128,15 @@ export const I18N = {
     reminderLabel: "فاصل التذكير (ثوان):",
     invalidInterval: "يرجى إدخال قيمة بين 5 و 3600 ثانية.",
     notificationError: "حدث خطأ. يرجى المحاولة مرة أخرى.",
-    clearReciter: "مسح"
+    clearReciter: "مسح",
+    searchSura: "ابحث عن سورة بالاسم أو الرقم",
+    continueAffordance: "متابعة {name} من {time}",
+    sleepTimerLabel: "مؤقت النوم",
+    sleepTimerOff: "متوقف",
+    sleepTimer15: "15 دقيقة",
+    sleepTimer30: "30 دقيقة",
+    sleepTimer45: "45 دقيقة",
+    sleepTimer60: "60 دقيقة"
   }
 };
 
