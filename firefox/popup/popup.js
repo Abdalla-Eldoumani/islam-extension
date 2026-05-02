@@ -363,19 +363,32 @@ async function applyRestoredAudioState(state) {
   updateProgressUI(state);
   updatePlayButtonUI(state.isPlaying, true, state.currentTime);
 
-  if (availabilityStatus) {
-    if (state.currentTime > 30) {
-      availabilityStatus.textContent = `Ready to resume from ${formatTime(state.currentTime)}`;
-      availabilityStatus.style.color = 'var(--status-info)';
-    } else if (state.currentTime > 5) {
-      availabilityStatus.textContent = `Previous session available`;
-      availabilityStatus.style.color = 'var(--status-info)';
-    }
+  if (availabilityStatus && !state.isPlaying && state.currentTime > 5) {
+    showContinueAffordance(availabilityStatus, state);
   }
 
   if (state.isPlaying) {
     startProgressTracking();
   }
+}
+
+function showContinueAffordance(host, state) {
+  const suraName = SURA_ID_TO_LABEL[state.suraId] || `Surah ${state.suraId}`;
+  const time = formatTime(state.currentTime);
+  const label = (t('continueAffordance') || 'Continue {name} from {time}')
+    .replace('{name}', suraName)
+    .replace('{time}', time);
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'continue-affordance';
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    button.remove();
+    resumeQuranAudio();
+  });
+  host.replaceChildren(button);
+  host.style.color = '';
 }
 
 async function loadHadith() {
