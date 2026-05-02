@@ -107,6 +107,22 @@ The Chrome and Firefox builds share their non-platform code via a `shared/` dire
 
 All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the reciters whose recitations make this possible.
 
+## Changelog
+
+### 2.1.0
+
+- Resume bug fix. Pause, close the popup, reopen later — the play button now correctly shows `Resume` with the saved timestamp on both Chrome and Firefox. Firefox also persists position across full browser restarts.
+- Reciter catalogue expansion. Al-Quran Cloud joins as a fourth provider; the previously hardcoded Islamic.network slug list is dropped. Coverage labels in the picker (`complete`, `limited`, `unknown`) are populated by a daily background HEAD-probe so users can pick reliable reciters confidently.
+- Surah search. The surah picker is now a search-as-you-type input. Type `mulk`, `67`, `Al-Fatihah`, or `الفاتحة` to filter.
+- Continue affordance. When a previous session is detected, a `Continue Surah <name> from M:SS` button appears above the play controls.
+- Sleep timer. New dropdown in the Qur'an card with Off / 15 / 30 / 45 / 60-minute presets. Audio pauses when the timer fires.
+- Design refinement. Stronger ink and rule contrast, larger card titles, gold-rule ON-state for toggle buttons, and the reminder window now uses the parchment tokens.
+- Security audit refresh. `api.alquran.cloud` added to the allowlist; coverage probe HEAD requests pass through `ensureAllowedAudioHost`. See `docs/SECURITY.md` for the full audit summary.
+
+### 2.0.0
+
+- Modernization pass: consolidated cross-browser logic into `shared/`, parchment design tokens with self-hosted fonts and SVG sprite, JSDelivr hadith source pinned to a commit SHA, dhikr interval floor raised with auto-dismiss, emoji prefixes removed from UI strings.
+
 ---
 
 May Allah (SWT) accept this effort and make it beneficial. Ameen.
