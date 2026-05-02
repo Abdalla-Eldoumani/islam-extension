@@ -40,21 +40,6 @@ export async function fetchMp3QuranReciters() {
   }
 }
 
-export async function fetchIslamicNetworkReciters() {
-  const slugs = ['ar.alafasy', 'ar.husary', 'ar.shuraym', 'ar.tablawee'];
-  return slugs.map((slug) => {
-    const prettyName = slug.split('.')[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    return {
-      id: `islamic:${slug}`,
-      reciter_name: prettyName,
-      style: 'Default',
-      source: 'islamic',
-      slug,
-      bitrate: 128
-    };
-  });
-}
-
 // Al-Quran Cloud curates audio editions, most pointing at cdn.islamic.network
 // with the same slug-shaped identifier. The slug becomes the reciter
 // identifier; getSuraAudioUrl already handles `islamic:<slug>` keys.
@@ -86,7 +71,7 @@ export async function fetchReciters() {
   const combined = (await Promise.all([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
-    fetchIslamicNetworkReciters()
+    fetchAlquranCloudReciters()
   ])).flat();
 
   const dedupedMap = new Map();
