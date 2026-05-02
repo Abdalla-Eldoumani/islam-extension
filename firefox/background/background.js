@@ -224,6 +224,17 @@ function saveAudioState() {
   }
 }
 
+// timeupdate fires several times a second; throttle disk writes so we lose at
+// most ten seconds of position on a hard browser kill.
+let lastTimeUpdateSave = 0;
+function maybeSaveOnTimeUpdate() {
+  const now = Date.now();
+  if (now - lastTimeUpdateSave > 10000) {
+    lastTimeUpdateSave = now;
+    saveAudioState();
+  }
+}
+
 async function handleAudioMessage(message, sendResponse) {
   try {
     console.log('Background: Handling audio message:', message.action);
@@ -287,6 +298,7 @@ async function playAudio(audioUrl, suraId, reciterKey) {
     audioPlayer.addEventListener('timeupdate', () => {
       currentAudioState.currentTime = audioPlayer.currentTime;
       currentAudioState.timestamp = Date.now();
+      maybeSaveOnTimeUpdate();
     });
     
     audioPlayer.addEventListener('play', () => {
