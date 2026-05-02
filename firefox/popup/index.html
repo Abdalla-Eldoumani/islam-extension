@@ -65,9 +65,8 @@
     <section class="cards">
       <article class="card card--quran">
         <h2 class="card__title" id="quran-title">Qur'an</h2>
-        <select class="card__select" id="sura-select">
-          <option value="">Select Sura...</option>
-        </select>
+        <input type="text" class="card__input" id="sura-input" list="sura-list" placeholder="Search a surah by name or number" autocomplete="off" spellcheck="false">
+        <datalist id="sura-list"></datalist>
 
         <!-- Combined reciter picker with inline search -->
         <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">
@@ -76,6 +75,16 @@
         <button class="card__button card__button--secondary" id="clear-reciter" title="Clear reciter selection" aria-label="Clear reciter selection">
           <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg> Clear
         </button>
+        <label class="card__label" id="sleep-timer-label" for="sleep-timer">
+          Sleep timer
+          <select id="sleep-timer" class="card__select">
+            <option value="0">Off</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </label>
 
         <div class="card__availability-status" id="quran-availability"></div>
         <div class="card__controls">
