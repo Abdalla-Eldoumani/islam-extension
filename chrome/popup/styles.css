@@ -299,7 +299,7 @@ body[dir="rtl"] .card__controls {
 .card__button {
   flex: 1;
   min-width: 100px;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   background: var(--ink-primary);
   color: var(--surface-base);
   border: none;
@@ -309,7 +309,14 @@ body[dir="rtl"] .card__controls {
   font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(26, 20, 16, 0.1);
   transition: background 150ms ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card__button {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .card__button:hover:not(:disabled) {
