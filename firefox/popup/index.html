@@ -66,8 +66,15 @@
     <section class="cards">
       <article class="card card--quran">
         <h2 class="card__title" id="quran-title">Qur'an</h2>
-        <input type="text" class="card__input" id="sura-input" list="sura-list" placeholder="Search a surah by name or number" autocomplete="off" spellcheck="false">
-        <datalist id="sura-list"></datalist>
+        <div class="combobox" data-combobox="sura">
+          <input type="text"
+                 class="card__input combobox__input"
+                 id="sura-input"
+                 autocomplete="off"
+                 spellcheck="false"
+                 placeholder="Search a surah by name or number">
+          <ul role="listbox" id="sura-panel" class="combobox__panel" hidden></ul>
+        </div>
 
         <!-- Combined reciter picker with inline search -->
         <input type="text" class="card__input" id="reciter-input" list="reciter-list" placeholder="Select or type a reciter..." autocomplete="off" spellcheck="false">

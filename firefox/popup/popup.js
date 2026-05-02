@@ -9,6 +9,7 @@ import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.j
 import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
 import { getCoverageLabel } from '../shared/reciter-coverage.js';
 import { fetchReciters } from '../shared/reciter-catalogue.js';
+import { createCombobox } from '../shared/combobox.js';
 
 // Silence verbose logs in production. Flip ENV_PROD to false when debugging.
 if (typeof console !== 'undefined') {
@@ -63,13 +64,18 @@ let lastKnownAudioState = {
 // Unified in-memory catalogue for all reciters pulled from every provider.
 const RECITER_CATALOG = {};
 
-// Map display label -> reciterKey for the datalist picker
+// Map display label -> reciterKey for the picker
 const RECITER_LABEL_TO_KEY = {};
 
-// Sura search: maps for the datalist filter on `sura-input`. Filled in
-// setupQuranSelectors. The label looks like "67. Al-Mulk".
+// Sura lookup maps. Label format: "67. Al-Mulk".
 const SURA_LABEL_TO_ID = {};
 const SURA_ID_TO_LABEL = {};
+let ALL_SURAS = [];
+
+// Combobox controllers for the surah and reciter pickers, lazily initialised
+// in setupQuranSelectors once the data is loaded.
+let suraCombobox = null;
+let reciterCombobox = null;
 
 function getSelectedSuraId() {
   const input = document.getElementById('sura-input');
@@ -82,9 +88,12 @@ function getSelectedSuraId() {
 }
 
 function setSelectedSuraById(id) {
+  if (suraCombobox) {
+    suraCombobox.setValue(String(id));
+    return;
+  }
   const input = document.getElementById('sura-input');
-  if (!input) return;
-  input.value = SURA_ID_TO_LABEL[id] || '';
+  if (input) input.value = SURA_ID_TO_LABEL[id] || '';
 }
 
 function getReciterKey() {
@@ -647,7 +656,6 @@ async function saveDhikrSettings() {
 }
 
 async function setupQuranSelectors() {
-  const suraDatalist = document.getElementById('sura-list');
   const reciterInput = document.getElementById('reciter-input');
   const reciterDatalist = document.getElementById('reciter-list');
 
@@ -658,14 +666,30 @@ async function setupQuranSelectors() {
       browser.storage.local.get('reciterCoverage')
     ]);
 
-    suraDatalist.replaceChildren();
+    ALL_SURAS = suras;
     suras.forEach((s) => {
       const label = `${s.id}. ${getSuraName(s)}`;
       SURA_LABEL_TO_ID[label] = String(s.id);
       SURA_ID_TO_LABEL[String(s.id)] = label;
-      const option = document.createElement('option');
-      option.value = label;
-      suraDatalist.appendChild(option);
+    });
+
+    suraCombobox = createCombobox({
+      inputEl: document.getElementById('sura-input'),
+      panelEl: document.getElementById('sura-panel'),
+      getOptions: () => ALL_SURAS.map(s => {
+        const altName = CURRENT_LANG === 'ar' ? s.name_simple : s.name_arabic;
+        return {
+          id: String(s.id),
+          label: `${s.id}. ${getSuraName(s)}`,
+          secondary: altName || ''
+        };
+      }),
+      onSelect: () => {
+        handleInputChange();
+        saveUserSelections().catch(() => {});
+      },
+      onClear: () => handleInputChange(),
+      name: 'sura'
     });
 
     ALL_RECITERS = reciters;
@@ -1439,23 +1463,18 @@ function applyLanguage() {
   // Reload hadith and sura names when language changes
   loadHadith();
   fetchSuras().then(suras => {
-    const datalist = document.getElementById('sura-list');
     const currentSelected = getSelectedSuraId();
 
     Object.keys(SURA_LABEL_TO_ID).forEach((k) => delete SURA_LABEL_TO_ID[k]);
     Object.keys(SURA_ID_TO_LABEL).forEach((k) => delete SURA_ID_TO_LABEL[k]);
-    if (datalist) datalist.replaceChildren();
+    ALL_SURAS = suras;
     suras.forEach((s) => {
       const label = `${s.id}. ${getSuraName(s)}`;
       SURA_LABEL_TO_ID[label] = String(s.id);
       SURA_ID_TO_LABEL[String(s.id)] = label;
-      if (datalist) {
-        const option = document.createElement('option');
-        option.value = label;
-        datalist.appendChild(option);
-      }
     });
 
+    if (suraCombobox) suraCombobox.refresh();
     if (currentSelected) {
       setSelectedSuraById(currentSelected);
     }
