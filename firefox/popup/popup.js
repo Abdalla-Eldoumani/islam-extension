@@ -593,9 +593,43 @@ async function loadHadith() {
         && !/<script|<iframe|<object|<embed/i.test(hadithTxt);
       hadithEl.textContent = safe ? hadithTxt : 'حدث خطأ فى جلب الحديث';
     } else if (CURRENT_LANG === 'fr') {
-      // ---------------- French with fallback ----------------
-      const text = await fetchRandomFrenchHadith();
-      hadithEl.textContent = text || 'Il n\'y a de divinité qu\'Allah';
+      // ---------------- French with local cache ----------------
+      const CACHE_KEY = 'hadithCacheFr';
+      const TARGET_CACHE_SIZE = 30;
+
+      let { [CACHE_KEY]: cacheArr } = await browser.storage.local.get(CACHE_KEY);
+      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
+
+      let text = '';
+      if (cacheArr.length > 0) {
+        text = cacheArr.shift();
+        // save trimmed cache back but don't await to prevent UI delay
+        browser.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
+      }
+
+      if (!text) {
+        text = await fetchRandomFrenchHadith();
+      }
+
+      // Top-up the cache asynchronously if it's below threshold
+      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
+        (async () => {
+          try {
+            const needed = TARGET_CACHE_SIZE - cacheArr.length;
+            const newOnes = [];
+            for (let i = 0; i < needed; i++) {
+              const h = await fetchRandomFrenchHadith();
+              if (h) newOnes.push(h);
+            }
+            const updated = cacheArr.concat(newOnes);
+            await browser.storage.local.set({ [CACHE_KEY]: updated });
+          } catch (err) {
+            console.warn('Failed to refill French hadith cache:', err);
+          }
+        })();
+      }
+
+      hadithEl.textContent = text || 'Erreur lors du chargement du Hadith.';
     } else {
       // ---------------- English with local cache ----------------
       const CACHE_KEY = 'hadithCacheEn';
@@ -637,7 +671,13 @@ async function loadHadith() {
     }
   } catch (error) {
     console.error('Failed to load Hadith:', error);
-    hadithEl.textContent = CURRENT_LANG === 'ar' ? 'لَا إِلَٰهَ إِلَّا اللَّهُ' : 'There is no god but Allah';
+    if (CURRENT_LANG === 'ar') {
+      hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ';
+    } else if (CURRENT_LANG === 'fr') {
+      hadithEl.textContent = "Il n'y a de divinité qu'Allah";
+    } else {
+      hadithEl.textContent = 'There is no god but Allah';
+    }
   }
 }
 
@@ -684,31 +724,46 @@ async function fetchRandomEnglishHadith() {
   return '';
 }
 
-// French Hadith fetcher with fallbacks
+// Helper function to fetch a random French hadith
 async function fetchRandomFrenchHadith() {
-  const FRENCH_FALLBACKS = [
-    'Le Prophète ﷺ a dit : "Les actions ne valent que par les intentions."',
-    'Le Prophète ﷺ a dit : "Souriez à votre frère, c\'est une aumône."',
-    'Le Prophète ﷺ a dit : "Le meilleur des hommes est celui qui est utile aux autres."',
-    'Le Prophète ﷺ a dit : "Celui qui croit en Allah et au Jour dernier, qu\'il dise du bien ou qu\'il se taise."',
-    'Le Prophète ﷺ a dit : "La foi (iman) a soixante-dix et quelques branches."'
+  const FR_EDITIONS = [
+    { edition: 'fra-bukhari', count: 7008 },
+    { edition: 'fra-muslim', count: 5362 },
+    { edition: 'fra-abudawud', count: 4590 },
+    { edition: 'fra-nasai', count: 5662 },
+    { edition: 'fra-ibnmajah', count: 4339 },
+    { edition: 'fra-malik', count: 1594 },
+    { edition: 'fra-nawawi', count: 42 },
+    { edition: 'fra-qudsi', count: 40 },
+    { edition: 'fra-dehlawi', count: 40 }
   ];
 
-  // Try HadeethEnc API for French
-  for (let i = 0; i < 10; i++) {
-    const randomId = Math.floor(Math.random() * 1000) + 1;
+  for (let i = 0; i < 6; i++) {
+    const pick = FR_EDITIONS[Math.floor(Math.random() * FR_EDITIONS.length)];
+    const num = Math.floor(Math.random() * pick.count) + 1;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
     try {
-      const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=fr&id=${randomId}`);
+      const res = await fetch(url, { cache: 'force-cache' });
       if (res.ok) {
         const data = await res.json();
-        const txt = data?.hadeeth || data?.title;
-        if (txt && txt.length > 20) return txt;
+        const text = data.hadiths?.[0]?.text || data.hadith?.french || data.french;
+        if (text && text.trim()) {
+          return text.length > 500 ? text.substring(0, 497) + '...' : text;
+        }
       }
-    } catch (_) { /* ignore */ }
+    } catch (err) {
+      console.warn('Failed to fetch French hadith:', err);
+    }
   }
 
-  // Return random fallback
-  return FRENCH_FALLBACKS[Math.floor(Math.random() * FRENCH_FALLBACKS.length)];
+  // Fallback to a default French hadith if APIs fail
+  const fallbackHadiths = [
+    "Rapporté par 'Umar ibn Al-Khattab : J'ai entendu le Messager d'Allah (ﷺ) dire : « Les actions ne valent que par les intentions, et chacun n'obtient que ce qu'il a eu l'intention de faire... »",
+    "Rapporté par 'A'ishah : Le Prophète (ﷺ) a dit : « Celui qui innove dans notre religion une chose qui n'en fait pas partie, cette chose sera rejetée. »",
+    "Rapporté par Abu Hurairah : Le Messager d'Allah (ﷺ) a dit : « Un croyant fort est meilleur et plus aimé d'Allah qu'un croyant faible, bien qu'il y ait du bien dans les deux... »"
+  ];
+
+  return fallbackHadiths[Math.floor(Math.random() * fallbackHadiths.length)];
 }
 
 // Comprehensive collection of authentic Dhikr with their rewards
