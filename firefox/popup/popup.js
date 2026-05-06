@@ -287,7 +287,6 @@ function setupEventHandlers() {
     });
   }
 
-  // datalist handles filtering natively, so no extra handler
 }
 
 // New function to handle input changes
