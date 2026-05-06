@@ -35,7 +35,7 @@ export function ensureAllowedAudioHost(url) {
   return url;
 }
 
-export function parseReciterKey(reciterKey) {
+function parseReciterKey(reciterKey) {
   if (reciterKey.includes(':')) {
     const parts = reciterKey.split(':');
     return { provider: parts[0], rawId: parts.slice(1).join(':') };
