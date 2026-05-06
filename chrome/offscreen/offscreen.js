@@ -13,6 +13,26 @@ let currentAudioState = {
   reciterKey: null
 };
 
+// The CSP media-src enumerates these too; this guard rejects any URL that
+// reaches the offscreen audio element from outside the popup's allowlist.
+const ALLOWED_MEDIA_HOSTS = new Set([
+  'verses.quran.com',
+  'cdn.islamic.network',
+  'mirrors.quranicaudio.com',
+  'download.quranicaudio.com',
+  'www.mp3quran.net'
+]);
+
+function isAllowedAudioHost(url) {
+  try {
+    const u = new URL(url);
+    if (ALLOWED_MEDIA_HOSTS.has(u.hostname)) return true;
+    return u.hostname.endsWith('.mp3quran.net');
+  } catch (_) {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Logging control – keep errors/warnings but silence verbose logs in release
 // ---------------------------------------------------------------------------
@@ -73,9 +93,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function playAudio(audioUrl, suraId, reciterKey) {
+  if (!isAllowedAudioHost(audioUrl)) {
+    throw new Error('Audio source unavailable for this combination');
+  }
   try {
     console.log('Offscreen: Attempting to play audio:', audioUrl);
-    
+
     // Stop current audio if playing
     if (!audioPlayer.paused) {
       console.log('Offscreen: Stopping current audio');
