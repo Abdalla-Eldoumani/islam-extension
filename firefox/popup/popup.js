@@ -1675,6 +1675,9 @@ function applyLanguage() {
     if (span) span.textContent = t('clearReciterButton');
   }
 
+  const playingBannerDiscard = document.getElementById('playing-banner-discard');
+  if (playingBannerDiscard) playingBannerDiscard.setAttribute('aria-label', t('stopPlaying'));
+
   // Update current time and total time
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
