@@ -221,6 +221,9 @@ function setupEventHandlers() {
     });
   }
 
+  const discardBtn = document.getElementById('playing-banner-discard');
+  if (discardBtn) discardBtn.addEventListener('click', discardPlayingAudio);
+
   const sleepTimer = document.getElementById('sleep-timer');
   if (sleepTimer) {
     chrome.storage.local.get('sleepTimer').then(({ sleepTimer: saved }) => {
@@ -485,6 +488,35 @@ function renderPlayingBanner() {
 
   if (label) label.textContent = text;
   banner.classList.remove('hidden');
+}
+
+// Stop the live audio without changing the user's saved selections. Pauses
+// the offscreen audio, clears lastKnownAudioState so the popup forgets which
+// track was alive, and refreshes the play-button surface for the current
+// (different) selection.
+async function discardPlayingAudio() {
+  try {
+    await chrome.runtime.sendMessage({ action: 'pauseAudio' });
+  } catch (err) {
+    console.warn('Failed to pause audio on discard:', err);
+  }
+
+  if (progressTrackingInterval) {
+    clearInterval(progressTrackingInterval);
+    progressTrackingInterval = null;
+  }
+
+  lastKnownAudioState = {
+    suraId: null,
+    reciterKey: null,
+    audioUrl: null,
+    currentTime: 0,
+    isPlaying: false
+  };
+
+  renderPlayingBanner();
+  const canPlay = Boolean(getSelectedSuraId() && getReciterKey());
+  updatePlayButtonUI(false, canPlay, 0);
 }
 
 async function loadHadith() {
