@@ -8,6 +8,7 @@
   "scripts": {
     "sync": "node scripts/sync.mjs",
     "check-sync": "node scripts/check-sync.mjs",
+    "test": "node --test tests/*.test.mjs",
     "lint:chrome": "web-ext lint --source-dir=chrome --self-hosted",
     "lint:firefox": "web-ext lint --source-dir=firefox",
     "build:chrome": "web-ext build --source-dir=chrome --artifacts-dir=. --overwrite-dest --ignore-files **/CLAUDE.md CLAUDE.md",
