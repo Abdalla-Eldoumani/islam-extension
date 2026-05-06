@@ -1156,6 +1156,11 @@ async function playNextSura() {
   setSelectedSuraById(nextSuraId);
   await saveUserSelections();
 
+  // Clear the live audio url so renderPlayingBanner does not flash
+  // "Stop playing: <previous surah>" during the fetch window. playQuranAudio
+  // repopulates lastKnownAudioState atomically on success.
+  lastKnownAudioState.audioUrl = null;
+
   // Ensure UI is in clean state before starting new sura
   updatePlayButtonUI(false, true, 0);
   setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
