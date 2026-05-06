@@ -303,13 +303,22 @@ function handleInputChange() {
   
   if (lastKnownAudioState.suraId && lastKnownAudioState.reciterKey) {
     const hasChanged = (
-      currentSuraId !== lastKnownAudioState.suraId || 
+      currentSuraId !== lastKnownAudioState.suraId ||
       currentReciterKey !== lastKnownAudioState.reciterKey
     );
-    
+
     if (hasChanged) {
       console.log('Input changed - resetting playback state');
       resetPlaybackState();
+    } else {
+      // Selection just snapped back to match the playing audio. Re-render the
+      // play surface so Pause reappears immediately instead of waiting for the
+      // next 1s poll tick.
+      updatePlayButtonUI(
+        lastKnownAudioState.isPlaying,
+        true,
+        lastKnownAudioState.currentTime
+      );
     }
   }
 
