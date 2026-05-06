@@ -4,7 +4,7 @@
  * This version uses the Quran.com v4 API for Surah names, reciters, and audio.
  */
 
-import { dhikrCollection, DHIKR_REWARD_AR } from '../shared/dhikr.js';
+import { dhikrCollection, DHIKR_REWARD_AR, DHIKR_REWARD_FR } from '../shared/dhikr.js';
 import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
 import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
 import { getCoverageLabel } from '../shared/reciter-coverage.js';
@@ -779,7 +779,9 @@ async function loadDhikr() {
 
 function getRewardText(rewardEn) {
   if (!rewardEn) return '';
-  return CURRENT_LANG === 'ar' ? (DHIKR_REWARD_AR[rewardEn] || '') : rewardEn;
+  if (CURRENT_LANG === 'ar') return DHIKR_REWARD_AR[rewardEn] || '';
+  if (CURRENT_LANG === 'fr') return DHIKR_REWARD_FR[rewardEn] || rewardEn;
+  return rewardEn;
 }
 
 function getSuraName(chapter) {
@@ -817,7 +819,13 @@ function displayCurrentDhikr() {
     document.createTextNode(' - '),
     enSpan
   );
-  infoEl.textContent = dhikr.reward ? `Reward: ${dhikr.reward}` : '';
+
+  const reward = getRewardText(dhikr.reward);
+  if (CURRENT_LANG === 'fr') {
+    infoEl.textContent = reward ? `Récompense : ${reward}` : '';
+  } else {
+    infoEl.textContent = reward ? `Reward: ${reward}` : '';
+  }
 }
 
 async function loadDhikrSettings() {
