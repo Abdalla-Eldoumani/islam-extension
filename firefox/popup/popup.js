@@ -453,6 +453,33 @@ function showContinueAffordance(host, state) {
   host.style.color = '';
 }
 
+// Render the playing-track banner above the controls when audio is alive in
+// the background page but the popup's inputs do not point at it. Hides
+// itself when the inputs match the playing audio or when no audio is alive.
+function renderPlayingBanner() {
+  const banner = document.getElementById('playing-banner');
+  if (!banner) return;
+  const label = document.getElementById('playing-banner-label');
+
+  const live = !!lastKnownAudioState.audioUrl;
+  if (!live || selectionMatchesPlaying()) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  const suraName = SURA_ID_TO_LABEL[lastKnownAudioState.suraId] || `Surah ${lastKnownAudioState.suraId}`;
+  const reciterFull = Object.keys(RECITER_LABEL_TO_KEY).find(
+    l => RECITER_LABEL_TO_KEY[l] === lastKnownAudioState.reciterKey
+  ) || lastKnownAudioState.reciterKey || '';
+
+  const text = (t('playingBannerLabel') || 'Stop playing: {surah} · {reciter}')
+    .replace('{surah}', suraName)
+    .replace('{reciter}', reciterFull);
+
+  if (label) label.textContent = text;
+  banner.classList.remove('hidden');
+}
+
 async function loadHadith() {
   const hadithEl = document.getElementById('hadith-text');
   try {
