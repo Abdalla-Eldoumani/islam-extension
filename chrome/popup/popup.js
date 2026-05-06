@@ -438,6 +438,12 @@ async function loadSavedAudioState() {
 
 async function applyRestoredAudioState(state) {
   const availabilityStatus = document.getElementById('quran-availability');
+  // The status host can carry red error text from a previous failed playback.
+  // Reset it before any branch below decides what to render here.
+  if (availabilityStatus) {
+    availabilityStatus.textContent = '';
+    availabilityStatus.style.color = '';
+  }
   const currentSuraId = getSelectedSuraId();
   const currentReciterKey = getReciterKey();
   const matchesCurrent = state.reciterKey === currentReciterKey && state.suraId === currentSuraId;
