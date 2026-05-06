@@ -49,7 +49,7 @@ export async function probeCoverage(reciters) {
   return { timestamp: Date.now(), map };
 }
 
-export function isCoverageFresh(reciterCoverage) {
+function isCoverageFresh(reciterCoverage) {
   if (!reciterCoverage?.timestamp || !reciterCoverage?.map) return false;
   return Date.now() - reciterCoverage.timestamp <= COVERAGE_TTL_MS;
 }
