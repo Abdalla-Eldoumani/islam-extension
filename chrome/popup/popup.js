@@ -1198,6 +1198,16 @@ function setUILoading(isLoading) {
 function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
+  const progressBar = document.getElementById('progress-bar');
+
+  // Seeking only makes sense against the audio the inputs point at. When the
+  // selection has drifted, disable the slider and dim its accent so the user
+  // is not confused about what a drag would affect.
+  if (progressBar) {
+    const matched = selectionMatchesPlaying();
+    progressBar.disabled = !matched;
+    progressBar.classList.toggle('card__progress-bar--inactive', !matched);
+  }
 
   // Resume is offered when audio is alive in the offscreen document AND the
   // popup's surah and reciter inputs agree with that audio. When inputs

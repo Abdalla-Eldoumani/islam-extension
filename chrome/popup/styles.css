@@ -468,6 +468,10 @@ body[dir="rtl"] .card__playing-banner {
   accent-color: var(--gold-primary);
 }
 
+.card__progress-bar--inactive {
+  accent-color: var(--ink-tertiary);
+}
+
 .card__time {
   display: flex;
   justify-content: space-between;
