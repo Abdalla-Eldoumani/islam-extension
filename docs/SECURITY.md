@@ -104,6 +104,8 @@ Audio-state restoration polls `chrome.runtime.sendMessage({ action: 'getAudioSta
 
 The 2.1.2 release adds no third-party hosts, no new media or connect sources, no new external scripts, and no new file types. The new playing banner element renders via `textContent` and `replaceChildren`. The two new clear buttons share their click handlers with the existing combobox X icons and add no new code paths into the audio resolver. `web-ext lint` runs at the same steady state as 2.1.1.
 
+A defense-in-depth pass added `isAllowedAudioHost` checks at the entry of `playAudio` in `chrome/offscreen/offscreen.js` and `firefox/background/background.js`. The popup already gates URLs through `ensureAllowedAudioHost` before sending the play message; the new checks make the trust boundary explicit at the receiver and reject any future caller (a content script, a second extension page) that tries to bypass the popup. The inline Arabic hadith path in both popup files now applies the same length cap (4096 chars) and markup rejection that `shared/hadith.js#isSafeHadithText` enforces, closing a divergence where a compromised `api.hadith.gading.dev` response could have been rendered unbounded.
+
 ## Audit items closed in the current release
 
 - JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
