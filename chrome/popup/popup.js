@@ -520,7 +520,7 @@ function renderPlayingBanner() {
   if (!banner) return;
   const label = document.getElementById('playing-banner-label');
 
-  const live = !!lastKnownAudioState.audioUrl;
+  const live = !!lastKnownAudioState.audioUrl && !!lastKnownAudioState.suraId;
   if (!live || selectionMatchesPlaying()) {
     banner.classList.add('hidden');
     return;
