@@ -284,6 +284,8 @@ function handleInputChange() {
       resetPlaybackState();
     }
   }
+
+  renderPlayingBanner();
 }
 
 // On input change the popup clears the in-popup status banner and re-renders
@@ -439,6 +441,8 @@ async function applyRestoredAudioState(state) {
   if (state.isPlaying) {
     startProgressTracking();
   }
+
+  renderPlayingBanner();
 }
 
 // Render a clickable "Continue Surah <name> from M:SS" affordance into the
@@ -1023,6 +1027,7 @@ async function playQuranAudio() {
     updatePlayButtonUI(true, true, 0);
     lastKnownAudioState.isPlaying = true;
     startProgressTracking();
+    renderPlayingBanner();
   } catch (error) {
     console.error('Audio playback failed:', error);
     lastKnownAudioState = previousAudioState;
@@ -1077,6 +1082,7 @@ async function resumeQuranAudio() {
         updatePlayButtonUI(true, true);
       }
       startProgressTracking();
+      renderPlayingBanner();
     } else {
       console.error('Failed to resume audio:', response?.error);
       updatePlayButtonUI(false, true);
@@ -1136,11 +1142,12 @@ async function playNextSura() {
   
   setSelectedSuraById(nextSuraId);
   await saveUserSelections();
-  
+
   updatePlayButtonUI(false, true, 0);
   setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
   document.getElementById('play-quran').dataset.action = 'play';
-  
+  renderPlayingBanner();
+
   await playQuranAudio();
 }
 
