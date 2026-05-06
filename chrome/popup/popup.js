@@ -521,10 +521,13 @@ function renderPlayingBanner() {
   const reciterFull = Object.keys(RECITER_LABEL_TO_KEY).find(
     l => RECITER_LABEL_TO_KEY[l] === lastKnownAudioState.reciterKey
   ) || lastKnownAudioState.reciterKey || '';
+  // Strip the trailing coverage parenthetical (e.g., " (complete)") so the
+  // banner stays short. The full label remains in the input.
+  const reciterShort = reciterFull.replace(/\s*\([^)]*\)\s*$/, '').trim();
 
   const text = (t('playingBannerLabel') || 'Stop playing: {surah} · {reciter}')
     .replace('{surah}', suraName)
-    .replace('{reciter}', reciterFull);
+    .replace('{reciter}', reciterShort);
 
   if (label) label.textContent = text;
   banner.classList.remove('hidden');
