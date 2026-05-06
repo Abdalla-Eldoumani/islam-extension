@@ -25,7 +25,13 @@
   ],
   "background": {
     "service_worker": "background/background.js",
+    "scripts": ["background/background.js"],
     "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "quran-sunnah-companion@example.com"
+    }
   },
   "action": {
     "default_popup": "popup/index.html",
