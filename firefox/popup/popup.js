@@ -233,6 +233,12 @@ function setupEventHandlers() {
   const clearSuraBtn = document.getElementById('clear-sura');
   if (clearSuraBtn) clearSuraBtn.addEventListener('click', clearSurahSelection);
 
+  const quickClearSurah = document.getElementById('quick-clear-surah');
+  if (quickClearSurah) quickClearSurah.addEventListener('click', clearSurahSelection);
+
+  const quickClearReciter = document.getElementById('quick-clear-reciter');
+  if (quickClearReciter) quickClearReciter.addEventListener('click', clearReciterSelection);
+
   const discardBtn = document.getElementById('playing-banner-discard');
   if (discardBtn) discardBtn.addEventListener('click', discardPlayingAudio);
 
