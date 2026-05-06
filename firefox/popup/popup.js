@@ -1621,6 +1621,20 @@ function applyLanguage() {
   const clearSuraBtn = document.getElementById('clear-sura');
   if (clearSuraBtn) clearSuraBtn.setAttribute('aria-label', t('clearSurah'));
 
+  const quickClearSurahBtn = document.getElementById('quick-clear-surah');
+  if (quickClearSurahBtn) {
+    quickClearSurahBtn.setAttribute('aria-label', t('clearSurahButton'));
+    const span = quickClearSurahBtn.querySelector('.card__quick-clear-label');
+    if (span) span.textContent = t('clearSurahButton');
+  }
+
+  const quickClearReciterBtn = document.getElementById('quick-clear-reciter');
+  if (quickClearReciterBtn) {
+    quickClearReciterBtn.setAttribute('aria-label', t('clearReciterButton'));
+    const span = quickClearReciterBtn.querySelector('.card__quick-clear-label');
+    if (span) span.textContent = t('clearReciterButton');
+  }
+
   // Update current time and total time
   const currentTimeEl = document.getElementById('current-time');
   if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
