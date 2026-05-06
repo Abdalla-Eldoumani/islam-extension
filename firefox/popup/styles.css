@@ -350,6 +350,21 @@ body[dir="rtl"] .card__controls {
   color: var(--ink-primary);
 }
 
+.card__quick-clears {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.card__quick-clears .card__button--quick-clear {
+  flex: 1;
+  justify-content: center;
+}
+
+body[dir="rtl"] .card__quick-clears {
+  flex-direction: row-reverse;
+}
+
 /* ON state: gold left rule plus a faint gold tint. RTL flips to right rule. */
 .card__button[data-autoplay="true"],
 .card__button[data-enabled="true"] {
