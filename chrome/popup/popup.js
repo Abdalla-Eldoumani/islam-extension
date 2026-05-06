@@ -50,6 +50,12 @@ function refreshClearButtonVisibility(buttonId, inputEl) {
   btn.dataset.visible = inputEl.value ? 'true' : 'false';
 }
 
+function refreshQuickClearDisabled(btnId, inputEl) {
+  const btn = document.getElementById(btnId);
+  if (!btn || !inputEl) return;
+  btn.disabled = !inputEl.value;
+}
+
 // --- STATE AND CACHE ---
 
 // Global progress tracking interval
@@ -103,6 +109,7 @@ function setSelectedSuraById(id) {
     if (input) input.value = SURA_ID_TO_LABEL[id] || '';
   }
   refreshClearButtonVisibility('clear-sura', document.getElementById('sura-input'));
+  refreshQuickClearDisabled('quick-clear-surah', document.getElementById('sura-input'));
 }
 
 function getReciterKey() {
@@ -134,6 +141,7 @@ function setReciterInputByKey(key) {
   const label = Object.keys(RECITER_LABEL_TO_KEY).find(l => RECITER_LABEL_TO_KEY[l] === canonicalId);
   if (label) input.value = label;
   refreshClearButtonVisibility('clear-reciter', input);
+  refreshQuickClearDisabled('quick-clear-reciter', input);
   if (canonicalId !== key) {
     saveUserSelections().catch(() => {});
   }
@@ -283,9 +291,12 @@ function setupEventHandlers() {
 
 // New function to handle input changes
 function handleInputChange() {
+  refreshQuickClearDisabled('quick-clear-surah', document.getElementById('sura-input'));
+  refreshQuickClearDisabled('quick-clear-reciter', document.getElementById('reciter-input'));
+
   validateQuranSelection();
   saveUserSelections();
-  
+
   // Check if current selections differ from active audio state
   const currentSuraId = getSelectedSuraId();
   const currentReciterKey = getReciterKey();
@@ -459,6 +470,8 @@ async function applyRestoredAudioState(state) {
     startProgressTracking();
   }
 
+  refreshQuickClearDisabled('quick-clear-surah', document.getElementById('sura-input'));
+  refreshQuickClearDisabled('quick-clear-reciter', document.getElementById('reciter-input'));
   renderPlayingBanner();
 }
 
