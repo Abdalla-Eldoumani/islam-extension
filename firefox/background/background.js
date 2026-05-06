@@ -77,36 +77,29 @@ let dhikrReminderMode = 'notification'; // 'notification' | 'popup'
 
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
- * Chrome's notifications.getPermissionLevel historically supported only the
- * callback form.  In newer Chrome versions a promise form is available, but we
- * still need to support both to avoid runtime errors that can silently break
- * the start/stop logic.  This helper normalises the API into a Promise that
- * always resolves with the permission string (`granted`, `denied`, `default`).
+ * Firefox's `notifications` API does not expose `getPermissionLevel`. The
+ * permission is granted at install time via the `notifications` manifest
+ * permission and there is no separate runtime check. Treat absence of the
+ * function as `granted` so the start/stop logic does not silently fail with
+ * the chrome-style polyfill that would otherwise resolve to `denied`.
  * @returns {Promise<'granted'|'denied'|'default'>}
  */
 function getNotificationPermissionLevel() {
-  // Newer Chrome releases (>=116) return a promise when no callback is
-  // supplied.  Detect this by checking the function length (expected
-  // callback-arity of 1 in the classic API).
-  try {
-    if (browser.notifications.getPermissionLevel.length === 0) {
-      // Promise variant available.
-      return browser.notifications.getPermissionLevel();
-    }
-  } catch (_) {
-    // Fall back to callback style below.
+  if (typeof browser.notifications.getPermissionLevel !== 'function') {
+    return Promise.resolve('granted');
   }
-
-  // Fallback for older Chrome versions – wrap the callback style.
   return new Promise((resolve) => {
     try {
-      browser.notifications.getPermissionLevel((level) => {
-        // In very old versions the callback can be undefined; treat it as
-        // 'denied' so we fail gracefully.
+      const result = browser.notifications.getPermissionLevel((level) => {
         resolve(level || 'denied');
       });
+      // Promise variant returns a thenable; chain through.
+      if (result && typeof result.then === 'function') {
+        result.then((level) => resolve(level || 'denied'),
+                    () => resolve('denied'));
+      }
     } catch (err) {
-      console.error('getPermissionLevel callback form failed:', err);
+      console.error('getPermissionLevel failed:', err);
       resolve('denied');
     }
   });
