@@ -139,6 +139,31 @@ function setReciterInputByKey(key) {
   }
 }
 
+// Shared clear paths so the inline X icons and the quick-clear row run the
+// same flow: empty the combobox, run input-change handling, refocus the
+// input.
+function clearSurahSelection() {
+  if (suraCombobox) suraCombobox.clear();
+  else {
+    const input = document.getElementById('sura-input');
+    if (input) input.value = '';
+  }
+  handleInputChange();
+  const input = document.getElementById('sura-input');
+  if (input) input.focus();
+}
+
+function clearReciterSelection() {
+  if (reciterCombobox) reciterCombobox.clear();
+  else {
+    const input = document.getElementById('reciter-input');
+    if (input) input.value = '';
+  }
+  handleInputChange();
+  const input = document.getElementById('reciter-input');
+  if (input) input.focus();
+}
+
 // --- LIFECYCLE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -202,24 +227,10 @@ function setupEventHandlers() {
   });
 
   const clearReciterBtn = document.getElementById('clear-reciter');
-  if (clearReciterBtn) {
-    clearReciterBtn.addEventListener('click', () => {
-      if (reciterCombobox) reciterCombobox.clear();
-      else reciterInput.value = '';
-      handleInputChange();
-      reciterInput.focus();
-    });
-  }
+  if (clearReciterBtn) clearReciterBtn.addEventListener('click', clearReciterSelection);
 
   const clearSuraBtn = document.getElementById('clear-sura');
-  if (clearSuraBtn) {
-    clearSuraBtn.addEventListener('click', () => {
-      if (suraCombobox) suraCombobox.clear();
-      else suraInput.value = '';
-      handleInputChange();
-      suraInput.focus();
-    });
-  }
+  if (clearSuraBtn) clearSuraBtn.addEventListener('click', clearSurahSelection);
 
   const discardBtn = document.getElementById('playing-banner-discard');
   if (discardBtn) discardBtn.addEventListener('click', discardPlayingAudio);
