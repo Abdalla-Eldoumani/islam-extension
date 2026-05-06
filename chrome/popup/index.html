@@ -109,6 +109,15 @@
         </label>
 
         <div class="card__availability-status" id="quran-availability"></div>
+        <div class="card__playing-banner hidden" id="playing-banner">
+          <span class="card__playing-banner-label" id="playing-banner-label"></span>
+          <button type="button"
+                  class="card__playing-banner-discard"
+                  id="playing-banner-discard"
+                  aria-label="Stop playing">
+            <svg width="14" height="14" aria-hidden="true"><use href="#clear-cross"/></svg>
+          </button>
+        </div>
         <div class="card__controls">
           <button class="card__button" id="play-quran" data-action="play" aria-label="Play recitation" disabled>
             <svg width="14" height="14" aria-hidden="true"><use href="#play-triangle"/></svg> Play
