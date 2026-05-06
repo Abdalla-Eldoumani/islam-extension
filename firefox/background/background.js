@@ -424,7 +424,7 @@ async function startDhikrNotifications(intervalSeconds, mode = 'notification') {
       const permissionLevel = await getNotificationPermissionLevel();
       console.log('Background: Notification permission level:', permissionLevel);
       if (permissionLevel === 'denied') {
-        throw new Error('Notifications are disabled. Please enable notifications for this extension in Chrome settings.');
+        throw new Error('Notifications are disabled. Please enable notifications for this extension in your browser settings.');
       }
     }
     
