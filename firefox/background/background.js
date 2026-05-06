@@ -77,32 +77,15 @@ let dhikrReminderMode = 'notification'; // 'notification' | 'popup'
 
 // ---- HELPER PROMISE WRAPPERS -------------------------------------------------
 /**
- * Firefox's `notifications` API does not expose `getPermissionLevel`. The
+ * Firefox's `notifications` API does not expose a permission-level query — the
  * permission is granted at install time via the `notifications` manifest
- * permission and there is no separate runtime check. Treat absence of the
- * function as `granted` so the start/stop logic does not silently fail with
- * the chrome-style polyfill that would otherwise resolve to `denied`.
+ * permission and there is no separate runtime check. Resolve directly to
+ * `granted` here. Chrome's equivalent helper lives in the chrome background
+ * and uses the chrome-only `getPermissionLevel` API.
  * @returns {Promise<'granted'|'denied'|'default'>}
  */
 function getNotificationPermissionLevel() {
-  if (typeof browser.notifications.getPermissionLevel !== 'function') {
-    return Promise.resolve('granted');
-  }
-  return new Promise((resolve) => {
-    try {
-      const result = browser.notifications.getPermissionLevel((level) => {
-        resolve(level || 'denied');
-      });
-      // Promise variant returns a thenable; chain through.
-      if (result && typeof result.then === 'function') {
-        result.then((level) => resolve(level || 'denied'),
-                    () => resolve('denied'));
-      }
-    } catch (err) {
-      console.error('getPermissionLevel failed:', err);
-      resolve('denied');
-    }
-  });
+  return Promise.resolve('granted');
 }
 
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
