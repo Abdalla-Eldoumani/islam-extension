@@ -109,6 +109,13 @@ All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the r
 
 ## Changelog
 
+### 2.1.2
+
+- Resume affordance now follows the selection. When the surah or reciter input changes mid-playback, the popup switches to Play instead of stranding Resume against the new selection. Audio state restoration on a failed fetch reverts to the previous live state on both Chrome and Firefox, where Chrome previously left the keys half-updated.
+- Stop-playing banner. When audio is alive in the background but does not match the current selection, a banner above the controls names the playing track and discards it on click. The user can start a new selection without restoring the original to Pause first.
+- Two clear buttons under the sleep timer. A more visible target than the inline X icons in the comboboxes. Each button disables when its input is empty and translates with the rest of the UI.
+- Smaller fixes: stale red status text from a failed playback no longer survives a popup reopen, and the progress slider disables and dims when seeking would not affect the current selection.
+
 ### 2.1.1
 
 - Audio control persistence. Play, Pause, and Resume now render on every popup reopen as long as the offscreen document or background page still holds audio, regardless of whether the inputs match the saved keys. Restoration polls the runtime first (the offscreen always sets `audioUrl` on play) and falls back to `chrome.storage.local.audioState` if the service worker is asleep or slow to wake. Saved reciter ids from previous catalogue revisions resolve to the canonical entry via the alt-id index.
