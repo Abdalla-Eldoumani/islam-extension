@@ -100,6 +100,10 @@ The combobox normalises a comparison key for filtering (NFKD strip, Arabic tashk
 
 Audio-state restoration polls `chrome.runtime.sendMessage({ action: 'getAudioState' })` with a 1500 ms timeout. The cap prevents a slow or stuck service-worker wakeup from leaving the popup in an indeterminate state; on timeout the popup falls back to `chrome.storage.local.audioState`. No new attack surface: the message contract is unchanged from 2.1.0 and `ensureAllowedAudioHost` still gates every URL the offscreen document loads.
 
+## 2.1.2 audit summary
+
+The 2.1.2 release adds no third-party hosts, no new media or connect sources, no new external scripts, and no new file types. The new playing banner element renders via `textContent` and `replaceChildren`. The two new clear buttons share their click handlers with the existing combobox X icons and add no new code paths into the audio resolver. `web-ext lint` runs at the same steady state as 2.1.1.
+
 ## Audit items closed in the current release
 
 - JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
