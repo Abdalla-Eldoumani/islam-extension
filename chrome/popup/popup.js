@@ -593,7 +593,13 @@ async function loadHadith() {
       if (!res.ok) throw new Error('Hadith API failed');
       const data = await res.json();
       const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
-      hadithEl.textContent = hadithTxt || 'حدث خطأ فى جلب الحديث';
+      // Same safety bounds as shared/hadith.js#isSafeHadithText: cap length and
+      // reject markup-shaped strings before rendering.
+      const safe = typeof hadithTxt === 'string'
+        && hadithTxt.length > 0
+        && hadithTxt.length <= 4096
+        && !/<script|<iframe|<object|<embed/i.test(hadithTxt);
+      hadithEl.textContent = safe ? hadithTxt : 'حدث خطأ فى جلب الحديث';
     } else if (CURRENT_LANG === 'fr') {
       // ---------------- French with local cache ----------------
       const CACHE_KEY = 'hadithCacheFr';
