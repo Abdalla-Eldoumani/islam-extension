@@ -131,7 +131,7 @@ On popup open the popup polls the runtime first (`chrome.runtime.sendMessage({ a
 
 If neither runtime nor storage carries an `audioUrl` but the saved `suraId` and `reciterKey` are present, the popup derives the URL via `shared/audio-urls.js#getSuraAudioUrl` so the resume affordance still has the data it needs.
 
-The popup renders Resume whenever the offscreen document (Chrome) or background page (Firefox) holds a live or paused audio with non-zero progress, regardless of whether the surah and reciter inputs currently match the saved selections. The semantics are: as long as audio is alive somewhere, the popup must always offer a way to control it. Clicking Resume issues a keyless `resumeAudio` message; the offscreen document or background page resumes from its own internal state, so the popup's input fields can drift out of match without breaking the control surface.
+Resume is offered when the offscreen document (Chrome) or background page (Firefox) holds live or paused audio AND the popup's surah and reciter inputs agree with that audio. When inputs disagree, the popup renders Play; pressing it fetches and plays the new selection and replaces the live audio. The 2.1.1 rule that controls render unconditionally has been narrowed because it caused Resume to fire against stale selections.
 
 When a surah finishes naturally during popup-open polling and autoplay is off, the polling tracker calls `updatePlayButtonUI(false, true, currentTime)` only — the older code that explicitly reset the button label to "Play" and the progress bar to zero was removing the Resume affordance the moment the audio ended. Autoplay-on still resets the controls before transitioning to the next surah.
 
