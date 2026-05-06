@@ -109,6 +109,17 @@ function getReciterKey() {
   return RECITER_LABEL_TO_KEY[input.value];
 }
 
+// True only when the popup's surah and reciter inputs both resolve and match
+// the audio currently held in lastKnownAudioState. Empty inputs and a cold
+// state (no audio ever played) both fall through to false.
+function selectionMatchesPlaying() {
+  const sId = getSelectedSuraId();
+  const rKey = getReciterKey();
+  if (!sId || !rKey) return false;
+  if (!lastKnownAudioState.suraId || !lastKnownAudioState.reciterKey) return false;
+  return sId === lastKnownAudioState.suraId && rKey === lastKnownAudioState.reciterKey;
+}
+
 function setReciterInputByKey(key) {
   const input = document.getElementById('reciter-input');
   if (!input) return;
