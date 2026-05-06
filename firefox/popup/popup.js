@@ -982,13 +982,6 @@ function validateQuranSelection() {
   const isEnabled = !!suraId && !!reciterId;
   playButton.disabled = !isEnabled;
   autoplayButton.disabled = !isEnabled;
-  
-  // if (isEnabled) {
-  //     availabilityStatus.innerHTML = '&#x2705; Ready to play';
-  //     availabilityStatus.style.color = 'green';
-  // } else {
-  //     availabilityStatus.textContent = '';
-  // }
 }
 
 async function playQuranAudio() {
@@ -1435,14 +1428,7 @@ async function toggleDhikrNotifications() {
     button.dataset.enabled = newState.toString();
     button.setAttribute('aria-pressed', newState ? 'true' : 'false');
     setIconLabel(button, 'bell-line', newState ? t('notificationsOn') : t('notificationsOff'));
-    
-    // // Show success message
-    // if (newState) {
-    //   showNotificationMessage('Dhikr notifications enabled! You should see a test notification shortly.', 'success');
-    // } else {
-    //   showNotificationMessage('Dhikr notifications disabled.', 'info');
-    // }
-    
+
     await saveDhikrSettings();
     
     // Small delay to prevent rapid re-clicking
