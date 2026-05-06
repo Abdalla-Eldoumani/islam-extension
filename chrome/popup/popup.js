@@ -1070,7 +1070,7 @@ async function playQuranAudio() {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
 
-    availabilityStatus.textContent = 'Playing...';
+    availabilityStatus.textContent = t('statusPlaying');
     availabilityStatus.style.color = 'var(--status-positive)';
     updatePlayButtonUI(true, true, 0);
     lastKnownAudioState.isPlaying = true;
@@ -1079,7 +1079,7 @@ async function playQuranAudio() {
   } catch (error) {
     console.error('Audio playback failed:', error);
     lastKnownAudioState = previousAudioState;
-    availabilityStatus.textContent = 'Reciter not available right now.';
+    availabilityStatus.textContent = t('statusReciterUnavailable');
     availabilityStatus.style.color = 'var(--status-negative)';
     updatePlayButtonUI(false, true);
   } finally {
