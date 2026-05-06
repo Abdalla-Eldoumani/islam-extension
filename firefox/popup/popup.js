@@ -1074,6 +1074,13 @@ async function pauseQuranAudio() {
 }
 
 async function resumeQuranAudio() {
+  // Defensive clear of the availability host so a stale Continue affordance
+  // (or any prior status text) cannot survive a resume click. The click
+  // handler in showContinueAffordance already removes its own button; this
+  // catches any path that re-renders into the host before progress polling
+  // takes over.
+  const availabilityStatus = document.getElementById('quran-availability');
+  if (availabilityStatus) availabilityStatus.replaceChildren();
   try {
     const response = await browser.runtime.sendMessage({ action: 'resumeAudio' });
     if (response?.success) {
