@@ -916,11 +916,10 @@ async function playQuranAudio() {
   const suraId = getSelectedSuraId();
   const reciterId = getReciterKey();
   const availabilityStatus = document.getElementById('quran-availability');
-  
-  // Update last known state when starting new playback
-  lastKnownAudioState.suraId = suraId;
-  lastKnownAudioState.reciterKey = reciterId;
-  
+  // Snapshot the previous audio state so a fetch failure can revert cleanly
+  // instead of leaving lastKnownAudioState half-updated.
+  const previousAudioState = { ...lastKnownAudioState };
+
   try {
     console.log('Popup: Testing background script connectivity...');
     try {
@@ -930,10 +929,16 @@ async function playQuranAudio() {
       console.error('Popup: Background script ping failed:', pingError);
       console.error('Popup: Chrome runtime lastError:', chrome.runtime.lastError);
     }
-    
+
     const audioUrl = await getSuraAudioUrl(reciterId, suraId);
     console.log('Fetched audio URL:', audioUrl);
-    lastKnownAudioState.audioUrl = audioUrl;
+    lastKnownAudioState = {
+      suraId,
+      reciterKey: reciterId,
+      audioUrl,
+      currentTime: 0,
+      isPlaying: false
+    };
 
     console.log('Popup: Sending message to background script...');
     const response = await chrome.runtime.sendMessage({
@@ -944,7 +949,7 @@ async function playQuranAudio() {
     });
 
     console.log('Popup: Received response from background:', response);
-    
+
     if (chrome.runtime.lastError) {
       console.error('Popup: Chrome runtime error:', chrome.runtime.lastError);
       throw new Error(`Chrome runtime error: ${chrome.runtime.lastError.message}`);
@@ -953,7 +958,7 @@ async function playQuranAudio() {
     if (!response?.success) {
       throw new Error(response?.error || 'Background script failed to play audio.');
     }
-    
+
     availabilityStatus.textContent = 'Playing...';
     availabilityStatus.style.color = 'var(--status-positive)';
     updatePlayButtonUI(true, true, 0);
@@ -961,6 +966,7 @@ async function playQuranAudio() {
     startProgressTracking();
   } catch (error) {
     console.error('Audio playback failed:', error);
+    lastKnownAudioState = previousAudioState;
     availabilityStatus.textContent = 'Reciter not available right now.';
     availabilityStatus.style.color = 'var(--status-negative)';
     updatePlayButtonUI(false, true);
