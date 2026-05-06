@@ -111,10 +111,11 @@ All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the r
 
 ### 2.1.2
 
-- Resume affordance now follows the selection. When the surah or reciter input changes mid-playback, the popup switches to Play instead of stranding Resume against the new selection. Audio state restoration on a failed fetch reverts to the previous live state on both Chrome and Firefox, where Chrome previously left the keys half-updated.
-- Stop-playing banner. When audio is alive in the background but does not match the current selection, a banner above the controls names the playing track and discards it on click. The user can start a new selection without restoring the original to Pause first.
+- Resume affordance now follows the selection. When the surah or reciter input changes mid-playback, the popup switches to Play instead of stranding Resume against the new selection. Audio state restoration on a failed fetch reverts to the previous live state on both Chrome and Firefox, where Chrome previously left the keys half-updated. Restoring the original selection brings Pause back immediately instead of waiting for the next state poll.
+- Stop-playing banner. When audio is alive in the background but does not match the current selection, a banner above the controls names the playing track and discards it on click. The user can start a new selection without restoring the original to Pause first. The banner no longer flashes during autoplay-next transitions and hides correctly when the saved state is missing a surah id.
 - Two clear buttons under the sleep timer. A more visible target than the inline X icons in the comboboxes. Each button disables when its input is empty and translates with the rest of the UI.
-- Smaller fixes: stale red status text from a failed playback no longer survives a popup reopen, and the progress slider disables and dims when seeking would not affect the current selection.
+- Status text and the banner discard button now translate with the rest of the UI. French and Arabic users no longer see English-only "Playing..." or "Stop playing" strings. The dhikr reward line on Chrome now shows the French translation that was already wired on Firefox.
+- Hardening pass: the offscreen document on Chrome and the background page on Firefox now reject any `playAudio` URL that is not on the media-host allowlist, mirroring the popup-side check. The inline Arabic hadith path applies the same length cap and markup rejection that the shared module enforces. Stale red status text from a failed playback no longer survives a popup reopen, and the progress slider disables and dims when seeking would not affect the current selection.
 
 ### 2.1.1
 
