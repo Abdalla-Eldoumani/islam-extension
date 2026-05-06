@@ -1057,8 +1057,6 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const playButton = document.getElementById('play-quran');
   const pauseButton = document.getElementById('pause-quran');
 
-  pauseButton.disabled = !isEnabled;
-
   // Resume is offered when audio is alive in the background page AND the
   // popup's surah and reciter inputs agree with that audio. When inputs
   // disagree, the popup renders Play; pressing Play replaces the live audio
@@ -1067,7 +1065,8 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
   const progress = currentTime || lastKnownAudioState.currentTime || 0;
   const showResume = hasLiveAudio && progress > 0 && !isPlaying && selectionMatchesPlaying();
 
-  if (isPlaying) {
+  if (isPlaying && selectionMatchesPlaying()) {
+    pauseButton.disabled = !isEnabled;
     playButton.classList.remove('hidden');
     playButton.disabled = true;
     setIconLabel(playButton, 'play-triangle', t('playing'));
