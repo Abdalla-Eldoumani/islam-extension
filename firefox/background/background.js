@@ -4,7 +4,7 @@
  */
 
 import { getRandomDhikr } from '../shared/dhikr.js';
-import { getSuraAudioUrl as getSuraAudioUrlShared } from '../shared/audio-urls.js';
+import { getSuraAudioUrl as getSuraAudioUrlShared, isAllowedAudioHost } from '../shared/audio-urls.js';
 import { fetchReciters } from '../shared/reciter-catalogue.js';
 import { probeCoverage } from '../shared/reciter-coverage.js';
 
@@ -323,6 +323,9 @@ async function handleAudioMessage(message, sendResponse) {
 }
 
 async function playAudio(audioUrl, suraId, reciterKey) {
+  if (!isAllowedAudioHost(audioUrl)) {
+    throw new Error('Audio source unavailable for this combination');
+  }
   try {
     // Stop any existing audio
     if (audioPlayer) {
