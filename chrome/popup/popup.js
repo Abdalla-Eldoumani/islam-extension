@@ -1093,12 +1093,13 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
 
   pauseButton.disabled = !isEnabled;
 
-  // Resume is offered whenever the offscreen document holds an audio URL
-  // with non-zero progress. The inputs do not need to match the saved keys;
-  // clicking Resume controls whatever is alive in the offscreen document.
+  // Resume is offered when audio is alive in the offscreen document AND the
+  // popup's surah and reciter inputs agree with that audio. When inputs
+  // disagree, the popup renders Play; pressing Play replaces the live audio
+  // with the new selection.
   const hasLiveAudio = !!lastKnownAudioState.audioUrl;
   const progress = currentTime || lastKnownAudioState.currentTime || 0;
-  const showResume = hasLiveAudio && progress > 0 && !isPlaying;
+  const showResume = hasLiveAudio && progress > 0 && !isPlaying && selectionMatchesPlaying();
 
   if (isPlaying) {
     playButton.classList.remove('hidden');
