@@ -7,6 +7,3 @@ const _g = globalThis;
 export const browser = (typeof _g.browser !== 'undefined' && _g.browser?.runtime)
   ? _g.browser
   : _g.chrome;
-
-export const isFirefox = (typeof _g.browser !== 'undefined' && _g.browser?.runtime)
-  && !(_g.chrome && _g.chrome.offscreen);
