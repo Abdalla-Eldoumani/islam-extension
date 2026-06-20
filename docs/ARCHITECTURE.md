@@ -137,7 +137,7 @@ When a surah finishes naturally during popup-open polling and autoplay is off, t
 
 ## Sync mechanism
 
-`scripts/sync.mjs` walks the repo-root `shared/` and copies every file (excluding `CLAUDE.md` and `.DS_Store`) into `chrome/shared/` and `firefox/shared/`. The destination is wiped and rewritten on each run so removed files do not linger.
+`scripts/sync.mjs` walks the repo-root `shared/` and copies every file (excluding Markdown notes and `.DS_Store`) into `chrome/shared/` and `firefox/shared/`. The destination is wiped and rewritten on each run so removed files do not linger.
 
 `scripts/check-sync.mjs` hashes both copies and the source. It exits non-zero if any file in the source has no matching hash in either copy or vice versa. Wire it into `.git/hooks/pre-commit` so a contributor cannot commit drift.
 
