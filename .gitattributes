@@ -1,0 +1,16 @@
+# Force LF for text in both the repo and the working tree, overriding
+# core.autocrlf on Windows so the shared/ sync script and editors stop
+# producing CRLF-only diffs that show every file as modified.
+* text=auto eol=lf
+
+# Binary assets git must never convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.otf binary
+*.zip binary
