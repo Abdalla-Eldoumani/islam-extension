@@ -680,7 +680,7 @@ async function fetchRandomArabicHadith() {
   for (let i = 0; i < 6; i++) {
     const pick = AR_EDITIONS[Math.floor(Math.random() * AR_EDITIONS.length)];
     const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
     try {
       const res = await fetch(url, { cache: 'force-cache' });
       if (res.ok) {
@@ -710,7 +710,7 @@ async function fetchRandomEnglishHadith() {
   for (let i = 0; i < 6; i++) {
     const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
     const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
     try {
       const res = await fetch(url, { cache: 'force-cache' });
       if (res.ok) {
@@ -754,7 +754,7 @@ async function fetchRandomFrenchHadith() {
   for (let i = 0; i < 6; i++) {
     const pick = FR_EDITIONS[Math.floor(Math.random() * FR_EDITIONS.length)];
     const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
     try {
       const res = await fetch(url, { cache: 'force-cache' });
       if (res.ok) {
