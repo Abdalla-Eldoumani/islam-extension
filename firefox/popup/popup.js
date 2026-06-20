@@ -987,11 +987,32 @@ function populateSelect(selectEl, items, defaultOptionText, mapper) {
 
 async function fetchSuras(lang = CURRENT_LANG || 'en') {
   // Quran.com supports ?language=ar or en
-  const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
-  if (!response.ok) throw new Error('Failed to fetch suras');
-  const { chapters } = await response.json();
-  // console.log(`Fetched ${chapters.length} surahs for lang`, lang);
-  return chapters;
+  try {
+    const response = await fetch(`https://api.quran.com/api/v4/chapters?language=${lang}`);
+    if (response.ok) {
+      const { chapters } = await response.json();
+      if (Array.isArray(chapters) && chapters.length) return chapters;
+    }
+  } catch (_) {
+    // fall through to the no-auth fallback
+  }
+
+  // Al-Quran Cloud serves chapter metadata without authentication. Map its
+  // shape onto the fields the selectors and audio resolver already expect.
+  try {
+    const response = await fetch('https://api.alquran.cloud/v1/surah');
+    if (response.ok) {
+      const json = await response.json();
+      const data = Array.isArray(json?.data) ? json.data : [];
+      if (data.length) {
+        return data.map((s) => ({ id: s.number, name_simple: s.englishName, name_arabic: s.name }));
+      }
+    }
+  } catch (_) {
+    // both providers unavailable
+  }
+
+  return [];
 }
 
 // Reciter catalogue --- cache and hydration are popup-side; provider fetches and
