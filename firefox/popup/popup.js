@@ -1453,7 +1453,7 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending startDhikrNotifications message...');
       
-      // Send message with robust timeout handling
+      // Send message with timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
           browser.runtime.sendMessage({
@@ -1479,7 +1479,7 @@ async function toggleDhikrNotifications() {
       
       console.log('Sending stopDhikrNotifications message...');
       
-      // Send message with robust timeout handling
+      // Send message with timeout handling
       response = await Promise.race([
         new Promise((resolve, reject) => {
           browser.runtime.sendMessage({
