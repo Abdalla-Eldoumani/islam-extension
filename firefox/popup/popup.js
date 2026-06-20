@@ -568,23 +568,7 @@ async function loadHadith() {
   try {
     if (CURRENT_LANG === 'ar') {
       // ---------------- Arabic ----------------
-      const AR_BOOKS = [
-        { id: 'abu-daud', available: 4419 },
-        { id: 'ahmad', available: 4305 },
-        { id: 'bukhari', available: 6638 },
-        { id: 'darimi', available: 2949 },
-        { id: 'ibnu-majah', available: 4285 },
-        { id: 'malik', available: 1587 },
-        { id: 'muslim', available: 4930 },
-        { id: 'nasai', available: 5364 },
-        { id: 'tirmidzi', available: 3625 }
-      ];
-      const picked = AR_BOOKS[Math.floor(Math.random() * AR_BOOKS.length)];
-      const rand = Math.floor(Math.random() * picked.available) + 1;
-      const res = await fetch(`https://api.hadith.gading.dev/books/${picked.id}?range=${rand}-${rand}`);
-      if (!res.ok) throw new Error('Hadith API failed');
-      const data = await res.json();
-      const hadithTxt = data?.data?.hadiths?.[0]?.arab || data?.data?.hadiths?.[0]?.id || '';
+      const hadithTxt = await fetchRandomArabicHadith();
       // Same safety bounds as shared/hadith.js#isSafeHadithText: cap length and
       // reject markup-shaped strings before rendering.
       const safe = typeof hadithTxt === 'string'
@@ -681,6 +665,35 @@ async function loadHadith() {
   }
 }
 
+// Helper: fetch a single random Arabic hadith (JSdelivr fawazahmed0 editions)
+async function fetchRandomArabicHadith() {
+  const AR_EDITIONS = [
+    { edition: 'ara-bukhari', count: 6638 },
+    { edition: 'ara-muslim', count: 4930 },
+    { edition: 'ara-abudawud', count: 4419 },
+    { edition: 'ara-nasai', count: 5364 },
+    { edition: 'ara-ibnmajah', count: 4285 },
+    { edition: 'ara-tirmidhi', count: 3625 },
+    { edition: 'ara-malik', count: 1587 }
+  ];
+
+  for (let i = 0; i < 6; i++) {
+    const pick = AR_EDITIONS[Math.floor(Math.random() * AR_EDITIONS.length)];
+    const num = Math.floor(Math.random() * pick.count) + 1;
+    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${pick.edition}/${num}.min.json`;
+    try {
+      const res = await fetch(url, { cache: 'force-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.hadiths?.[0]?.text;
+        if (text) return text;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  return '';
+}
+
 // Helper: fetch a single random English hadith (tries fast JSdelivr, fallback HadeethEnc)
 async function fetchRandomEnglishHadith() {
   const EN_EDITIONS = [
@@ -702,7 +715,7 @@ async function fetchRandomEnglishHadith() {
       const res = await fetch(url, { cache: 'force-cache' });
       if (res.ok) {
         const data = await res.json();
-        const text = data.hadith?.english || data.english;
+        const text = data.hadiths?.[0]?.text;
         if (text) return text;
       }
     } catch (_) { /* ignore */ }
