@@ -18,13 +18,14 @@ const targets = [
 ];
 
 // Same skip rules as scripts/sync.mjs so the check matches what got copied.
-const SKIP_NAMES = new Set(['CLAUDE.md', '.DS_Store']);
+const SKIP_NAMES = new Set(['.DS_Store']);
+const shouldSkip = (name) => SKIP_NAMES.has(name) || name.endsWith('.md');
 
 async function listFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    if (SKIP_NAMES.has(entry.name)) continue;
+    if (shouldSkip(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await listFiles(full)));
