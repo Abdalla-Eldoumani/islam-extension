@@ -1627,7 +1627,7 @@ function updatePresetButtons(currentInterval) {
 }
 
 // ---------------------------
-// 🗺️  BASIC I18N SUPPORT
+// BASIC I18N SUPPORT
 // ---------------------------
 
 let CURRENT_LANG = 'en';
