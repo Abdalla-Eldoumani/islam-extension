@@ -31,8 +31,7 @@ The host permissions enumerate the audio CDNs and the hadith APIs:
 - `www.mp3quran.net` and `*.mp3quran.net` — Reciter catalogue and audio mirrors.
 - `cdn.islamic.network` — Audio CDN for Alafasy, Husary, Shuraym, Tablawee.
 - `mirrors.quranicaudio.com`, `download.quranicaudio.com` — Audio mirrors for the Quran.com catalogue.
-- `api.hadith.gading.dev` — Arabic hadith collections.
-- `cdn.jsdelivr.net` — English and French hadith editions, served from the `fawazahmed0/hadith-api` repo via JSDelivr.
+- `cdn.jsdelivr.net` — Arabic, English, and French hadith editions, served from the `fawazahmed0/hadith-api` repo via JSDelivr.
 - `hadeethenc.com` — Hadith fallback when the JSDelivr source fails.
 
 The CSP `connect-src` enumerates the same hosts as a defence-in-depth check. The `media-src` allowlist constrains audio URL hosts; URLs returned by API responses that fall outside the allowlist are rejected before reaching the audio element.
