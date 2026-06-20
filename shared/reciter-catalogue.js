@@ -68,11 +68,14 @@ export async function fetchAlquranCloudReciters() {
 }
 
 export async function fetchReciters() {
-  const combined = (await Promise.all([
+  // allSettled so one failing provider (for example a Quran.com outage or its
+  // move to an auth-gated host) never empties the whole catalogue.
+  const settled = await Promise.allSettled([
     fetchQuranComReciters(),
     fetchMp3QuranReciters(),
     fetchAlquranCloudReciters()
-  ])).flat();
+  ]);
+  const combined = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
 
   const dedupedMap = new Map();
   combined.forEach((r) => {
