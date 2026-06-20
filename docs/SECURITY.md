@@ -23,13 +23,12 @@ The extension runs in the popup, the background service worker (Chrome) or persi
 | `www.mp3quran.net`, `*.mp3quran.net` | Reciter catalogue and audio mirrors. | Same. |
 | `cdn.islamic.network` | Audio for Islamic.network reciter slugs. | Same. |
 | `api.alquran.cloud` | Curated audio editions catalogue. The 2.1.0 fourth provider. | Treated as untrusted; we filter responses to `format === 'audio'` and use the returned `identifier` as a slug. The resulting audio URLs still resolve to `cdn.islamic.network` and pass through `ensureAllowedAudioHost`. |
-| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@<sha>` | English and French hadith editions. | JSDelivr serves a specific commit. We pin to the SHA recorded in `shared/hadith.js`. To bump, look up the commit on the upstream repo and update both the constant and the note here. The response is shape-validated before reaching the popup. |
-| `api.hadith.gading.dev` | Arabic hadith. | Treated as untrusted; shape-validated. |
+| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@<sha>` | Arabic, English, and French hadith editions. | JSDelivr serves a specific commit. We pin to `df57907be35291c91ad6a6691180e22ca9920784` (the `1` branch HEAD as of 2026-06-03), hard-coded in the `fetchRandom*Hadith` helpers in both popup files. To bump, look up a newer commit on the upstream repo and update the URL in those helpers and this note. The response is shape-checked before reaching the popup. |
 | `hadeethenc.com` | Hadith fallback. | Treated as untrusted; shape-validated. |
 
 ### Response shape validation
 
-`shared/hadith.js` rejects any response where:
+The popup rejects any hadith response where:
 
 - the body field is not a string,
 - the string is empty or longer than 4096 characters,
@@ -68,7 +67,7 @@ No `'unsafe-inline'`, no `'unsafe-eval'`, no `data:` URIs, no `https:` wildcards
 
 The extension does not load any subresource over the network at startup. Fonts ship inside the package (`assets/fonts/*.woff2`). Stylesheets and scripts are extension-relative. Therefore SRI is not applicable to the extension itself.
 
-For the JSDelivr-hosted hadith content, SRI is impractical because the response is per-hadith and dynamic. We mitigate by shape validation (above) and by pinning to a known commit SHA (planned for the next release).
+For the JSDelivr-hosted hadith content, SRI is impractical because the response is per-hadith and dynamic. We mitigate by shape validation (above) and by pinning to a known commit SHA (recorded in the table above).
 
 ## Console output in production
 
@@ -104,7 +103,7 @@ Audio-state restoration polls `chrome.runtime.sendMessage({ action: 'getAudioSta
 
 The 2.1.2 release adds no third-party hosts, no new media or connect sources, no new external scripts, and no new file types. The new playing banner element renders via `textContent` and `replaceChildren`. The two new clear buttons share their click handlers with the existing combobox X icons and add no new code paths into the audio resolver. `web-ext lint --self-hosted` improved on both builds: Chrome 0 errors and 10 warnings (was 2 / 9), Firefox 0 errors and 1 warning (was 0 / 4). Adding `browser_specific_settings.gecko.id` and a `background.scripts` fallback to the Chrome manifest cleared `BACKGROUND_SERVICE_WORKER_NOFALLBACK` and `ADDON_ID_REQUIRED` without affecting Chrome runtime behaviour. Simplifying the Firefox `getNotificationPermissionLevel` polyfill cleared three `UNSUPPORTED_API` warnings.
 
-A defense-in-depth pass added `isAllowedAudioHost` checks at the entry of `playAudio` in `chrome/offscreen/offscreen.js` and `firefox/background/background.js`. The popup already gates URLs through `ensureAllowedAudioHost` before sending the play message; the new checks make the trust boundary explicit at the receiver and reject any future caller (a content script, a second extension page) that tries to bypass the popup. The inline Arabic hadith path in both popup files now applies the same length cap (4096 chars) and markup rejection that the popup-level safety filter enforces, closing a divergence where a compromised `api.hadith.gading.dev` response could have been rendered unbounded.
+A defense-in-depth pass added `isAllowedAudioHost` checks at the entry of `playAudio` in `chrome/offscreen/offscreen.js` and `firefox/background/background.js`. The popup already gates URLs through `ensureAllowedAudioHost` before sending the play message; the new checks make the trust boundary explicit at the receiver and reject any future caller (a content script, a second extension page) that tries to bypass the popup. The inline Arabic hadith path in both popup files now applies the same length cap (4096 chars) and markup rejection that the popup-level safety filter enforces, closing a divergence where a compromised hadith response could have been rendered unbounded.
 
 A code-hygiene pass deleted the unused `shared/hadith.js` module and dropped three orphan exports (`isFirefox`, `parseReciterKey`, `isCoverageFresh`) that no caller imported. Firefox's French hadith pipeline was rewritten to mirror Chrome's: JSDelivr-pinned editions on the existing CSP allowlist, a 30-entry storage cache, and consistent fallback strings across both builds. A latent Firefox bug was fixed: `getNotificationPermissionLevel` was a Chrome-shaped polyfill that always resolved to `denied` on Firefox because the API does not exist there; dhikr notifications in `notification` mode never fired. The Firefox helper now resolves to `granted` directly since the permission is granted at install time via the manifest. Arabic UI translations were added for 17 error/loading strings that previously fell through to English on the Arabic locale; the dhikr collection itself is unchanged.
 
@@ -112,7 +111,7 @@ A node-based test suite (`npm test`) was added covering the host allowlist, sura
 
 ## Audit items closed in the current release
 
-- JSDelivr response shape validation; URL pinned to a specific commit SHA recorded in `shared/hadith.js`.
+- JSDelivr response shape validation; URL pinned to a specific commit SHA in both popup files.
 - `innerHTML` writes replaced with `textContent` and `replaceChildren` everywhere.
 - `console.warn` and `console.error` silenced in the production gate.
 - Offscreen test buttons and the debug-info div removed.
