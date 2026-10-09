@@ -1,0 +1,34 @@
+/* The reminder window: one dhikr on the same ruled page as the popup. */
+
+.reminder__page {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  max-width: 440px;
+  min-height: 100vh;
+  padding-block: 8px 16px;
+}
+
+.reminder__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-block-end: 1px solid var(--rule-hairline);
+}
+
+.reminder__title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* The dhikr sits in the middle of whatever height the window has. */
+.reminder .leaf--dhikr {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 20px;
+}
