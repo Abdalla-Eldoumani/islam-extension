@@ -81,6 +81,8 @@ npm install
 npm run sync
 ```
 
+Run `git config core.hooksPath .githooks` once to enable the pre-commit sync guard.
+
 The Chrome and Firefox builds share their non-platform code via a `shared/` directory. Edit files there, then run `npm run sync` to copy them into both `chrome/shared/` and `firefox/shared/` before reloading the extension.
 
 ## Documentation
