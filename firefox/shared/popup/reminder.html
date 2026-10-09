@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dhikr reminder</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="reminder.css">
+</head>
+<body class="reminder">
+  <svg class="sprite" aria-hidden="true">
+    <defs>
+      <symbol id="icon-cross" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <line x1="4.5" y1="4.5" x2="11.5" y2="11.5"/>
+        <line x1="11.5" y1="4.5" x2="4.5" y2="11.5"/>
+      </symbol>
+    </defs>
+  </svg>
+  <main class="page reminder__page">
+    <header class="reminder__header">
+      <h1 class="reminder__title" id="reminder-title">Dhikr reminder</h1>
+      <button type="button" class="action action--compact" id="close-button">
+        <svg class="action__icon" width="16" height="16" aria-hidden="true"><use href="#icon-cross"/></svg>
+        <span id="close-label">Close</span>
+      </button>
+    </header>
+    <section class="leaf leaf--dhikr" aria-labelledby="reminder-title">
+      <p class="dhikr__arabic" id="dhikr-arabic" lang="ar" dir="rtl"></p>
+      <p class="dhikr__translit" id="dhikr-translit" lang="ar-Latn" dir="ltr"></p>
+      <p class="dhikr__meaning" id="dhikr-meaning" lang="en" dir="ltr"></p>
+      <p class="dhikr__virtue" id="dhikr-virtue" hidden></p>
+      <p class="source" id="dhikr-source"></p>
+    </section>
+  </main>
+  <script type="module" src="reminder.js"></script>
+</body>
+</html>
