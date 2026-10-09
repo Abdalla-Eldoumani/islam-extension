@@ -1,115 +1,123 @@
 # Qur'an & Sunnah Companion
 
-A browser extension that brings Qur'an recitation, authentic Hadith, and Dhikr reminders to your browser. Available for Chrome (Manifest V3) and Firefox (Manifest V2).
+A browser extension with Qur'an recitation, a hadith from Sahih al-Bukhari or Sahih Muslim each time you open it, and dhikr reminders. The Chrome build uses Manifest V3 and the Firefox build uses Manifest V2.
 
 [Chrome Web Store](https://chromewebstore.google.com/detail/quran-sunnah-companion/okkohadnmodfaienacdlfaledjblcbka?hl=en-US&utm_source=ext_sidebar) | [GitHub](https://github.com/Abdalla-Eldoumani/islam-extension)
 
 ## Features
 
-### Qur'an Recitation
-- 50+ reciters from Quran.com, MP3Quran.net, and Islamic.network with automatic deduplication
-- Inline search to filter reciters by name, bitrate, and style
-- All 114 Surahs with progress bar, seek controls, and autoplay
-- Background playback continues when the popup is closed
+### Qur'an recitation
+- One searchable list of reciters from three catalogues: Quran.com, MP3Quran and Al-Quran Cloud. Duplicates across catalogues are merged; the list had 426 entries on 9 October 2026.
+- Every entry plays whole surahs. A reciter who recorded only part of the Qur'an shows the number of surahs available, and surahs that reciter did not record are skipped.
+- A progress bar with seeking, autoplay of the next surah, and a sleep timer of 15, 30, 45 or 60 minutes.
+- Playback continues after the popup closes, and a paused surah can be resumed after the browser restarts.
 
-### Authentic Hadith
-- 9-book Arabic collection with English and French translations
-- Local cache for instant display
-- New hadith each time you open the popup
+### Hadith
+- A random hadith from Sahih al-Bukhari or Sahih Muslim in the interface language: English, French or Arabic.
+- Each hadith shows its collection and number, for example "Sahih al-Bukhari 6405", linked to its page on sunnah.com.
+- The text comes from the [fawazahmed0/hadith-api](https://github.com/fawazahmed0/hadith-api) dataset at one pinned commit. Up to 30 hadith per language are cached so the next one appears at once.
+- When no hadith can be loaded, the popup shows the shahada, labelled as the shahada.
 
-### Dhikr Reminders
-- 32 authentic adhkar with Arabic, English, and transliteration
-- Reward explanations in English, Arabic, and French
-- Configurable interval (30 seconds to 1 hour) with preset buttons
-- Two reminder styles: system notification or in-extension popup
-- Notifications auto-dismiss after 60 seconds so a forgotten reminder cannot pile up
+### Dhikr
+- 28 adhkar in Arabic, each with a transliteration and an English meaning.
+- Each dhikr names its source: a hadith linked to sunnah.com or verses linked to quran.com.
+- Qur'anic adhkar use the exact verse text from the Quran.com API with the Saheeh International translation. For adhkar taken from hadith, the English line is this project's own rendering of the meaning.
+- A virtue is shown only when its hadith is graded sahih or hasan. Quoted virtues reproduce the English and Arabic of the sunnah.com page.
+- Reminders from every 30 seconds to every hour, as a system notification or a small window. A reminder closes after a minute, or when the next one replaces it.
 
 ### Privacy
-No personal data is collected. No accounts, tracking, or ads. The extension uses storage for preferences, alarms for Dhikr scheduling, and network access for Qur'an audio and Hadith APIs. The Dhikr collection works offline.
+No accounts, analytics, ads or tracking. Preferences and caches stay in the browser's local extension storage. Requests go only to the catalogue, audio and hadith hosts listed in [docs/PRIVACY.md](docs/PRIVACY.md). The adhkar are bundled with the extension and work offline.
 
 ## Installation
 
 ### Chrome Web Store
-Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/quran-sunnah-companion/okkohadnmodfaienacdlfaledjblcbka?hl=en-US&utm_source=ext_sidebar).
+Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/quran-sunnah-companion/okkohadnmodfaienacdlfaledjblcbka?hl=en-US&utm_source=ext_sidebar).
 
-### Manual Installation (Chrome)
-1. Download and extract the [repository ZIP](https://github.com/Abdalla-Eldoumani/islam-extension/archive/refs/heads/main.zip)
-2. Open `chrome://extensions` and enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked** and select the `chrome/` folder from the extracted files
-4. Pin the extension from the puzzle piece icon in the toolbar
+### Chrome, Edge and other Chromium browsers, unpacked
+1. Download and extract the [repository ZIP](https://github.com/Abdalla-Eldoumani/islam-extension/archive/refs/heads/main.zip), or clone the repository.
+2. Open `chrome://extensions` and turn on **Developer mode**.
+3. Click **Load unpacked** and select the `chrome/` folder.
+4. Pin the extension from the puzzle-piece menu in the toolbar.
 
-### Firefox (Permanent)
-1. Download the [repository ZIP](https://github.com/Abdalla-Eldoumani/islam-extension/archive/refs/heads/main.zip) and extract it
-2. Go to `about:addons` > gear icon > **Install Add-on From File** and select `firefox/manifest.json`
-
-### Firefox (Temporary / Development)
-1. Go to `about:debugging` > **This Firefox** > **Load Temporary Add-on**
-2. Select `firefox/manifest.json` from the cloned repository
+### Firefox
+Release versions of Firefox install only add-ons signed by Mozilla. To run the repository version, open `about:debugging`, choose **This Firefox**, click **Load Temporary Add-on** and select `firefox/manifest.json`. The add-on stays loaded until Firefox closes. See [docs/INSTALLATION.md](docs/INSTALLATION.md) for other options.
 
 ## Usage
 
-- **Qur'an**: Pick a Surah and reciter, press Play. Turn on autoplay to advance through Surahs automatically.
-- **Hadith**: Opens with a new hadith each time.
-- **Dhikr**: Toggle reminders on, choose an interval, and allow browser notifications when prompted.
+- **Qur'an**: pick a surah and a reciter, then press Play. Turn on Autoplay to continue with the next surah.
+- **Hadith**: a new hadith appears each time the popup opens. Follow the reference to read it on sunnah.com.
+- **Dhikr**: press Next dhikr to move through the collection. Turn on Reminders, choose an interval and a style, and allow notifications if the browser asks.
 
-## Technical Details
+## Technical details
 
-Built with vanilla JavaScript and CSS (no frameworks). Uses Chrome Extension APIs: Storage, Alarms, Notifications, Offscreen.
+Plain JavaScript and CSS with no build step and no runtime dependencies. The popup, the reminder window and the modules both builds use live in `shared/`, and `npm run sync` copies them into `chrome/shared/` and `firefox/shared/`.
 
-### APIs
-- **Quran.com** -- Surah metadata and primary audio
-- **MP3Quran.net** -- Additional reciters
-- **Islamic.network** -- CDN audio sources
-- **Hadith APIs** -- Arabic collections and English/French translations
+- **Chrome (Manifest V3)**: a service worker handles messages, alarms and autoplay. An offscreen document holds the audio element.
+- **Firefox (Manifest V2)**: a persistent background page holds the audio element and does the same work.
 
-### Browser Support
-- Chrome / Chromium 109+ (Manifest V3)
-- Firefox 109+ (Manifest V2, included in `firefox/`)
-- Microsoft Edge and other Chromium browsers
+### Services used
+- **Quran.com API**: surah names, the Quran.com reciter list and its audio file addresses.
+- **MP3Quran**: a reciter list and its audio servers.
+- **Al-Quran Cloud and the Islamic Network CDN**: audio editions and their whole-surah files.
+- **jsDelivr**: serves the hadith dataset from GitHub at the pinned commit.
 
-### Trilingual Interface
-One-tap language switcher (English / Francais / Arabic) with full RTL support. All UI labels, Surah names, Dhikr rewards, and Hadiths update instantly.
+### Browser support
+- Chrome and other Chromium browsers, version 121 or later.
+- Firefox 109 or later.
+
+### Languages
+English, French and Arabic, chosen from the menu in the header. Arabic turns the whole page right to left. On first use the interface follows the browser language.
 
 ## Contributing
 
-Contributions are welcome. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup, conventions, and how to add a reciter or a language.
+Contributions are welcome. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup, conventions and how to add a reciter catalogue or a language.
 
 ```bash
 git clone https://github.com/Abdalla-Eldoumani/islam-extension.git
 cd islam-extension
-npm install
+npm ci
 npm run sync
+npm test
 ```
 
-Run `git config core.hooksPath .githooks` once to enable the pre-commit sync guard.
-
-The Chrome and Firefox builds share their non-platform code via a `shared/` directory. Edit files there, then run `npm run sync` to copy them into both `chrome/shared/` and `firefox/shared/` before reloading the extension.
+Run `git config core.hooksPath .githooks` once to turn on the pre-commit sync check. Edit files in `shared/`, never in `chrome/shared/` or `firefox/shared/`, then run `npm run sync` before reloading the extension.
 
 ## Documentation
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — message passing, storage schema, the Chrome MV3 + offscreen pattern, the Firefox MV2 background page pattern.
-- [docs/INSTALLATION.md](docs/INSTALLATION.md) — install steps for Chrome, Firefox, Edge, Brave.
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — development workflow, atomic commits, religious-content rules, adding reciters and locales.
-- [docs/I18N.md](docs/I18N.md) — translation tables, RTL handling, the read-only rule for religious text.
-- [docs/PRIVACY.md](docs/PRIVACY.md) — permissions table, what data is stored where, what is sent to which third party.
-- [docs/SECURITY.md](docs/SECURITY.md) — third-party dependencies, vulnerability reporting, the deferred audit items.
-- [docs/MV3_MIGRATION.md](docs/MV3_MIGRATION.md) — the Firefox MV3 path, gated on Mozilla resolving background audio playback.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): layout, message contract, storage keys, and how audio and reminders work in each build.
+- [docs/INSTALLATION.md](docs/INSTALLATION.md): install steps for Chrome, Edge, Brave and Firefox.
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): development workflow, commits, the religious-content rules, adding catalogues and languages.
+- [docs/I18N.md](docs/I18N.md): the string table, right-to-left layout and the read-only rule for religious text.
+- [docs/PRIVACY.md](docs/PRIVACY.md): permissions, what is stored, and what each service receives.
+- [docs/SECURITY.md](docs/SECURITY.md): trust boundaries, the content security policy, and reporting a vulnerability.
+- [docs/MV3_MIGRATION.md](docs/MV3_MIGRATION.md): what a Manifest V3 Firefox build would need.
 
 ## Troubleshooting
 
-- **Audio won't play**: Verify your internet connection, try another reciter, or check that browser audio permissions are enabled.
-- **Notifications not showing**: Allow notifications when prompted and confirm they are enabled in your browser settings.
-- **Extension won't load**: Enable Developer mode and make sure you selected the `chrome/` or `firefox/` folder.
+- **Audio does not play**: check the connection and try another reciter. A reciter who recorded only some surahs cannot play the others.
+- **Notifications do not appear**: allow notifications for the browser in the operating system settings, and for the extension if the browser asks. The small-window style needs no notification permission.
+- **The extension does not load**: turn on Developer mode and select the `chrome/` folder, or `firefox/manifest.json` in Firefox.
 
 ## License
 
-[MIT](LICENSE)
+The code is under the [MIT](LICENSE) licence. The bundled fonts (Amiri, Cormorant Garamond and Plus Jakarta Sans) are under the SIL Open Font License 1.1; the licence texts are in `assets/fonts/` in each build.
 
 ## Acknowledgments
 
-All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the reciters whose recitations make this possible.
+All praise is due to Allah (SWT). Thanks to Quran.com, MP3Quran, Al-Quran Cloud and the Islamic Network, to the maintainers of the hadith-api dataset and sunnah.com, and to the reciters whose recitations make this possible.
 
 ## Changelog
+
+### 2.2.0
+
+- Audio. Al-Quran Cloud reciters now play whole surahs from the Islamic Network CDN; editions the CDN does not hold as whole surahs are no longer listed. Quran.com reciters come from its chapter-reciter list, so the reciter you pick is the one you hear. The first-ayah fallback is gone. MP3Quran reciters with partial recordings show how many surahs they have, and autoplay skips the missing ones. The 128 kbps label, which no provider supplied, is removed.
+- Hadith. Hadith now come only from Sahih al-Bukhari and Sahih Muslim, with the collection and number linked to sunnah.com, in English, French and Arabic. The three unsourced French fallback hadith are removed; when nothing loads, the shahada is shown and labelled as such.
+- Dhikr. Every dhikr names its source with a link. Reward lines are kept only where the hadith is graded sahih or hasan, and several now quote the source instead of paraphrasing it. Qur'anic adhkar use the exact verse text and Saheeh International. Five adhkar without a confirmed source in the wording shown were removed, and 71:28 and 17:24 are now two separate entries.
+- Reminders. The interval and style are kept in storage, every interval runs on browser alarms, and a reminder closes after a minute. The test notification at startup is gone. Notifications and the reminder window follow the interface language.
+- Firefox. Autoplay continues with the popup closed. In both builds a paused surah can be resumed after the browser restarts.
+- Design. One ruled page replaces the stacked cards. Arabic mirrors the layout without special cases, Latin text uses Plus Jakarta Sans, and Arabic is never set in italics. Controls have labels and 44 px targets, focus rings meet contrast, and status messages are announced to screen readers.
+- Removed: the two clear buttons under the sleep timer (the clear buttons inside the pickers remain) and the Continue button (Resume shows the saved time instead).
+- Both builds share one popup, the font licences ship with the fonts, and CI runs the sync check, the tests and both lints on Node 22.
 
 ### 2.1.2
 
@@ -130,7 +138,7 @@ All praise is due to Allah (SWT). Thanks to Quran.com for their API and to the r
 
 ### 2.1.0
 
-- Resume bug fix. Pause, close the popup, reopen later — the play button now correctly shows `Resume` with the saved timestamp on both Chrome and Firefox. Firefox also persists position across full browser restarts.
+- Resume bug fix. Pause, close the popup, reopen later: the play button now correctly shows `Resume` with the saved timestamp on both Chrome and Firefox. Firefox also persists position across full browser restarts.
 - Reciter catalogue expansion. Al-Quran Cloud joins as a fourth provider; the previously hardcoded Islamic.network slug list is dropped. Coverage labels in the picker (`complete`, `limited`, `unknown`) are populated by a daily background HEAD-probe so users can pick reliable reciters confidently.
 - Surah search. The surah picker is now a search-as-you-type input. Type `mulk`, `67`, `Al-Fatihah`, or `الفاتحة` to filter.
 - Continue affordance. When a previous session is detected, a `Continue Surah <name> from M:SS` button appears above the play controls.
