@@ -1,54 +1,53 @@
 # Security
 
-This document describes the third-party dependencies, the trust boundaries, and the open items from the most recent audit.
+This document covers the trust boundaries, the checks on third-party data, the content security policy, and how to report a vulnerability.
 
 ## Reporting a vulnerability
 
-Open a GitHub issue marked `security` or email the maintainer using the address on the Chrome Web Store listing. Please do not file public issues for unpatched vulnerabilities. We will respond within 7 days.
+Email the maintainer at the address on the Chrome Web Store listing, or open a GitHub issue marked `security` for anything already public. Please do not post details of an unpatched vulnerability in a public issue. Expect an answer within 7 days.
 
 ## Threat model
 
-The extension runs in the popup, the background service worker (Chrome) or persistent background page (Firefox), and an offscreen audio host (Chrome only). It has no content scripts, no `<all_urls>` host permission, and no broad DOM access. The attack surface is:
+The extension runs in the popup, the reminder window, a background context (the Chrome service worker or the Firefox background page) and, on Chrome, an offscreen document that holds the audio element. It has no content scripts and no `<all_urls>` access. What it has to treat with care:
 
-- Network responses from the third-party APIs we call.
-- Storage that the user or another extension can write to (other extensions cannot, since each extension has its own storage).
-- The popup's own DOM, where any `innerHTML`-style write would be a risk.
+- Responses from the third-party services it calls.
+- Values read back from its own storage, which earlier versions wrote in other shapes.
+- Its own pages' DOM, where an `innerHTML` write would be a risk.
 
-## Third-party dependencies
+## Third-party services
 
-| Dependency | Purpose | Trust posture |
+| Service | Used for | How its data is treated |
 | --- | --- | --- |
-| `api.quran.com` | Surah metadata and recitations catalogue. | Operated by the Quran.com Foundation. We treat their JSON as untrusted: every URL is validated against the media-host allowlist before reaching the audio element. |
-| `verses.quran.com` | Quran.com audio CDN. | Same. |
-| `www.mp3quran.net`, `*.mp3quran.net` | Reciter catalogue and audio mirrors. | Same. |
-| `cdn.islamic.network` | Audio for Islamic.network reciter slugs. | Same. |
-| `api.alquran.cloud` | Curated audio editions catalogue. The 2.1.0 fourth provider. | Treated as untrusted; we filter responses to `format === 'audio'` and use the returned `identifier` as a slug. The resulting audio URLs still resolve to `cdn.islamic.network` and pass through `ensureAllowedAudioHost`. |
-| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@<sha>` | Arabic, English, and French hadith editions. | JSDelivr serves a specific commit. We pin to `df57907be35291c91ad6a6691180e22ca9920784` (the `1` branch HEAD as of 2026-06-03), hard-coded in the `fetchRandom*Hadith` helpers in both popup files. To bump, look up a newer commit on the upstream repo and update the URL in those helpers and this note. The response is shape-checked before reaching the popup. |
-| `hadeethenc.com` | Hadith fallback. | Treated as untrusted; shape-validated. |
+| `api.quran.com` | Surah names, the Quran.com reciter list, recitation file addresses. | Untrusted. Every file address must pass the media host allowlist before it reaches an audio element. |
+| `www.mp3quran.net` | The MP3Quran reciter list. | Untrusted. Only reciters whose server address is https are listed, and their files must pass the allowlist. |
+| `api.alquran.cloud`, `cdn.islamic.network` | Audio editions and the directory of whole-surah files. | Untrusted. Only editions found in the CDN directory with all 114 files are listed, and the built address must pass the allowlist. |
+| `cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784` | Hadith in English, French and Arabic. | Pinned to one commit so the text cannot change under the extension. Every hadith is checked before it is shown or cached (below). To move the pin, change `HADITH_PIN` in `shared/hadith.js` and this table. |
 
-### Response shape validation
+## Checks on third-party data
 
-The popup rejects any hadith response where:
+### Hadith
 
-- the body field is not a string,
-- the string is empty or longer than 4096 characters,
-- the string contains a `<script`, `<iframe`, `<object`, or `<embed` substring.
+`shared/hadith.js` keeps a hadith only when:
 
-A rejection falls through to the next API in the chain. If every API rejects, the popup shows the per-locale fallback string.
+- the text is a non-empty string of at most 4096 characters,
+- it contains none of `<script`, `<iframe`, `<object` or `<embed` (in any case),
+- the collection is Sahih al-Bukhari or Sahih Muslim, and the number maps to one sunnah.com page.
 
-### Media host allowlist
+A rejected entry is skipped and another is tried, up to eight times. Cached entries are checked again every time they are read. If nothing passes, the popup shows the shahada, labelled as such, and says the hadith could not load.
 
-`shared/audio-urls.js` exports `ensureAllowedAudioHost`. Every URL that becomes the `<audio>` source passes through this check. The allowlist is:
+### Audio addresses
 
-- `verses.quran.com`
-- `cdn.islamic.network`
-- `mirrors.quranicaudio.com`
-- `download.quranicaudio.com`
-- `www.mp3quran.net` plus any subdomain ending in `.mp3quran.net`
+`shared/audio-urls.js` allows only https addresses on `download.quranicaudio.com`, `cdn.islamic.network` or a host ending in `.mp3quran.net`. The popup checks the address before sending it, and the player in the offscreen document or Firefox background page checks it again before setting it as the source. Anything else fails with "Audio source unavailable for this combination", which the popup reports as the reciter being unavailable.
 
-A URL outside the allowlist throws "Audio source unavailable for this combination", which the popup surfaces as a play-failure message.
+### Messages
 
-## CSP
+The popup's commands go to the background with `runtime.sendMessage`, which only the extension's own pages can use. On Chrome, the offscreen document answers only messages marked for it, and the service worker accepts playback reports only from the offscreen document's URL.
+
+### Rendering
+
+All text reaches the DOM through `textContent` and `replaceChildren`. No page uses `innerHTML`, `eval` or inline event handlers.
+
+## Content security policy
 
 Both manifests declare:
 
@@ -56,70 +55,23 @@ Both manifests declare:
 default-src 'self';
 style-src 'self';
 font-src 'self';
-media-src <enumerated audio hosts>;
-connect-src <enumerated API hosts>;
+media-src https://download.quranicaudio.com https://cdn.islamic.network https://*.mp3quran.net;
+connect-src 'self' https://api.quran.com https://api.alquran.cloud https://cdn.islamic.network https://www.mp3quran.net https://cdn.jsdelivr.net;
 object-src 'none';
 ```
 
-No `'unsafe-inline'`, no `'unsafe-eval'`, no `data:` URIs, no `https:` wildcards. Inline scripts are disallowed by Manifest V3 by default; inline styles are disallowed by the CSP above.
+There is no `'unsafe-inline'`, no `'unsafe-eval'` and no `data:` source. Scripts and styles load only from the extension package.
 
-## Subresource Integrity
+## Packaged resources
 
-The extension does not load any subresource over the network at startup. Fonts ship inside the package (`assets/fonts/*.woff2`). Stylesheets and scripts are extension-relative. Therefore SRI is not applicable to the extension itself.
+The fonts (Amiri, Cormorant Garamond and Plus Jakarta Sans, about 315 KB of WOFF2) ship in `assets/fonts/` with their SIL Open Font License texts, so no font service is contacted. Nothing else is loaded from the network at startup, so subresource integrity does not apply. The hadith responses are dynamic; the commit pin and the checks above stand in for it.
 
-For the JSDelivr-hosted hadith content, SRI is impractical because the response is per-hadith and dynamic. We mitigate by shape validation (above) and by pinning to a known commit SHA (recorded in the table above).
+## Development dependencies
 
-## Console output in production
+The only dependency is `web-ext`, used for linting and packaging; nothing from `node_modules` ships in the extension. `package-lock.json` pins the tree, and `overrides` lifts `shell-quote` to a fixed release. `npm audit` still reports `node-forge` (GHSA-86w9-cpqp-85rv) through `web-ext`'s Android debugging dependency: no fixed `node-forge` release exists yet, and the advisory concerns RSA signature verification, which the lint and build commands do not perform.
 
-`ENV_PROD = true` in `chrome/background/background.js`, `firefox/background/background.js`, `chrome/offscreen/offscreen.js`, `chrome/popup/popup.js`, and `firefox/popup/popup.js`. While the gate is true:
+## Known limits
 
-- `console.log`, `console.warn`, and `console.error` are replaced with no-ops.
-- The originals are preserved as `console._log`, `console._warn`, and `console._error` for ad-hoc debugging.
-
-## Audit items deferred
-
-The following items from the last audit are documented rather than fixed in the current release:
-
-- **Permission scope** — every requested permission has a feature-level use. Listed in `PRIVACY.md`. No action.
-- **Request rate-limiting** — rapidly opening and closing the popup fires repeated API requests. Adding deduplication is a behaviour change that needs separate testing.
-- **Storage quota** — `chrome.storage.local` allows 10MB. Realistic usage is well under 1MB.
-- **Firefox MV3 migration** — pending Mozilla's resolution of background audio playback in MV3. Tracked in `MV3_MIGRATION.md`.
-
-## 2.1.0 audit summary
-
-The 2.1.0 release added one third-party host (`api.alquran.cloud`) and one in-extension probe (`shared/reciter-coverage.js`) that issues HEAD requests against the existing media CDNs. We re-swept the codebase for the dangerous DOM-string-write and dynamic-evaluation primitives flagged in the 2.0.0 audit; none have returned. We re-confirmed that the popup's restoration path now reads `audioState` from storage rather than relying on a runtime round-trip, which closes a race condition that was not a vulnerability but did surface as a regression-class bug. Both `web-ext lint` runs are at the same steady state as 2.0.0.
-
-The coverage probe deserves explicit mention: every URL it constructs is checked against `ensureAllowedAudioHost` before any HEAD request is issued. Off-allowlist URLs are dropped without a network call. Probe results are stored under `chrome.storage.local.reciterCoverage` with a 30-day TTL.
-
-## 2.1.1 audit summary
-
-The 2.1.1 release adds no third-party hosts. The popup migrated to `shared/reciter-catalogue.js`, which means the popup and the background service worker (or persistent background page on Firefox) now share a single allowlist enforcement path through `ensureAllowedAudioHost`. The new `shared/combobox.js` module renders option labels via `textContent` and `replaceChildren` only; no `innerHTML` is introduced. The dhikr bracket fix likewise builds DOM nodes with explicit `dir` and `lang` attributes rather than concatenating into a single string. Both `web-ext lint` runs are at the same steady state as 2.1.0.
-
-The combobox normalises a comparison key for filtering (NFKD strip, Arabic tashkeel and tatweel removed, lowercase). The displayed label is never modified, preserving the religious-content-immutable rule for surah names and reciter names alike.
-
-Audio-state restoration polls `chrome.runtime.sendMessage({ action: 'getAudioState' })` with a 1500 ms timeout. The cap prevents a slow or stuck service-worker wakeup from leaving the popup in an indeterminate state; on timeout the popup falls back to `chrome.storage.local.audioState`. No new attack surface: the message contract is unchanged from 2.1.0 and `ensureAllowedAudioHost` still gates every URL the offscreen document loads.
-
-## 2.1.2 audit summary
-
-The 2.1.2 release adds no third-party hosts, no new media or connect sources, no new external scripts, and no new file types. The new playing banner element renders via `textContent` and `replaceChildren`. The two new clear buttons share their click handlers with the existing combobox X icons and add no new code paths into the audio resolver. `web-ext lint --self-hosted` improved on both builds: Chrome 0 errors and 10 warnings (was 2 / 9), Firefox 0 errors and 1 warning (was 0 / 4). Adding `browser_specific_settings.gecko.id` and a `background.scripts` fallback to the Chrome manifest cleared `BACKGROUND_SERVICE_WORKER_NOFALLBACK` and `ADDON_ID_REQUIRED` without affecting Chrome runtime behaviour. Simplifying the Firefox `getNotificationPermissionLevel` polyfill cleared three `UNSUPPORTED_API` warnings.
-
-A defense-in-depth pass added `isAllowedAudioHost` checks at the entry of `playAudio` in `chrome/offscreen/offscreen.js` and `firefox/background/background.js`. The popup already gates URLs through `ensureAllowedAudioHost` before sending the play message; the new checks make the trust boundary explicit at the receiver and reject any future caller (a content script, a second extension page) that tries to bypass the popup. The inline Arabic hadith path in both popup files now applies the same length cap (4096 chars) and markup rejection that the popup-level safety filter enforces, closing a divergence where a compromised hadith response could have been rendered unbounded.
-
-A code-hygiene pass deleted the unused `shared/hadith.js` module and dropped three orphan exports (`isFirefox`, `parseReciterKey`, `isCoverageFresh`) that no caller imported. Firefox's French hadith pipeline was rewritten to mirror Chrome's: JSDelivr-pinned editions on the existing CSP allowlist, a 30-entry storage cache, and consistent fallback strings across both builds. A latent Firefox bug was fixed: `getNotificationPermissionLevel` was a Chrome-shaped polyfill that always resolved to `denied` on Firefox because the API does not exist there; dhikr notifications in `notification` mode never fired. The Firefox helper now resolves to `granted` directly since the permission is granted at install time via the manifest. Arabic UI translations were added for 17 error/loading strings that previously fell through to English on the Arabic locale; the dhikr collection itself is unchanged.
-
-A node-based test suite (`npm test`) was added covering the host allowlist, surah ID wraparound, locale parity for the 2.1.2 keys, placeholder substitution invariants, and reciter coverage TTL. 23 tests pass against the shared modules. The dhikr reward translation map is reported as having a 6-entry gap on the Arabic side (rewards used in `dhikrCollection` that lack `DHIKR_REWARD_AR` entries); these are religious content the maintainer authors and are tracked as a known finding rather than fixed automatically.
-
-## Audit items closed in the current release
-
-- JSDelivr response shape validation; URL pinned to a specific commit SHA in both popup files.
-- `innerHTML` writes replaced with `textContent` and `replaceChildren` everywhere.
-- `console.warn` and `console.error` silenced in the production gate.
-- Offscreen test buttons and the debug-info div removed.
-- Inline `<style>` block in `popup/reminder.html` extracted to `popup/reminder.css`; CSP `style-src` no longer permits `'unsafe-inline'`.
-- Media-host allowlist enforced in `shared/audio-urls.js`.
-- Dhikr reminder interval floor raised from 5s to 30s; notifications auto-dismiss after 60s.
-- Google Fonts CDN dropped; fonts are self-hosted under `assets/fonts/`.
-
-## Self-hosted fonts
-
-WOFF2 files for Cormorant Garamond, Plus Jakarta Sans, and Amiri ship in `chrome/assets/fonts/` and `firefox/assets/fonts/`. The popup loads them via `@font-face` declarations with `font-display: swap`. No third-party font CDN is contacted at runtime. Total font payload is around 315 KB.
+- The hadith and surah-list requests are not rate limited; reopening the popup quickly repeats them.
+- `storage.local` holds well under 1 MB in normal use.
+- The Firefox build stays on Manifest V2 until Firefox can keep extension audio playing under Manifest V3; see `MV3_MIGRATION.md`.
