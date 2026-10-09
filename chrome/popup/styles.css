@@ -509,6 +509,34 @@ body[dir="rtl"] .card__playing-banner {
   text-align: center;
 }
 
+/* Hadith collection-name byline. Muted, smaller than the body; sits below the
+ * hadith text. Hidden via the [hidden] attribute when the edition is unknown. */
+.card__source {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  font-style: italic;
+  color: var(--ink-tertiary);
+}
+
+/* Inline "see full hadith" expand toggle. Text-button styled to inherit the
+ * manuscript palette (gold accent), not a filled control. */
+.card__expand {
+  display: inline;
+  margin-top: var(--space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--gold-deep);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.card__expand:hover {
+  color: var(--gold-primary);
+}
+
 .card__label {
   display: block;
   font-size: var(--text-xs);
@@ -654,5 +682,6 @@ body[dir="rtl"] .card__interval-presets {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
