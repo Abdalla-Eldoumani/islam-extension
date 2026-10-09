@@ -35,8 +35,15 @@ function normaliseForCompare(s) {
     .trim();
 }
 
-function hasArabic(s) {
+// Exported pure detector so callers and tests can reuse the single ARABIC_RANGE
+// without duplicating the unicode range. dir="auto" handles bidi ordering; this
+// gates the lang="ar" font/RTL switch on actual Arabic script.
+export function isArabicText(s) {
   return typeof s === 'string' && ARABIC_RANGE.test(s);
+}
+
+function hasArabic(s) {
+  return isArabicText(s);
 }
 
 function matchesQuery(option, normQuery) {
@@ -85,6 +92,9 @@ export function createCombobox({ inputEl, panelEl, getOptions, onSelect, onClear
       if (hasArabic(option.label)) {
         li.setAttribute('lang', 'ar');
       }
+      // Unconditional: bidi-isolate every option so mixed Latin+Arabic names
+      // shape and order correctly even when lang="ar" is not set.
+      li.setAttribute('dir', 'auto');
       const labelSpan = document.createElement('span');
       labelSpan.className = 'combobox__option__label';
       labelSpan.textContent = option.label;
