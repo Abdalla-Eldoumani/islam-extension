@@ -1,161 +1,149 @@
 # Architecture
 
-The extension is a 380px popup with three independent features (Qur'an audio, Hadith of the day, Dhikr reminders) plus a background script that owns long-running state. Vanilla JavaScript and CSS, no build step, no bundler. Two browser builds share most code via a `shared/` directory.
+The extension is a 360 px popup with three parts (Qur'an audio, a hadith, and the adhkar with their reminders) plus a background context that keeps audio and reminders running when the popup is closed. Plain JavaScript and CSS, no build step, no bundler. Both browser builds load the same popup and modules from `shared/`.
 
 ## Repository layout
 
 ```
-shared/                source of truth for cross-browser logic
-  dhikr.js             adhkar collection, AR/FR reward translations
-  i18n.js              UI string table for en/fr/ar plus t() helper
-  reciter-catalogue.js fetchers for Quran.com / MP3Quran / Islamic.network
-  audio-urls.js        provider-aware surah audio URL resolution
-  hadith.js            hadith fetchers with response-shape validation
-  browser.js           browser/chrome namespace polyfill
+shared/                  source for everything both builds use
+  popup/
+    index.html           the popup
+    popup.js             popup logic: pickers, playback controls, hadith, adhkar
+    dhikr-view.js        renders one dhikr and its source line (popup and reminder window)
+    reminder.html/.js    the small reminder window
+    styles.css           page styles and design tokens
+    reminder.css         reminder window additions
+  audio-player.js        drives an <audio> element: play, pause, resume, seek, state
+  audio-urls.js          surah audio URL for a catalogue entry, media host allowlist
+  browser.js             picks the browser or chrome namespace
+  combobox.js/.css       the searchable surah and reciter pickers
+  dhikr.js               the adhkar with their sources, and the shahada
+  hadith.js              random hadith from the pinned dataset, with a cache
+  i18n.js                UI strings for en, fr and ar
+  playback.js            stored audio state, autoplay, sleep timer
+  reciter-catalogue.js   the merged reciter list from three providers
+  reminders.js           reminder settings, alarms, notification or window
+  sources.js             label and link for a cited hadith or verse
 
 scripts/
-  sync.mjs             copies shared/ into chrome/shared/ and firefox/shared/
-  check-sync.mjs       fails if either copy drifts; runs in pre-commit hook
+  sync.mjs               copies shared/ into chrome/shared/ and firefox/shared/
+  check-sync.mjs         fails when either copy differs from shared/
 
-chrome/                Chrome Manifest V3 build
-  manifest.json        service-worker background, type:module
-  background/
-    background.js      service worker, ES module
-  popup/               UI surface
-  offscreen/           invisible audio host (offscreen document)
-  shared/              copied from /shared via scripts/sync.mjs
+chrome/                  Manifest V3 build
+  background/background.js   service worker (ES module)
+  offscreen/                 offscreen document holding the <audio> element
+  assets/                    icons, fonts and font licences
+  shared/                    copy of shared/
 
-firefox/               Firefox Manifest V2 build
-  manifest.json        page-based persistent background, type:module via HTML
-  background/
-    background.html    one <script type="module" src="background.js">
-    background.js      persistent script, ES module
-  popup/
-  shared/              copied from /shared
+firefox/                 Manifest V2 build
+  background/background.html + background.js   persistent background page
+  assets/                    icons, fonts and font licences
+  shared/                    copy of shared/
 ```
+
+Both manifests point the toolbar popup at `shared/popup/index.html`.
 
 ## Why two builds
 
-Chrome and Firefox have different lifecycles and different APIs for long-lived audio. Chrome MV3 service workers terminate after ~30s of idle, so audio cannot live in the worker. Firefox does not yet have a stable solution for background audio under MV3. Each build uses its platform's working pattern:
+Chrome stops a Manifest V3 service worker after about 30 seconds without events, so the worker cannot hold an audio element. Chrome's answer is the offscreen document. Firefox has no offscreen document, but a Manifest V2 background page can stay loaded (`persistent: true`) and hold the audio element itself.
 
-- **Chrome MV3**: service worker hands audio off to an offscreen document. The offscreen document hosts the `<audio>` element and survives across worker restarts.
-- **Firefox MV2**: persistent background page hosts the `<audio>` element directly. No offscreen document.
+- **Chrome**: the service worker receives the popup's messages and forwards audio commands to the offscreen document, creating it on demand.
+- **Firefox**: the background page owns `new Audio()` and handles everything in one place.
 
-The `shared/` directory holds everything that does not depend on this difference.
-
-## Audio playback flow (Chrome)
-
-```
-popup click  ->  background service worker  ->  offscreen document
-              chrome.runtime.sendMessage      chrome.offscreen.createDocument
-              { action: 'playAudio', ... }   forwards message
-                                              audioPlayer.src = url
-                                              audioPlayer.play()
-                                              writes audioState to storage
-              <-  popup polls every 1s        responds to getAudioState
-```
-
-When a surah ends and autoplay is on, the background script reads the next surah ID and sends a fresh `playAudio` message. The offscreen document handles wraparound (114 -> 1).
-
-### Polling cadence
-
-Three independent timers drive audio state, at different rates:
-
-- **1s** — the popup polls audio state while playing (`progressTrackingInterval`) to update the progress bar and play/pause UI.
-- **2s** — the background audio-monitoring `setInterval` (`background.js`, `}, 2000)`) reads `audioState` and triggers the next surah when the current one ends and autoplay is on.
-- **10s** — the offscreen document throttles `audioState` persistence in its `timeupdate` handler (`offscreen.js`, `now - lastSaveTime > 10000`): frequent enough to lose under 10s on a crash, infrequent enough not to thrash storage.
-
-## Audio playback flow (Firefox)
-
-Same popup -> background message. The background page calls `audioPlayer.play()` directly on a long-lived `<audio>` element. No offscreen document. The `audioState` shape and message contract are identical to Chrome.
-
-## Dhikr notification flow
-
-Interval setting is read from `chrome.storage.local.dhikrSettings`. The background script picks one of two scheduling primitives based on the interval:
-
-- `>= 60s` -> `chrome.alarms.create('dhikr-reminder', { periodInMinutes })`. Alarms wake a terminated service worker.
-- `< 60s` -> recursive `setTimeout`, since `chrome.alarms` does not support sub-minute periods. The timeout chain stops when the user toggles notifications off.
-
-When a reminder fires, the background script reads `dhikrReminderMode`:
-
-- `notification` -> `chrome.notifications.create({ requireInteraction: true, ... })`. Auto-dismissed after 60 seconds via `setTimeout(notifications.clear, 60_000)` so a forgotten reminder cannot pile up.
-- `popup` -> `chrome.windows.create({ url: 'popup/reminder.html', type: 'popup', width: 420, height: 320 })`. The reminder window reads the current dhikr from storage and renders.
+Both use `shared/audio-player.js` for the player, `shared/playback.js` for stored state, autoplay and the sleep timer, and `shared/reminders.js` for reminders.
 
 ## Message contract
 
-All messages between popup, background, and offscreen go through `chrome.runtime.sendMessage`. The contract is defined by `action` strings:
+The popup talks to the background with `runtime.sendMessage`. Every reply has the shape `{ success, ... }`, or `{ success: false, error }`.
 
-| action | from -> to | payload |
+| action | payload | reply |
 | --- | --- | --- |
-| `ping` | popup -> background | none |
-| `playAudio` | popup -> background -> offscreen | `{ audioUrl, suraId, reciterKey }` |
-| `pauseAudio` | popup -> background -> offscreen | none |
-| `resumeAudio` | popup -> background -> offscreen | none |
-| `seekAudio` | popup -> background -> offscreen | `{ time }` |
-| `getAudioState` | popup -> background -> offscreen | none, returns `{ state }` |
-| `startDhikrNotifications` | popup -> background | `{ interval, mode }` (`interval` in seconds) |
-| `stopDhikrNotifications` | popup -> background | none |
-| `updateDhikrInterval` | popup -> background | `{ interval }` (seconds) |
-| `setSleepTimer` | popup -> background | `{ minutes }` (0 cancels) |
-| `showBrowserNotification` | background -> offscreen | `{ title, body, icon }` |
+| `playAudio` | `{ audioUrl, suraId, reciterKey }` | `{ state }` |
+| `pauseAudio` | none; also cancels the sleep timer | `{ state }` |
+| `resumeAudio` | none | `{ state }` |
+| `seekAudio` | `{ time }` in seconds | `{ state }` |
+| `getAudioState` | none | `{ state }`, or the stored state when no player is running |
+| `updateReminders` | `{ settings: { notificationsEnabled, interval, mode } }` | `{ settings }` |
+| `setSleepTimer` | `{ minutes }`: 15, 30, 45 or 60; anything else turns it off | none |
 
-Background returns `true` from `onMessage` to signal an async response.
+`state` is `{ audioUrl, suraId, reciterKey, isPlaying, currentTime, duration, live }`. `live` is true when an audio element holds the track right now.
 
-## Storage schema
+On Chrome the worker forwards audio commands with `target: 'offscreen'`, and the offscreen document answers only messages with that target. The offscreen document reports back with `{ target: 'background', action: 'audioState' | 'audioEnded', state }`; the worker accepts those only from the offscreen document's URL. An offscreen document can use only the runtime API, so the worker writes what it reports to storage.
 
-Everything lives in `chrome.storage.local` (Firefox: `browser.storage.local`). Keys:
+## Audio
 
-| key | shape | lifetime |
+`shared/audio-urls.js` builds the file URL from a catalogue entry:
+
+- **Quran.com** (`qc:<id>`): asks `api.quran.com/api/v4/chapter_recitations/<id>/<surah>` for the file. The ids come from Quran.com's chapter-reciter list, which is the list that endpoint accepts.
+- **MP3Quran** (`mp3:<id>`): the reciter's server plus a three-digit file name, for example `.../114.mp3`.
+- **Al-Quran Cloud** (`islamic:<edition>`): `cdn.islamic.network/quran/audio-surah/<bitrate>/<edition>/<surah>.mp3`.
+
+Every URL must be https on `download.quranicaudio.com`, `cdn.islamic.network` or a `*.mp3quran.net` host before it reaches an audio element. The popup checks it, and the player checks it again.
+
+The player waits up to 15 seconds for the file's metadata, then plays and reports its state. It reports again on pause, when the track ends, and every 10 seconds while playing. The popup polls `getAudioState` once a second while audio plays.
+
+When a track ends with Autoplay on, the background resolves the next surah the same reciter recorded (wrapping from 114 to 1), plays it, and saves it as the selected surah.
+
+## Resume
+
+The background stores every reported state under `audioState`. When no audio element holds a track (Chrome closed the offscreen document, or the browser restarted), `getAudioState` returns that stored state with `isPlaying: false`, and `resumeAudio` starts the stored file again from its saved position.
+
+On open, the popup restores the saved surah and reciter. If audio is live in the background, the popup adopts its surah and reciter instead. The main button shows Pause while the selection is playing, Resume with the saved time when the selection is paused part way, and Play otherwise. When audio plays for a different selection, a banner names it and offers to stop it.
+
+## Reminders
+
+`shared/reminders.js` keeps everything in storage and alarms, so it survives Chrome stopping the service worker.
+
+- `updateReminders` validates the settings (30 to 3600 seconds, mode `notification` or `popup`), stores them under `dhikrSettings`, and creates the `dhikr-reminder` alarm with the interval as its period. A change of mode alone keeps the running alarm, because the mode is read when the alarm fires.
+- When `dhikr-reminder` fires, the background shows a random dhikr as a notification or as a small window (`shared/popup/reminder.html?dhikr=<index>`), records what it showed under `shownReminder`, and sets the one-minute `dhikr-dismiss` alarm. The next reminder replaces the previous one; `dhikr-dismiss` closes it if nothing replaces it.
+- On browser start and on install or update, the background clears any reminder left from the last session and recreates the alarm if reminders are on.
+
+Notification and window text use the language chosen in the popup. Chrome's alarms fire at most every 30 seconds from Chrome 120; Firefox documents no minimum.
+
+## Storage
+
+Everything is in `storage.local`.
+
+| key | shape | written by |
 | --- | --- | --- |
-| `audioState` | `{ audioUrl, suraId, reciterKey, currentTime, duration, isPlaying, timestamp }` | written by the offscreen (Chrome) and the persistent background (Firefox) on play / pause / seek / ended / throttled timeupdate. The popup reads this on open as the primary restoration source. |
-| `userSelections` | `{ suraId, reciterKey, autoplayEnabled, timestamp }` | until manually cleared |
-| `dhikrSettings` | `{ notificationsEnabled, interval, mode, timestamp }` (`interval` in seconds; `mode` is the reminder mode, e.g. `'notification'`; `timestamp` is the save time) | until manually cleared |
-| `currentDhikr` | one entry from `dhikrCollection` | overwritten on each reminder |
-| `reciterCache` | `{ reciters: [...], timestamp }` | refreshed every 6 hours |
-| `reciterCoverage` | `{ timestamp, map: { [reciterId]: 'complete' \| 'limited' } }` | refreshed every 24 hours by the background coverage probe; 30-day TTL when read |
-| `sleepTimer` | `{ minutes: 0 \| 15 \| 30 \| 45 \| 60 }` | persists across sessions; 0 means off |
-| `hadithCacheEn` | array of `{ text, edition }` entries (legacy bare strings tolerated on read) | up to 30 entries, replenished asynchronously |
-| `hadithCacheFr` | array of `{ text, edition }` entries (legacy bare strings tolerated on read) | same |
-| `uiLanguage` | `'en' \| 'fr' \| 'ar'` | until manually cleared |
+| `uiLanguage` | `'en' \| 'fr' \| 'ar'` | popup |
+| `userSelections` | `{ suraId, reciterKey, autoplayEnabled, timestamp }` | popup; autoplay updates `suraId` |
+| `audioState` | `{ audioUrl, suraId, reciterKey, currentTime, duration, isPlaying, timestamp }` | background |
+| `sleepTimer` | `{ minutes }`, 0 when off | background |
+| `dhikrSettings` | `{ notificationsEnabled, interval, mode }` | background |
+| `shownReminder` | `{ notificationId }` or `{ windowId }` | background |
+| `reciterCatalog` | `{ reciters, timestamp }`, reused for 6 hours, never stored empty | popup and background |
+| `hadithCacheEn`, `hadithCacheFr`, `hadithCacheAr` | up to 30 `{ text, collection, number }` | popup |
 
-The 10MB quota is far above realistic usage (well under 1MB even pessimistically).
+Installing or updating removes keys earlier versions used: `currentDhikr`, `reciterCache` and `reciterCoverage`, and the `reciter-coverage-probe` alarm.
 
 ## Reciter catalogue
 
-Four providers feed the catalogue:
+`shared/reciter-catalogue.js` fetches three lists in parallel and keeps whatever succeeds:
 
-- **Quran.com** (`api.quran.com`) — verse-by-verse and chapter recitations.
-- **MP3Quran.net** — additional reciters with their own server URL pattern.
-- **Islamic.network** (`cdn.islamic.network`) — audio CDN; reciters keyed by slug.
-- **Al-Quran Cloud** (`api.alquran.cloud`) — curated audio editions whose `identifier` is an Islamic.network slug. Replaces the hardcoded slug list 2.0.0 carried.
+- **Quran.com** (`api.quran.com/api/qdc/audio/reciters`): the chapter reciters.
+- **MP3Quran** (`www.mp3quran.net/api/_english.json`): reciters on https servers. The `suras` field says which surahs each one recorded; complete reciters store `surahs: null`.
+- **Al-Quran Cloud** (`api.alquran.cloud/v1/edition/format/audio`), filtered by the Islamic Network CDN's directory listing (`cdn.islamic.network/quran/info/by-surah/info.json`): only editions with all 114 whole-surah files are offered, at the highest bitrate listed for them.
 
-Results are deduplicated by `name + style`. The popup caches the deduped list under `reciterCache` for six hours.
+Entries with the same name and style are merged; the merged ids stay in `altIds` so an older saved selection still resolves.
 
-A background coverage probe HEAD-tests four sample surahs (1, 50, 87, 114) per reciter and writes results to `reciterCoverage` with a 30-day TTL. Reciters with at least two passes are `complete`; one or zero passes are `limited`. The picker label surfaces this so users can choose reliable reciters confidently. The probe runs once on install/startup with a 30-second delay, then every 24 hours via `chrome.alarms`. Every probed URL passes through `ensureAllowedAudioHost` before any HEAD request.
+## Hadith
 
-## Resume behaviour
+`shared/hadith.js` picks Sahih al-Bukhari or Sahih Muslim at random, then a random entry number, and fetches it from the fawazahmed0/hadith-api dataset through jsDelivr at a pinned commit, in the edition for the popup's language (`eng-`, `fra-` or `ara-`). It keeps the hadith only when the text passes the safety check and its number maps to one sunnah.com page:
 
-On popup open the popup polls the runtime first (`chrome.runtime.sendMessage({ action: 'getAudioState' })`) with a 1500 ms cap. The offscreen document always sets `audioUrl` on play, so a successful poll is the most up-to-date source of truth. If the runtime times out, rejects, or returns state without `audioUrl` (for example the service worker is asleep or the offscreen was just recreated and is still loading state from storage), the popup falls back to `chrome.storage.local.audioState`. This is the same pattern the v2.0.0 release used; storing-first as the only path was a 2.1.0 regression that hid the playing UI when storage and offscreen disagreed.
+- Bukhari: the dataset's number is sunnah.com's number.
+- Muslim: sunnah.com numbers by the dataset's `arabicnumber`. `408` stays `408`, `2708.01` becomes `2708a`; other decimals and entries without an `arabicnumber` are skipped.
 
-If neither runtime nor storage carries an `audioUrl` but the saved `suraId` and `reciterKey` are present, the popup derives the URL via `shared/audio-urls.js#getSuraAudioUrl` so the resume affordance still has the data it needs.
-
-Resume is offered when the offscreen document (Chrome) or background page (Firefox) holds live or paused audio AND the popup's surah and reciter inputs agree with that audio. When inputs disagree, the popup renders Play; pressing it fetches and plays the new selection and replaces the live audio. The 2.1.1 rule that controls render unconditionally has been narrowed because it caused Resume to fire against stale selections.
-
-When a surah finishes naturally during popup-open polling and autoplay is off, the polling tracker calls `updatePlayButtonUI(false, true, currentTime)` only — the older code that explicitly reset the button label to "Play" and the progress bar to zero was removing the Resume affordance the moment the audio ended. Autoplay-on still resets the controls before transitioning to the next surah.
+Up to eight entries are tried per hadith. The popup shows the next cached hadith and refills the cache in the background.
 
 ## Sync mechanism
 
-`scripts/sync.mjs` walks the repo-root `shared/` and copies every file (excluding Markdown notes and `.DS_Store`) into `chrome/shared/` and `firefox/shared/`. The destination is wiped and rewritten on each run so removed files do not linger.
+`scripts/sync.mjs` copies every file under `shared/` (except Markdown files and `.DS_Store`) into `chrome/shared/` and `firefox/shared/`, wiping each destination first so deleted files do not linger. `scripts/check-sync.mjs` compares SHA-256 hashes and exits non-zero on any difference. The pre-commit hook in `.githooks/` and the CI workflow both run it.
 
-`scripts/check-sync.mjs` hashes both copies and the source. It exits non-zero if any file in the source has no matching hash in either copy or vice versa. Wire it into `.git/hooks/pre-commit` so a contributor cannot commit drift.
+Copies rather than symlinks: symlinks break on Windows without developer mode and do not survive packaging.
 
-Why copies rather than symlinks: symlinks across `chrome/` and `firefox/` break on Windows without dev mode, do not survive zip packaging, and confuse Manifest V3 static analysis.
+## What is not here
 
-## What is not in this architecture
-
-- No build step. Everything ships as written.
-- No transpiler. The minimum Chrome version is 109 and the minimum Firefox version is 109; both support every ES2020+ feature used in the source.
-- No bundler. ES modules resolve relative paths natively.
-- No framework. Vanilla DOM APIs throughout.
-- No analytics, no telemetry, no remote scripts. See `PRIVACY.md`.
-- No request rate-limiting, backoff, or in-flight de-duplication on the hadith and Qur'an-surah fetches. Rapidly reopening the popup can fire repeated requests; the only mitigations are `cache: 'force-cache'` on the hadith fetches and the Al-Quran Cloud surah-list fallback. This is a known limitation, deferred as RESIL-01.
+- No build step, transpiler, bundler or framework. ES modules load by relative path.
+- No analytics, telemetry or remote code. See `PRIVACY.md`.
+- No rate limiting on the hadith and surah-list requests. Reopening the popup quickly repeats them; hadith requests use `cache: 'force-cache'`.
