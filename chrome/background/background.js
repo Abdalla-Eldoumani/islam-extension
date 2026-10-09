@@ -397,7 +397,7 @@ async function showDhikrPopup(dhikr, isTest = false) {
   try {
     await chrome.storage.local.set({ currentDhikr: dhikr });
 
-    await chrome.windows.create({
+    const reminderWindow = await chrome.windows.create({
       url: chrome.runtime.getURL('popup/reminder.html'),
       type: 'popup',
       width: 420,
@@ -405,6 +405,13 @@ async function showDhikrPopup(dhikr, isTest = false) {
       focused: true
     });
     console.log('Background: Dhikr popup window opened');
+    // Auto-dismiss the reminder window after 60 seconds so a forgotten popup
+    // reminder cannot pile up on screen, matching the system-notification path.
+    if (reminderWindow && reminderWindow.id != null) {
+      setTimeout(() => {
+        chrome.windows.remove(reminderWindow.id).catch(() => {});
+      }, 60_000);
+    }
   } catch (err) {
     console.error('Background: Failed to open Dhikr popup window:', err);
   }
@@ -513,21 +520,7 @@ async function showDhikrNotification(isTest = false) {
         console.error('Background: Failed to create popup window:', popupError);
       }
     }
-    
-    if (!chromeNotificationWorked && !isTest) {
-      console.log('Background: Trying audio notification fallback...');
-      try {
-        await createOffscreenDocumentIfNeeded();
-        await chrome.runtime.sendMessage({
-          action: 'playNotificationSound',
-          dhikr: dhikr
-        });
-        console.log('Background: Audio notification sent');
-      } catch (audioError) {
-        console.error('Background: Audio notification failed:', audioError);
-      }
-    }
-    
+
     if (isTest) {
       console.log('Background: Test Dhikr notification completed:', dhikr.arabic);
     } else {
