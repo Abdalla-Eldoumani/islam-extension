@@ -1,5 +1,5 @@
-/* Parchment combobox. Inherits design tokens from chrome/popup/styles.css and
-   firefox/popup/styles.css; the dark-mode :root overrides cascade through. */
+/* Combobox for the surah and reciter pickers. Uses the colour and type
+   tokens from popup/styles.css, so the dark scheme follows automatically. */
 
 .combobox {
   position: relative;
@@ -7,54 +7,56 @@
 }
 
 .combobox__input {
-  padding-inline-end: 32px;
+  padding-inline-end: 44px;
 }
 
 .combobox__clear {
   position: absolute;
-  inset-block: 0;
-  inset-inline-end: 8px;
-  margin-block: auto;
-  width: 22px;
-  height: 22px;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  border: none;
+  border: 0;
   background: transparent;
   color: var(--ink-tertiary);
   cursor: pointer;
   display: none;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
 }
 
 .combobox__clear[data-visible="true"] {
   display: inline-flex;
 }
 
-.combobox__clear:hover,
+.combobox__clear:hover {
+  color: var(--ink-primary);
+}
+
 .combobox__clear:focus-visible {
   color: var(--ink-primary);
-  background: rgba(184, 137, 62, 0.08);
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 
 .combobox__panel {
   position: absolute;
   inset-inline: 0;
-  top: calc(100% + 4px);
+  inset-block-start: calc(100% + 2px);
   z-index: 20;
   margin: 0;
   padding: 4px 0;
   list-style: none;
   background: var(--surface-raised);
   border: 1px solid var(--rule-hairline);
-  border-radius: 4px;
-  box-shadow: var(--shadow-page);
-  max-height: 280px;
+  border-radius: 2px;
+  box-shadow: var(--panel-shadow);
+  max-height: 264px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   color: var(--ink-primary);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 14px;
 }
 
@@ -63,34 +65,43 @@
 }
 
 .combobox__option {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-inline-start: 3px solid transparent;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  justify-content: center;
+  gap: 1px;
+  min-height: 44px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.combobox__option + .combobox__option {
+  border-block-start: 1px solid var(--rule-soft);
 }
 
 .combobox__option:hover,
 .combobox__option[data-highlighted="true"] {
-  background: rgba(184, 137, 62, 0.08);
+  background: var(--wash);
 }
 
-.combobox__option[aria-selected="true"] {
-  border-inline-start-color: var(--gold-primary);
+.combobox__option[aria-selected="true"] .combobox__option__label {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* Options keep dir="auto" so mixed names order themselves; in the Arabic
+   interface they still line up with the right-aligned field. */
+html[dir="rtl"] .combobox__option {
+  text-align: right;
 }
 
 .combobox__option[lang="ar"] {
   font-family: var(--font-arabic);
-  direction: rtl;
-}
-
-.combobox__option__label {
-  color: var(--ink-primary);
+  font-size: 16px;
 }
 
 .combobox__option__secondary {
   color: var(--ink-tertiary);
+  font-family: var(--font-ui);
   font-size: 12px;
 }
 
