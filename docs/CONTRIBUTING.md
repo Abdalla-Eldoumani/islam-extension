@@ -9,7 +9,10 @@ git clone https://github.com/Abdalla-Eldoumani/islam-extension.git
 cd islam-extension
 npm install
 npm run sync
+git config core.hooksPath .githooks
 ```
+
+Run `git config core.hooksPath .githooks` once after cloning. Hooks are not installed automatically. It points git at the committed `.githooks/` directory so `git commit` runs the sync check and rejects a `shared/` that is out of sync with `chrome/shared/` or `firefox/shared/`.
 
 Load `chrome/` as an unpacked extension in `chrome://extensions` and `firefox/manifest.json` as a temporary add-on in `about:debugging`.
 
@@ -94,7 +97,7 @@ If your commit message needs the word "and", split it.
 1. Branch from `main`: `git switch -c short-descriptive-name`.
 2. Commit atomically as you go. Push the branch.
 3. Open a PR. Describe the change in the body, not the title. Link any issue it closes.
-4. The maintainer reviews. CI runs `web-ext lint` against both builds and `npm run check-sync`.
+4. The maintainer reviews. CI runs `npm run check-sync` on push and pull request to reject a drifted `shared/`.
 5. Squash-merge or merge-commit, depending on whether the branch is already atomic. The maintainer decides.
 
 Force-push only on your own feature branch and only when rebasing on `main`. Never force-push to `main` directly.
