@@ -1,55 +1,71 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dhikrCollection, getRandomDhikr, DHIKR_REWARD_AR, DHIKR_REWARD_FR } from '../shared/dhikr.js';
+import { dhikrCollection, randomDhikrIndex, virtueFor, SHAHADA } from '../shared/dhikr.js';
+import { sourceLabel, sourceUrl } from '../shared/sources.js';
 
-test('dhikrCollection is a non-empty array', () => {
-  assert.ok(Array.isArray(dhikrCollection));
-  assert.ok(dhikrCollection.length >= 10, `expected at least 10 dhikr entries, got ${dhikrCollection.length}`);
+// Structure only: these tests never compare or reproduce the religious text.
+
+const COLLECTIONS = ['bukhari', 'muslim', 'abudawud', 'tirmidhi', 'ibnmajah'];
+const nonEmpty = (s) => typeof s === 'string' && s.trim().length > 0;
+
+test('every dhikr has arabic, transliteration and english text', () => {
+  assert.ok(dhikrCollection.length > 0);
+  dhikrCollection.forEach((d, i) => {
+    assert.ok(nonEmpty(d.arabic), `entry ${i} arabic`);
+    assert.ok(nonEmpty(d.transliteration), `entry ${i} transliteration`);
+    assert.ok(nonEmpty(d.english), `entry ${i} english`);
+  });
 });
 
-test('every dhikr entry carries arabic, transliteration, and english fields', () => {
-  for (let i = 0; i < dhikrCollection.length; i++) {
-    const d = dhikrCollection[i];
-    assert.ok(typeof d.arabic === 'string' && d.arabic.length > 0,
-      `entry ${i} missing arabic`);
-    assert.ok(typeof d.transliteration === 'string' && d.transliteration.length > 0,
-      `entry ${i} missing transliteration`);
-    assert.ok(typeof d.english === 'string' && d.english.length > 0,
-      `entry ${i} missing english`);
+test('every dhikr names a hadith or a Qur\'an reference with its translation', () => {
+  dhikrCollection.forEach((d, i) => {
+    const s = d.source;
+    if (s?.quran) {
+      assert.match(s.quran, /^\d{1,3}:\d{1,3}(-\d{1,3})?$/, `entry ${i} quran ref`);
+      assert.equal(s.translation, 'Saheeh International', `entry ${i} translation`);
+    } else {
+      assert.ok(COLLECTIONS.includes(s?.collection), `entry ${i} collection`);
+      assert.match(String(s.number), /^\d+[a-z]?$/, `entry ${i} number`);
+    }
+  });
+});
+
+test('every source renders a label and a quran.com or sunnah.com link', () => {
+  for (const d of dhikrCollection) {
+    for (const lang of ['en', 'fr', 'ar']) assert.ok(nonEmpty(sourceLabel(d.source, lang)));
+    assert.match(sourceUrl(d.source), /^https:\/\/(quran\.com\/\d+\/[\d-]+|sunnah\.com\/[a-z]+:\d+[a-z]?)$/);
   }
 });
 
-test('getRandomDhikr returns a member of the collection', () => {
-  for (let i = 0; i < 50; i++) {
-    const d = getRandomDhikr();
-    assert.ok(dhikrCollection.includes(d), 'getRandomDhikr returned a non-member');
+test('Qur\'an entries carry no virtue line', () => {
+  for (const d of dhikrCollection.filter((x) => x.source.quran)) assert.equal(d.virtue, undefined);
+});
+
+test('every virtue line has English and Arabic text', () => {
+  dhikrCollection.filter((d) => d.virtue).forEach((d) => {
+    assert.ok(nonEmpty(d.virtue.en));
+    assert.ok(nonEmpty(d.virtue.ar));
+    if ('fr' in d.virtue) assert.ok(nonEmpty(d.virtue.fr));
+  });
+});
+
+test('virtueFor picks the UI language and falls back to English', () => {
+  const both = { virtue: { en: 'e', ar: 'a', fr: 'f', quoted: false } };
+  const quoted = { virtue: { en: 'e', ar: 'a', quoted: true } };
+  assert.deepEqual(virtueFor(both, 'ar'), { text: 'a', lang: 'ar', quoted: false });
+  assert.deepEqual(virtueFor(both, 'fr'), { text: 'f', lang: 'fr', quoted: false });
+  assert.deepEqual(virtueFor(quoted, 'fr'), { text: 'e', lang: 'en', quoted: true });
+  assert.deepEqual(virtueFor(quoted, 'en'), { text: 'e', lang: 'en', quoted: true });
+  assert.equal(virtueFor({}, 'en'), null);
+});
+
+test('randomDhikrIndex stays inside the collection', () => {
+  for (let i = 0; i < 200; i++) {
+    const n = randomDhikrIndex();
+    assert.ok(Number.isInteger(n) && n >= 0 && n < dhikrCollection.length);
   }
 });
 
-// The reward translations are religious content authored by the maintainer.
-// The test does not assert full parity (the maintainer adds entries as the
-// dhikr collection grows). It does report the current coverage so future
-// regressions are visible.
-test('reward-translation coverage is reported for visibility', () => {
-  const rewards = new Set(dhikrCollection.map(d => d.reward).filter(Boolean));
-  const missingAr = [];
-  const missingFr = [];
-  for (const r of rewards) {
-    if (!DHIKR_REWARD_AR[r]) missingAr.push(r);
-    if (!DHIKR_REWARD_FR[r]) missingFr.push(r);
-  }
-  // Soft assertion: the test passes but logs gaps so they show up in CI output.
-  if (missingAr.length || missingFr.length) {
-    console.log(`reward-translation coverage gaps — ar: ${missingAr.length}, fr: ${missingFr.length}`);
-    if (missingAr.length) console.log('  ar gaps:', missingAr);
-    if (missingFr.length) console.log('  fr gaps:', missingFr);
-  }
-  // Hard assertion: gaps may not exceed the documented baseline. If the count
-  // grows, a new dhikr entry was added without its reward being translated.
-  const AR_BASELINE = 6;
-  const FR_BASELINE = 0;
-  assert.ok(missingAr.length <= AR_BASELINE,
-    `ar reward coverage regressed: ${missingAr.length} gaps, baseline ${AR_BASELINE}`);
-  assert.ok(missingFr.length <= FR_BASELINE,
-    `fr reward coverage regressed: ${missingFr.length} gaps, baseline ${FR_BASELINE}`);
+test('the shahada fallback has all three languages', () => {
+  for (const lang of ['ar', 'en', 'fr']) assert.ok(nonEmpty(SHAHADA[lang]));
 });
