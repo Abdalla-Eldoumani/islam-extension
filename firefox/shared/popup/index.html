@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qur'an &amp; Sunnah Companion</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../combobox.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true">
+    <defs>
+      <symbol id="icon-play" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+        <polygon points="5.5,3.5 12.5,8 5.5,12.5"/>
+      </symbol>
+      <symbol id="icon-pause" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <line x1="5.5" y1="3.5" x2="5.5" y2="12.5"/>
+        <line x1="10.5" y1="3.5" x2="10.5" y2="12.5"/>
+      </symbol>
+      <symbol id="icon-next" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="8" x2="12.5" y2="8"/>
+        <polyline points="9,4.5 12.5,8 9,11.5"/>
+      </symbol>
+      <symbol id="icon-cross" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <line x1="4.5" y1="4.5" x2="11.5" y2="11.5"/>
+        <line x1="11.5" y1="4.5" x2="4.5" y2="11.5"/>
+      </symbol>
+      <symbol id="icon-stop" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+        <rect x="4.5" y="4.5" width="7" height="7"/>
+      </symbol>
+      <symbol id="rosette" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1">
+        <circle cx="8" cy="8" r="1.5"/>
+        <path d="M8 2 L9.5 6.5 L14 8 L9.5 9.5 L8 14 L6.5 9.5 L2 8 L6.5 6.5 Z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+    <header class="masthead">
+      <div class="masthead__row">
+        <h1 class="masthead__title" id="app-title">Qur'an &amp; Sunnah Companion</h1>
+        <label class="visually-hidden" for="language-select" id="language-label">Language</label>
+        <select id="language-select" class="language-select">
+          <option value="en" lang="en">English</option>
+          <option value="fr" lang="fr">Français</option>
+          <option value="ar" lang="ar" dir="rtl">العربية</option>
+        </select>
+      </div>
+      <div class="ornament" aria-hidden="true">
+        <svg class="ornament__rosette" width="18" height="18"><use href="#rosette"/></svg>
+      </div>
+    </header>
+
+    <section class="leaf" aria-labelledby="quran-title">
+      <h2 class="leaf__title" id="quran-title">Qur'an</h2>
+
+      <div class="field">
+        <label class="field__label" for="sura-input" id="sura-label">Surah</label>
+        <div class="combobox">
+          <input type="text" class="field__input combobox__input" id="sura-input"
+                 autocomplete="off" spellcheck="false" placeholder="Search by name or number">
+          <button type="button" class="combobox__clear" id="clear-sura" aria-label="Clear surah">
+            <svg width="16" height="16" aria-hidden="true"><use href="#icon-cross"/></svg>
+          </button>
+          <ul id="sura-panel" class="combobox__panel" aria-labelledby="sura-label" hidden></ul>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="reciter-input" id="reciter-label">Reciter</label>
+        <div class="combobox">
+          <input type="text" class="field__input combobox__input" id="reciter-input"
+                 autocomplete="off" spellcheck="false" placeholder="Search reciters">
+          <button type="button" class="combobox__clear" id="clear-reciter" aria-label="Clear reciter">
+            <svg width="16" height="16" aria-hidden="true"><use href="#icon-cross"/></svg>
+          </button>
+          <ul id="reciter-panel" class="combobox__panel" aria-labelledby="reciter-label" hidden></ul>
+        </div>
+      </div>
+
+      <div class="playing-banner" id="playing-banner" hidden>
+        <span class="playing-banner__label" id="playing-banner-label"></span>
+        <button type="button" class="action action--compact" id="playing-banner-stop">
+          <svg class="action__icon" width="16" height="16" aria-hidden="true"><use href="#icon-stop"/></svg>
+          <span id="playing-banner-stop-label">Stop playing</span>
+        </button>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="action action--primary" id="play-button" data-action="play" disabled>
+          <span class="action__ring" aria-hidden="true">
+            <svg class="action__icon" width="16" height="16"><use id="play-button-icon" href="#icon-play"/></svg>
+          </span>
+          <span id="play-button-label">Play</span>
+        </button>
+        <button type="button" class="action" id="autoplay-toggle" aria-pressed="false">
+          <svg class="toggle-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5"/>
+            <circle class="toggle-mark__dot" cx="8" cy="8" r="2.5"/>
+          </svg>
+          <span id="autoplay-label">Autoplay</span>
+        </button>
+      </div>
+
+      <div class="progress" id="progress" hidden>
+        <input type="range" id="progress-bar" class="progress__bar" min="0" max="100" value="0" step="0.1"
+               aria-labelledby="progress-label">
+        <div class="progress__times">
+          <span id="progress-label" class="visually-hidden">Playback position</span>
+          <span id="current-time">0:00</span>
+          <span id="total-time">0:00</span>
+        </div>
+      </div>
+
+      <p class="status" id="quran-status" role="status" aria-live="polite"></p>
+
+      <div class="field field--inline">
+        <label class="field__label" for="sleep-timer" id="sleep-timer-label">Sleep timer</label>
+        <select id="sleep-timer" class="field__select">
+          <option value="0">Off</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">60 minutes</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="leaf" aria-labelledby="hadith-title">
+      <h2 class="leaf__title" id="hadith-title">Hadith</h2>
+      <p class="leaf__note" id="hadith-note">From Sahih al-Bukhari and Sahih Muslim</p>
+      <p class="hadith__text" id="hadith-text" dir="auto">Loading…</p>
+      <button type="button" class="link-button" id="hadith-expand" aria-expanded="false" hidden>See full hadith</button>
+      <p class="source" id="hadith-source" hidden></p>
+      <p class="status" id="hadith-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="leaf leaf--dhikr" aria-labelledby="dhikr-title">
+      <h2 class="leaf__title" id="dhikr-title">Dhikr</h2>
+      <p class="dhikr__arabic" id="dhikr-arabic" lang="ar" dir="rtl"></p>
+      <p class="dhikr__translit" id="dhikr-translit" lang="ar-Latn" dir="ltr"></p>
+      <p class="dhikr__meaning" id="dhikr-meaning" lang="en" dir="ltr"></p>
+      <p class="dhikr__virtue" id="dhikr-virtue" hidden></p>
+      <p class="source" id="dhikr-source"></p>
+
+      <div class="actions actions--center">
+        <button type="button" class="action" id="next-dhikr">
+          <svg class="action__icon action__icon--forward" width="16" height="16" aria-hidden="true"><use href="#icon-next"/></svg>
+          <span id="next-dhikr-label">Next dhikr</span>
+        </button>
+        <button type="button" class="action" id="reminders-toggle" aria-pressed="false" aria-controls="reminder-settings">
+          <svg class="toggle-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5"/>
+            <circle class="toggle-mark__dot" cx="8" cy="8" r="2.5"/>
+          </svg>
+          <span id="reminders-label">Reminders</span>
+        </button>
+      </div>
+
+      <div class="reminder-settings" id="reminder-settings" hidden>
+        <div class="field field--inline">
+          <label class="field__label" for="reminder-interval" id="reminder-interval-label">Interval in seconds</label>
+          <input type="number" id="reminder-interval" class="field__input field__input--number"
+                 min="30" max="3600" step="1" value="60" inputmode="numeric" aria-describedby="interval-error">
+        </div>
+        <div class="presets" role="group" aria-labelledby="presets-label">
+          <span class="visually-hidden" id="presets-label">Common intervals</span>
+          <button type="button" class="preset" data-seconds="30" aria-pressed="false">30 s</button>
+          <button type="button" class="preset" data-seconds="60" aria-pressed="false">1 min</button>
+          <button type="button" class="preset" data-seconds="300" aria-pressed="false">5 min</button>
+          <button type="button" class="preset" data-seconds="900" aria-pressed="false">15 min</button>
+        </div>
+        <p class="status status--error" id="interval-error" hidden></p>
+        <div class="field field--inline">
+          <label class="field__label" for="reminder-mode" id="reminder-mode-label">Reminder style</label>
+          <select id="reminder-mode" class="field__select">
+            <option value="notification">Notification</option>
+            <option value="popup">Small window</option>
+          </select>
+        </div>
+      </div>
+      <p class="status" id="reminder-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
