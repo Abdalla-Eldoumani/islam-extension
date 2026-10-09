@@ -10,6 +10,7 @@ import { I18N, LANG_STORAGE_KEY } from '../shared/i18n.js';
 import { getCoverageLabel } from '../shared/reciter-coverage.js';
 import { fetchReciters } from '../shared/reciter-catalogue.js';
 import { createCombobox } from '../shared/combobox.js';
+import { getHadithForLang, truncateHadith } from '../shared/hadith.js';
 
 // Silence verbose logs in production. Flip ENV_PROD to false when debugging.
 if (typeof console !== 'undefined') {
@@ -570,219 +571,112 @@ async function discardPlayingAudio() {
   updatePlayButtonUI(false, canPlay, 0);
 }
 
+// Per-locale rendered-error fallback for the hadith card. These are existing
+// religious strings kept verbatim from the inline original — never edited.
+function hadithErrorText() {
+  if (CURRENT_LANG === 'ar') return 'لَا إِلَٰهَ إِلَّا اللَّهُ';
+  if (CURRENT_LANG === 'fr') return "Il n'y a de divinité qu'Allah";
+  return 'There is no god but Allah';
+}
+
+// Remove the expand toggle if one lingers from a previous load. Keeps a single
+// toggle node across loads so a stale button never accumulates.
+function clearHadithExpand() {
+  const existing = document.getElementById('hadith-expand');
+  if (existing) existing.remove();
+}
+
+// Reset the byline + expand affordance to their empty/hidden baseline. Called
+// on the locale-refresh pass and before each fresh render.
+function resetHadithExtras() {
+  const sourceEl = document.getElementById('hadith-source');
+  if (sourceEl) {
+    sourceEl.textContent = '';
+    sourceEl.hidden = true;
+  }
+  clearHadithExpand();
+}
+
+// Render the collection-name byline. A non-empty source unhides the node with
+// the transliterated name; null keeps it empty and hidden (never a guessed
+// name). Text reaches the DOM only through textContent.
+function renderHadithSource(source) {
+  const sourceEl = document.getElementById('hadith-source');
+  if (!sourceEl) return;
+  if (source && typeof source === 'string') {
+    sourceEl.textContent = source;
+    sourceEl.hidden = false;
+  } else {
+    sourceEl.textContent = '';
+    sourceEl.hidden = true;
+  }
+}
+
+// Build the expand-in-place toggle when the verified text is truncated. Created
+// imperatively via createElement + textContent (no markup strings); on click it
+// swaps #hadith-text between the already-fetched short and full strings and
+// flips the label. The full text is in hand — the toggle only shows more/less
+// of it, never rewrites it.
+function renderHadithExpand(hadithEl, short, full) {
+  clearHadithExpand();
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'hadith-expand';
+  btn.className = 'card__expand';
+  btn.textContent = t('seeFullHadith');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.setAttribute('aria-label', t('seeFullHadith'));
+  btn.addEventListener('click', () => {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    if (expanded) {
+      hadithEl.textContent = short;
+      btn.textContent = t('seeFullHadith');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', t('seeFullHadith'));
+    } else {
+      hadithEl.textContent = full;
+      btn.textContent = t('showLessHadith');
+      btn.setAttribute('aria-expanded', 'true');
+      btn.setAttribute('aria-label', t('showLessHadith'));
+    }
+  });
+  hadithEl.insertAdjacentElement('afterend', btn);
+}
+
+// Generation token guarding loadHadith against overlapping invocations.
+// loadHadith fires on DOMContentLoaded and re-fires from applyLanguage on every
+// locale switch; a rapid switch (en -> fr -> en) can leave two getHadithForLang
+// awaits in flight. Each call captures the current seq, and a resolution whose
+// seq no longer matches the latest token bails before painting, so a slow stale
+// load cannot overwrite the byline/toggle of a newer one.
+let hadithLoadSeq = 0;
+
 async function loadHadith() {
+  const seq = ++hadithLoadSeq;
   const hadithEl = document.getElementById('hadith-text');
+  // Clear any byline/toggle from the previous render before fetching.
+  resetHadithExtras();
   try {
-    if (CURRENT_LANG === 'ar') {
-      // ---------------- Arabic ----------------
-      const hadithTxt = await fetchRandomArabicHadith();
-      // Same safety bounds as shared/hadith.js#isSafeHadithText: cap length and
-      // reject markup-shaped strings before rendering.
-      const safe = typeof hadithTxt === 'string'
-        && hadithTxt.length > 0
-        && hadithTxt.length <= 4096
-        && !/<script|<iframe|<object|<embed/i.test(hadithTxt);
-      hadithEl.textContent = safe ? hadithTxt : 'حدث خطأ فى جلب الحديث';
-    } else if (CURRENT_LANG === 'fr') {
-      // ---------------- French with local cache ----------------
-      const CACHE_KEY = 'hadithCacheFr';
-      const TARGET_CACHE_SIZE = 30;
-
-      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
-      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
-
-      let text = '';
-      if (cacheArr.length > 0) {
-        text = cacheArr.shift();
-        // save trimmed cache back but don't await to prevent UI delay
-        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
-      }
-
-      if (!text) {
-        text = await fetchRandomFrenchHadith();
-      }
-
-      // Top-up the cache asynchronously if it's below threshold
-      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
-        (async () => {
-          try {
-            const needed = TARGET_CACHE_SIZE - cacheArr.length;
-            const newOnes = [];
-            for (let i = 0; i < needed; i++) {
-              const h = await fetchRandomFrenchHadith();
-              if (h) newOnes.push(h);
-            }
-            const updated = cacheArr.concat(newOnes);
-            await chrome.storage.local.set({ [CACHE_KEY]: updated });
-          } catch (err) {
-            console.warn('Failed to refill French hadith cache:', err);
-          }
-        })();
-      }
-
-      hadithEl.textContent = text || 'Erreur lors du chargement du Hadith.';
-    } else {
-      // ---------------- English with local cache ----------------
-      const CACHE_KEY = 'hadithCacheEn';
-      const TARGET_CACHE_SIZE = 30;
-
-      let { [CACHE_KEY]: cacheArr } = await chrome.storage.local.get(CACHE_KEY);
-      cacheArr = Array.isArray(cacheArr) ? cacheArr : [];
-
-      let text = '';
-      if (cacheArr.length > 0) {
-        text = cacheArr.shift();
-        // save trimmed cache back but don't await to prevent UI delay
-        chrome.storage.local.set({ [CACHE_KEY]: cacheArr }).catch(console.error);
-      }
-
-      if (!text) {
-        text = await fetchRandomEnglishHadith();
-      }
-
-      // Top-up the cache asynchronously if it's below threshold
-      if (cacheArr.length < TARGET_CACHE_SIZE - 5) {
-        (async () => {
-          try {
-            const needed = TARGET_CACHE_SIZE - cacheArr.length;
-            const newOnes = [];
-            for (let i = 0; i < needed; i++) {
-              const h = await fetchRandomEnglishHadith();
-              if (h) newOnes.push(h);
-            }
-            const updated = cacheArr.concat(newOnes);
-            await chrome.storage.local.set({ [CACHE_KEY]: updated });
-          } catch (err) {
-            console.warn('Failed to refill hadith cache:', err);
-          }
-        })();
-      }
-
-      hadithEl.textContent = text || 'Error loading Hadith.';
+    const { text, source } = await getHadithForLang(CURRENT_LANG);
+    if (seq !== hadithLoadSeq) return; // a newer load superseded this one
+    if (!text) {
+      // Module returned empty text (every fetch attempt failed): render the
+      // localized fallback string and leave the byline/toggle hidden.
+      hadithEl.textContent = hadithErrorText();
+      return;
     }
+    const { truncated, short, full } = truncateHadith(text);
+    hadithEl.textContent = truncated ? short : full;
+    if (truncated) {
+      renderHadithExpand(hadithEl, short, full);
+    }
+    renderHadithSource(source);
   } catch (error) {
+    if (seq !== hadithLoadSeq) return; // a newer load superseded this one
     console.error('Failed to load Hadith:', error);
-    if (CURRENT_LANG === 'ar') {
-      hadithEl.textContent = 'لَا إِلَٰهَ إِلَّا اللَّهُ';
-    } else if (CURRENT_LANG === 'fr') {
-      hadithEl.textContent = "Il n'y a de divinité qu'Allah";
-    } else {
-      hadithEl.textContent = 'There is no god but Allah';
-    }
+    hadithEl.textContent = hadithErrorText();
+    resetHadithExtras();
   }
-}
-
-// Helper function to fetch a random Arabic hadith
-async function fetchRandomArabicHadith() {
-  const AR_EDITIONS = [
-    { edition: 'ara-bukhari', count: 6638 },
-    { edition: 'ara-muslim', count: 4930 },
-    { edition: 'ara-abudawud', count: 4419 },
-    { edition: 'ara-nasai', count: 5364 },
-    { edition: 'ara-ibnmajah', count: 4285 },
-    { edition: 'ara-tirmidhi', count: 3625 },
-    { edition: 'ara-malik', count: 1587 }
-  ];
-
-  for (let i = 0; i < 6; i++) {
-    const pick = AR_EDITIONS[Math.floor(Math.random() * AR_EDITIONS.length)];
-    const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
-    try {
-      const res = await fetch(url, { cache: 'force-cache' });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.hadiths?.[0]?.text;
-        if (text) return text;
-      }
-    } catch (_) {}
-  }
-
-  return '';
-}
-
-// Helper function to fetch a random English hadith
-async function fetchRandomEnglishHadith() {
-  const EN_EDITIONS = [
-    { edition: 'eng-bukhari', count: 6638 },
-    { edition: 'eng-muslim', count: 4930 },
-    { edition: 'eng-abudawud', count: 4419 },
-    { edition: 'eng-nasai', count: 5364 },
-    { edition: 'eng-ibnmajah', count: 4285 },
-    { edition: 'eng-tirmidhi', count: 3625 },
-    { edition: 'eng-malik', count: 1587 }
-  ];
-
-  for (let i = 0; i < 6; i++) {
-    const pick = EN_EDITIONS[Math.floor(Math.random() * EN_EDITIONS.length)];
-    const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
-    try {
-      const res = await fetch(url, { cache: 'force-cache' });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.hadiths?.[0]?.text;
-        if (text) return text;
-      }
-    } catch (_) {}
-  }
-
-  for (let j = 0; j < 20; j++) {
-    const randomId = Math.floor(Math.random() * 5000) + 1;
-    try {
-      const res = await fetch(`https://hadeethenc.com/api/v1/hadeeths/one/?language=en&id=${randomId}`);
-      if (res.ok) {
-        const data = await res.json();
-        const txt = data?.hadeeth || data?.title;
-        if (txt) return txt;
-      }
-    } catch (_) {}
-  }
-
-  return '';
-}
-
-// Helper function to fetch a random French hadith
-async function fetchRandomFrenchHadith() {
-  const FR_EDITIONS = [
-    { edition: 'fra-bukhari', count: 7008 },
-    { edition: 'fra-muslim', count: 5362 },
-    { edition: 'fra-abudawud', count: 4590 },
-    { edition: 'fra-nasai', count: 5662 },
-    { edition: 'fra-ibnmajah', count: 4339 },
-    { edition: 'fra-malik', count: 1594 },
-    { edition: 'fra-nawawi', count: 42 },
-    { edition: 'fra-qudsi', count: 40 },
-    { edition: 'fra-dehlawi', count: 40 }
-  ];
-
-  for (let i = 0; i < 6; i++) {
-    const pick = FR_EDITIONS[Math.floor(Math.random() * FR_EDITIONS.length)];
-    const num = Math.floor(Math.random() * pick.count) + 1;
-    const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@df57907be35291c91ad6a6691180e22ca9920784/editions/${pick.edition}/${num}.min.json`;
-    try {
-      const res = await fetch(url, { cache: 'force-cache' });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.hadiths?.[0]?.text || data.hadith?.french || data.french;
-        if (text && text.trim()) {
-          // Clean up the text a bit if needed
-          return text.length > 500 ? text.substring(0, 497) + '...' : text;
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to fetch French hadith:', err);
-    }
-  }
-
-  // Fallback to a default French hadith if APIs fail
-  const fallbackHadiths = [
-    "Rapporté par 'Umar ibn Al-Khattab : J'ai entendu le Messager d'Allah (ﷺ) dire : « Les actions ne valent que par les intentions, et chacun n'obtient que ce qu'il a eu l'intention de faire... »",
-    "Rapporté par 'A'ishah : Le Prophète (ﷺ) a dit : « Celui qui innove dans notre religion une chose qui n'en fait pas partie, cette chose sera rejetée. »",
-    "Rapporté par Abu Hurairah : Le Messager d'Allah (ﷺ) a dit : « Un croyant fort est meilleur et plus aimé d'Allah qu'un croyant faible, bien qu'il y ait du bien dans les deux... »"
-  ];
-
-  return fallbackHadiths[Math.floor(Math.random() * fallbackHadiths.length)];
 }
 
 
@@ -1224,6 +1118,7 @@ function updateAutoplayButton(isEnabled) {
   autoplayButton.dataset.autoplay = isEnabled.toString();
   autoplayButton.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
   setIconLabel(autoplayButton, 'cycle-arrow', isEnabled ? t('autoplayOn') : t('autoplayOff'));
+  autoplayButton.setAttribute('aria-label', isEnabled ? t('autoplayOn') : t('autoplayOff'));
 }
 
 function getNextSuraId(currentSuraId) {
@@ -1253,6 +1148,7 @@ async function playNextSura() {
 
   updatePlayButtonUI(false, true, 0);
   setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
+  document.getElementById('play-quran').setAttribute('aria-label', t('play'));
   document.getElementById('play-quran').dataset.action = 'play';
   renderPlayingBanner();
 
@@ -1294,6 +1190,7 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
     playButton.classList.remove('hidden');
     playButton.disabled = true;
     setIconLabel(playButton, 'play-triangle', t('playing'));
+    playButton.setAttribute('aria-label', t('playing'));
     playButton.dataset.action = '';
     pauseButton.classList.remove('hidden');
     setIconLabel(pauseButton, 'pause-bars', t('pause'));
@@ -1304,9 +1201,11 @@ function updatePlayButtonUI(isPlaying, isEnabled, currentTime = 0) {
     playButton.disabled = !isEnabled && !showResume;
     if (showResume) {
       setIconLabel(playButton, 'play-triangle', `${t('resume')} (${formatTime(progress)})`);
+      playButton.setAttribute('aria-label', `${t('resume')} (${formatTime(progress)})`);
       playButton.dataset.action = 'resume';
     } else {
       setIconLabel(playButton, 'play-triangle', t('play'));
+      playButton.setAttribute('aria-label', t('play'));
       playButton.dataset.action = 'play';
     }
     pauseButton.classList.add('hidden');
@@ -1358,6 +1257,7 @@ function startProgressTracking() {
             // Reset UI to fresh state before autoplay
             updatePlayButtonUI(false, true, 0);
             setIconLabel(document.getElementById('play-quran'), 'play-triangle', t('play'));
+            document.getElementById('play-quran').setAttribute('aria-label', t('play'));
             document.getElementById('play-quran').dataset.action = 'play';
             document.getElementById('progress-bar').value = 0;
             document.getElementById('current-time').textContent = formatTime(0);
@@ -1500,7 +1400,8 @@ async function toggleDhikrNotifications() {
     button.dataset.enabled = newState.toString();
     button.setAttribute('aria-pressed', newState ? 'true' : 'false');
     setIconLabel(button, 'bell-line', newState ? t('notificationsOn') : t('notificationsOff'));
-    
+    button.setAttribute('aria-label', newState ? t('notificationsOn') : t('notificationsOff'));
+
     await saveDhikrSettings();
     
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -1568,9 +1469,9 @@ function validateInterval() {
   const validationMessage = document.getElementById('interval-validation');
   const value = parseInt(input.value);
   
-  if (isNaN(value) || value < 5 || value > 3600) {
-    input.setCustomValidity('Interval must be between 5 seconds and 1 hour (3600 seconds)');
-    validationMessage.textContent = 'Please enter a valid interval between 5 seconds and 1 hour';
+  if (isNaN(value) || value < 30 || value > 3600) {
+    input.setCustomValidity('Interval must be between 30 seconds and 1 hour (3600 seconds)');
+    validationMessage.textContent = 'Please enter a valid interval between 30 seconds and 1 hour';
     validationMessage.classList.remove('hidden');
     return false;
   } else {
@@ -1673,23 +1574,34 @@ function applyLanguage() {
   }
 
   const playBtn = document.getElementById('play-quran');
-  if (playBtn && playBtn.dataset.action === 'play') setIconLabel(playBtn, 'play-triangle', t('play'));
+  if (playBtn && playBtn.dataset.action === 'play') {
+    setIconLabel(playBtn, 'play-triangle', t('play'));
+    playBtn.setAttribute('aria-label', t('play'));
+  }
 
   const pauseBtn = document.getElementById('pause-quran');
-  if (pauseBtn) setIconLabel(pauseBtn, 'pause-bars', t('pause'));
+  if (pauseBtn) {
+    setIconLabel(pauseBtn, 'pause-bars', t('pause'));
+    pauseBtn.setAttribute('aria-label', t('pause'));
+  }
 
   const autoplayBtn = document.getElementById('autoplay-toggle');
   if (autoplayBtn) {
     const on = autoplayBtn.dataset.autoplay === 'true';
     setIconLabel(autoplayBtn, 'cycle-arrow', on ? t('autoplayOn') : t('autoplayOff'));
+    autoplayBtn.setAttribute('aria-label', on ? t('autoplayOn') : t('autoplayOff'));
   }
 
   const nextDhikrBtn = document.getElementById('next-dhikr');
-  if (nextDhikrBtn) setIconLabel(nextDhikrBtn, 'next-arrow', t('nextDhikr'));
+  if (nextDhikrBtn) {
+    setIconLabel(nextDhikrBtn, 'next-arrow', t('nextDhikr'));
+    nextDhikrBtn.setAttribute('aria-label', t('nextDhikr'));
+  }
   const notifBtn = document.getElementById('toggle-notifications');
   if (notifBtn) {
     const en = notifBtn.dataset.enabled === 'true';
     setIconLabel(notifBtn, 'bell-line', en ? t('notificationsOn') : t('notificationsOff'));
+    notifBtn.setAttribute('aria-label', en ? t('notificationsOn') : t('notificationsOff'));
   }
 
   const loadingEl = document.getElementById('quran-loading');
@@ -1734,27 +1646,11 @@ function applyLanguage() {
   const playingBannerDiscard = document.getElementById('playing-banner-discard');
   if (playingBannerDiscard) playingBannerDiscard.setAttribute('aria-label', t('stopPlaying'));
 
-  const currentTimeEl = document.getElementById('current-time');
-  if (currentTimeEl) currentTimeEl.textContent = t('currentTime');
-  
-  const totalTimeEl = document.getElementById('total-time');
-  if (totalTimeEl) totalTimeEl.textContent = t('totalTime');
-  
-  const hadithTextEl = document.getElementById('hadith-text');
-  if (hadithTextEl) hadithTextEl.textContent = t('hadithText');
-
-  const dhikrTextEl = document.getElementById('dhikr-text');
-  if (dhikrTextEl) dhikrTextEl.textContent = t('dhikrText');
-
-  const intervalValidationEl = document.getElementById('interval-validation');
-  if (intervalValidationEl) intervalValidationEl.textContent = t('intervalValidation');
-
-  const notificationMessageEl = document.getElementById('notification-message');
-  if (notificationMessageEl) notificationMessageEl.textContent = t('notificationMessage');
-
-
   const hadithEl = document.getElementById('hadith-text');
   if (hadithEl) hadithEl.textContent = t('loading');
+  // Drop any stale byline/expand toggle from the previous locale; the re-fired
+  // loadHadith() re-renders both with the new locale's labels.
+  resetHadithExtras();
 
   displayCurrentDhikr();
   loadHadith();
