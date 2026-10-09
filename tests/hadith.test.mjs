@@ -1,12 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  truncateHadith,
-  isUsableHadithEntry,
-  sourceNameForEdition,
-  isSafeHadithText,
-  HADITH_SOURCE_NAMES
-} from '../shared/hadith.js';
+import { truncateHadith, isSafeHadithText, sunnahNumber, isUsableHadith } from '../shared/hadith.js';
 
 // Religious-content test discipline: every fixture here is synthetic
 // non-religious filler. No real hadith wording is reproduced. The helpers
@@ -71,55 +65,39 @@ test('truncateHadith returns the not-truncated shape for non-string input', () =
   }
 });
 
-test('isUsableHadithEntry accepts a non-empty legacy bare string', () => {
-  assert.equal(isUsableHadithEntry('non-empty'), true);
+test('sunnahNumber keeps Bukhari numbering as the dataset gives it', () => {
+  assert.equal(sunnahNumber('bukhari', { hadithnumber: 6405 }), '6405');
+  assert.equal(sunnahNumber('bukhari', { hadithnumber: 12.5 }), null);
+  assert.equal(sunnahNumber('bukhari', {}), null);
 });
 
-test('isUsableHadithEntry accepts an object with a non-empty text field', () => {
-  assert.equal(isUsableHadithEntry({ text: 'non-empty' }), true);
+test('sunnahNumber maps Muslim to the arabicnumber, with .01 as the a suffix', () => {
+  assert.equal(sunnahNumber('muslim', { hadithnumber: 1, arabicnumber: 8 }), '8');
+  assert.equal(sunnahNumber('muslim', { arabicnumber: 2708.01 }), '2708a');
+  assert.equal(sunnahNumber('muslim', { arabicnumber: '2721.01' }), '2721a');
 });
 
-test('isUsableHadithEntry rejects corrupt / empty shapes', () => {
-  assert.equal(isUsableHadithEntry({}), false);
-  assert.equal(isUsableHadithEntry({ text: '' }), false);
-  assert.equal(isUsableHadithEntry({ text: '   ' }), false);
-  assert.equal(isUsableHadithEntry({ text: 123 }), false);
-  assert.equal(isUsableHadithEntry(''), false);
-  assert.equal(isUsableHadithEntry('   '), false);
-  assert.equal(isUsableHadithEntry(null), false);
-  assert.equal(isUsableHadithEntry(undefined), false);
+test('sunnahNumber skips Muslim entries it cannot map to one sunnah.com page', () => {
+  assert.equal(sunnahNumber('muslim', { arabicnumber: 2708.02 }), null);
+  assert.equal(sunnahNumber('muslim', {}), null);
+  assert.equal(sunnahNumber('muslim', null), null);
+  assert.equal(sunnahNumber('nasai', { hadithnumber: 1 }), null);
 });
 
-test('sourceNameForEdition resolves the same name across en/fr/ar prefixes', () => {
-  const en = sourceNameForEdition('eng-bukhari');
-  const ar = sourceNameForEdition('ara-bukhari');
-  const fr = sourceNameForEdition('fra-bukhari');
-  assert.equal(en, ar);
-  assert.equal(ar, fr);
-  assert.ok(typeof en === 'string' && en.length > 0);
+test('isUsableHadith accepts the cached shape', () => {
+  assert.equal(isUsableHadith({ text: 'synthetic filler', collection: 'bukhari', number: '1' }), true);
+  assert.equal(isUsableHadith({ text: 'synthetic filler', collection: 'muslim', number: '2708a' }), true);
 });
 
-test('sourceNameForEdition covers every edition the fetchers select', () => {
-  const suffixes = [
-    'bukhari', 'muslim', 'abudawud', 'nasai', 'ibnmajah',
-    'tirmidhi', 'malik', 'nawawi', 'qudsi', 'dehlawi'
-  ];
-  for (const suffix of suffixes) {
-    assert.ok(
-      sourceNameForEdition('eng-' + suffix),
-      `expected a collection name for ${suffix}`
-    );
-  }
-  // The map covers exactly those ten editions, no more.
-  assert.equal(Object.keys(HADITH_SOURCE_NAMES).length, suffixes.length);
-});
-
-test('sourceNameForEdition returns null for an unknown / empty / null slug', () => {
-  assert.equal(sourceNameForEdition('eng-unknownbook'), null);
-  assert.equal(sourceNameForEdition('unknownbook'), null);
-  assert.equal(sourceNameForEdition(''), null);
-  assert.equal(sourceNameForEdition(null), null);
-  assert.equal(sourceNameForEdition(undefined), null);
+test('isUsableHadith rejects other collections, bad numbers and unsafe text', () => {
+  const ok = { text: 'synthetic filler', collection: 'bukhari', number: '1' };
+  assert.equal(isUsableHadith({ ...ok, collection: 'tirmidhi' }), false);
+  assert.equal(isUsableHadith({ ...ok, number: null }), false);
+  assert.equal(isUsableHadith({ ...ok, number: '12.3' }), false);
+  assert.equal(isUsableHadith({ ...ok, text: '   ' }), false);
+  assert.equal(isUsableHadith({ ...ok, text: '<script>x</script>' }), false);
+  assert.equal(isUsableHadith('synthetic filler'), false);
+  assert.equal(isUsableHadith(null), false);
 });
 
 test('isSafeHadithText rejects markup-shaped strings (case-insensitive)', () => {
