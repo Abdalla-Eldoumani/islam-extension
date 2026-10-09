@@ -1,272 +1,262 @@
-// Adhkar collection. Religious content. Copied from the canonical Chrome popup
-// list per maintainer decision; do not paraphrase, expand, or retranslate.
-// Edit only with maintainer review against an authoritative source.
+// Adhkar shown in the popup and in reminders. Religious content: do not
+// paraphrase, retranslate or retype any of it.
+//
+// Qur'an entries are copied byte for byte from api.quran.com (Imlaei text)
+// with the Saheeh International English. Hadith entries carry the wording of
+// the sunnah.com hadith they name, in this file's own spelling conventions;
+// for the takbir and the salawat the named hadith is the one giving the
+// virtue. A quoted virtue is copied byte for byte from that sunnah.com page,
+// English and Arabic. virtue.fr exists only where the French line matches
+// the source; otherwise the English line is shown.
 
 export const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
-    english: 'Glory be to Allah',
     transliteration: 'Subhan Allah',
-    reward: 'Each recitation equals a tree planted in Paradise'
+    english: 'Glory be to Allah',
+    source: { collection: 'muslim', number: '223' }
   },
   {
     arabic: 'الْحَمْدُ لِلَّهِ',
-    english: 'Praise be to Allah',
     transliteration: 'Alhamdulillah',
-    reward: 'Fills the scales of good deeds'
+    english: 'Praise be to Allah',
+    source: { collection: 'muslim', number: '223' },
+    virtue: {
+      en: 'al-Hamdu Lillah (all praise and gratitude is for Allah alone) fills the scale',
+      ar: 'الْحَمْدُ لِلَّهِ تَمْلأُ الْمِيزَانَ',
+      quoted: true
+    }
   },
   {
     arabic: 'اللَّهُ أَكْبَرُ',
-    english: 'Allah is the Greatest',
     transliteration: 'Allahu Akbar',
-    reward: 'Fills what is between heaven and earth'
+    english: 'Allah is the Greatest',
+    source: { collection: 'tirmidhi', number: '3519' },
+    virtue: {
+      en: 'Fills what is between heaven and earth',
+      ar: 'تملأ ما بين السماء والأرض',
+      fr: 'Remplit ce qui se trouve entre le ciel et la terre'
+    }
   },
   {
     arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
-    english: 'There is no god but Allah',
     transliteration: 'La ilaha illa Allah',
-    reward: 'The best of remembrance, heaviest on the scales'
+    english: 'There is no god but Allah',
+    source: { collection: 'tirmidhi', number: '3383' },
+    virtue: {
+      en: 'The best remembrance is: ‘there is none worthy of worship except Allah (Lā ilāha illallāh)’',
+      ar: 'أَفْضَلُ الذِّكْرِ لاَ إِلَهَ إِلاَّ اللَّهُ',
+      quoted: true
+    }
   },
   {
     arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
-    english: 'Glory be to Allah and praise be to Him',
     transliteration: 'Subhan Allahi wa bihamdihi',
-    reward: '100 sins erased, even if like foam on the sea'
+    english: 'Glory be to Allah and praise be to Him',
+    source: { collection: 'bukhari', number: '6405' },
+    virtue: {
+      en: 'Whoever says, \'Subhan Allah wa bihamdihi,\' one hundred times a day, will be forgiven all his sins even if they were as much as the foam of the sea.',
+      ar: 'مَنْ قَالَ سُبْحَانَ اللَّهِ وَبِحَمْدِهِ‏.‏ فِي يَوْمٍ مِائَةَ مَرَّةٍ حُطَّتْ خَطَايَاهُ، وَإِنْ كَانَتْ مِثْلَ زَبَدِ الْبَحْرِ',
+      quoted: true
+    }
   },
   {
     arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ',
-    english: 'Glory be to Allah the Magnificent and praise be to Him',
     transliteration: 'Subhan Allahil-Azeem wa bihamdihi',
-    reward: 'Beloved to Allah, light on the tongue, heavy on the scales'
+    english: 'Glory be to Allah the Magnificent and praise be to Him',
+    source: { collection: 'tirmidhi', number: '3464' }
   },
   {
     arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
-    english: 'There is no power except with Allah',
     transliteration: 'La hawla wa la quwwata illa billah',
-    reward: 'A treasure from the treasures of Paradise'
+    english: 'There is no power except with Allah',
+    source: { collection: 'bukhari', number: '6384' },
+    virtue: {
+      en: 'A treasure from the treasures of Paradise',
+      ar: 'كنز من كنوز الجنة',
+      fr: 'Un trésor parmi les trésors du Paradis'
+    }
   },
   {
     arabic: 'أَسْتَغْفِرُ اللَّهَ',
-    english: 'I seek forgiveness from Allah',
     transliteration: 'Astaghfirullah',
-    reward: 'Opens doors of mercy and provision'
+    english: 'I seek forgiveness from Allah',
+    source: { collection: 'muslim', number: '591' }
   },
   {
     arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ',
-    english: 'O Allah, send blessings upon Muhammad',
     transliteration: 'Allahumma salli ala Muhammad',
-    reward: 'Allah sends 10 blessings for each one sent'
+    english: 'O Allah, send blessings upon Muhammad ﷺ',
+    source: { collection: 'muslim', number: '408' },
+    virtue: {
+      en: 'Allah sends 10 blessings for each one sent',
+      ar: 'يُصلي الله عليه عشرًا بكل صلاة',
+      fr: 'Allah envoie 10 bénédictions pour chacune envoyée'
+    }
   },
   {
     arabic: 'رَبِّ اغْفِرْ لِي',
-    english: 'My Lord, forgive me',
     transliteration: 'Rabbighfir li',
-    reward: 'Direct supplication for forgiveness'
+    english: 'My Lord, forgive me',
+    source: { collection: 'abudawud', number: '874' }
   },
   {
     arabic: 'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ',
-    english: 'O Allah, help me to remember You, thank You, and worship You excellently',
     transliteration: 'Allahumma a\'inni ala dhikrika wa shukrika wa husni ibadatik',
-    reward: 'Comprehensive dua for spiritual improvement'
+    english: 'O Allah, help me to remember You, thank You, and worship You excellently',
+    source: { collection: 'abudawud', number: '1522' }
   },
   {
-    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
-    english: 'Allah is sufficient for us and He is the best Guardian',
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
     transliteration: 'Hasbunallahu wa ni\'mal-wakeel',
-    reward: 'Protection from all harms and anxieties'
+    english: 'Sufficient for us is Allāh, and [He is] the best Disposer of affairs.',
+    source: { quran: '3:173', translation: 'Saheeh International' }
   },
   {
-    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
-    english: 'Our Lord, give us good in this world and good in the next world and save us from the punishment of the Fire',
+    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
     transliteration: 'Rabbana atina fi\'d-dunya hasanatan wa fi\'l-akhirati hasanatan wa qina adhab an-nar',
-    reward: 'The most comprehensive dua for both worlds'
+    english: 'Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.',
+    source: { quran: '2:201', translation: 'Saheeh International' }
   },
   {
     arabic: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
-    english: 'O Allah, I ask You for guidance, piety, chastity and contentment',
     transliteration: 'Allahumma inni as\'aluka\'l-huda wa\'t-tuqa wa\'l-\'afafa wa\'l-ghina',
-    reward: 'Dua for the four pillars of a good life'
+    english: 'O Allah, I ask You for guidance, piety, chastity and contentment',
+    source: { collection: 'muslim', number: '2721a' }
   },
   {
     arabic: 'رَضِيتُ بِاللَّهِ رَبًّا وَبِالْإِسْلَامِ دِينًا وَبِمُحَمَّدٍ رَسُولًا',
-    english: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad as my Messenger',
     transliteration: 'Radeetu billahi rabban wa bil-Islami deenan wa bi Muhammadin rasoolan',
-    reward: 'Guarantees Paradise for the one who says it with conviction'
+    english: 'I am pleased with Allah as my Lord, Islam as my religion, and Muhammad ﷺ as my Messenger',
+    source: { collection: 'abudawud', number: '1529' },
+    virtue: { en: 'Paradise will be his due.', ar: 'وَجَبَتْ لَهُ الْجَنَّةُ', quoted: true }
   },
   {
     arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ',
-    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
     transliteration: 'Allahumma anta rabbi la ilaha illa anta khalaqtani wa ana \'abduk',
-    reward: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness'
+    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
+    source: { collection: 'bukhari', number: '6306' },
+    virtue: {
+      en: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness',
+      ar: 'بداية سيد الاستغفار',
+      fr: 'Début de Sayyid al-Istighfar - le maître de la demande de pardon'
+    }
   },
   {
     arabic: 'يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ',
-    english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
     transliteration: 'Ya Hayyu Ya Qayyum bi-rahmatika astaghith',
-    reward: "Powerful dua for seeking Allah's help and mercy"
+    english: 'O Ever-Living, O Self-Sustaining, by Your mercy I seek help',
+    source: { collection: 'tirmidhi', number: '3524' }
   },
   {
     arabic: 'اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ',
-    english: 'O Allah, guide me among those You have guided',
     transliteration: 'Allahumma\'hdini fiman hadayt',
-    reward: 'Dua for guidance and righteousness'
+    english: 'O Allah, guide me among those You have guided',
+    source: { collection: 'abudawud', number: '1425' }
   },
   {
-    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ',
-    english: 'My Lord, inspire me to be grateful for Your blessing',
+    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ',
     transliteration: 'Rabbi awzi\'ni an ashkura ni\'matak',
-    reward: 'Dua for gratitude and righteous deeds'
+    english: 'My Lord, enable me to be grateful for Your favor',
+    source: { quran: '27:19', translation: 'Saheeh International' }
   },
   {
     arabic: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
-    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
     transliteration: 'La ilaha illallahu wahdahu la sharika lah, lahul mulk wa lahul hamd, wa huwa ala kulli shay\'in qadir',
-    reward: 'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day'
+    english: 'There is no god except Allah, alone without partner; His is the dominion and His is the praise and He is over all things capable',
+    source: { collection: 'bukhari', number: '3293' },
+    virtue: {
+      en: 'If one says one-hundred times in one day … one will get the reward of manumitting ten slaves, and one-hundred good deeds will be written in his account, and one-hundred bad deeds will be wiped off or erased from his account, and on that day he will be protected from the morning till evening from Satan',
+      ar: 'فِي يَوْمٍ مِائَةَ مَرَّةٍ، كَانَتْ لَهُ عَدْلَ عَشْرِ رِقَابٍ، وَكُتِبَتْ لَهُ مِائَةُ حَسَنَةٍ، وَمُحِيَتْ عَنْهُ مِائَةُ سَيِّئَةٍ، وَكَانَتْ لَهُ حِرْزًا مِنَ الشَّيْطَانِ يَوْمَهُ ذَلِكَ حَتَّى يُمْسِيَ',
+      quoted: true
+    }
   },
   {
     arabic: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَٰهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ',
-    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
     transliteration: 'Subhan Allah, walhamdulillah, wa la ilaha illallah, wallahu akbar',
-    reward: 'More beloved to the Prophet than all the world and what it contains'
+    english: 'Glory be to Allah, praise be to Allah, there is no god but Allah, Allah is the Greatest',
+    source: { collection: 'muslim', number: '2695' },
+    virtue: {
+      en: 'More beloved to the Prophet ﷺ than all the world and what it contains',
+      ar: 'أحب إلى النبي ﷺ مما طلعت عليه الشمس'
+    }
   },
   {
     arabic: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
-    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
     transliteration: 'A\'udhu bi kalimatillahi at-tammati min sharri ma khalaq',
-    reward: 'Protection from harm until morning'
+    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created',
+    source: { collection: 'muslim', number: '2708a' },
+    virtue: {
+      en: 'When anyone lands at a place, and then says … nothing would harm him until he marches from that stopping place.',
+      ar: 'مَنْ نَزَلَ مَنْزِلاً ثُمَّ قَالَ … لَمْ يَضُرُّهُ شَىْءٌ حَتَّى يَرْتَحِلَ مِنْ مَنْزِلِهِ ذَلِكَ',
+      quoted: true
+    }
   },
   {
     arabic: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
-    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
     transliteration: 'Bismillahi alladhi la yadurru ma\'a ismihi shay\'un fil-ardi wa la fis-sama\'i wa huwa as-sami\'u al-alim',
-    reward: 'Nothing will harm the one who says it three times in morning and evening'
+    english: 'In the name of Allah with whose name nothing is harmed on earth or in the heavens, and He is the All-Hearing, the All-Knowing',
+    source: { collection: 'tirmidhi', number: '3388' },
+    virtue: {
+      en: 'Nothing will harm the one who says it three times in morning and evening',
+      ar: 'لا يضره شيء إذا قالها ثلاثًا صباحًا ومساءً',
+      fr: 'Rien ne nuira à celui qui le dit trois fois matin et soir'
+    }
   },
   {
-    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
-    english: 'Allah is sufficient for me; there is no god but Him. Upon Him I rely and He is the Lord of the mighty throne',
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ ۖ عَلَيْهِ تَوَكَّلْتُ ۖ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
     transliteration: 'Hasbiyallahu la ilaha illa Huwa, alayhi tawakkaltu wa Huwa Rabbul-Arsh il-Azeem',
-    reward: 'Whoever recites it seven times morning and evening Allah will suffice him'
+    english: 'Sufficient for me is Allāh; there is no deity except Him. On Him I have relied, and He is the Lord of the Great Throne.',
+    source: { quran: '9:129', translation: 'Saheeh International' }
   },
   {
-    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
-    english: 'My Lord, expand for me my chest and ease for me my task',
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
     transliteration: 'Rabbi shrah li sadri wa yassir li amri',
-    reward: 'Ease in tasks and removal of anxiety'
+    english: 'My Lord, expand [i.e., relax] for me my breast [with assurance] And ease for me my task',
+    source: { quran: '20:25-26', translation: 'Saheeh International' }
   },
   {
-    arabic: 'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
-    english: 'My Lord, forgive me and my parents and have mercy on them as they raised me when I was small',
-    transliteration: 'Rabbi ighfir li waliwalidayya warhamhuma kama rabbayani sagheera',
-    reward: "Dua for parents leading to Allah's mercy"
+    arabic: 'رَّبِّ اغْفِرْ لِي وَلِوَالِدَيَّ',
+    transliteration: 'Rabbi ighfir li waliwalidayya',
+    english: 'My Lord, forgive me and my parents',
+    source: { quran: '71:28', translation: 'Saheeh International' }
   },
   {
-    arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِيمَا أَعْطَيْتَنَا وَقِنَا عَذَابَ النَّارِ',
-    english: 'O Allah, bless us in what You have provided us and save us from the punishment of the Fire',
-    transliteration: 'Allahumma barik lana fima a’taytana wa qina adhab an-nar',
-    reward: 'Protection from Hellfire and blessing in sustenance'
+    arabic: 'رَّبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا',
+    transliteration: 'Rabbi irhamhuma kama rabbayanee sagheera',
+    english: 'My Lord, have mercy upon them as they brought me up [when I was] small.',
+    source: { quran: '17:24', translation: 'Saheeh International' }
   },
   {
-    arabic: 'اللَّهُمَّ إِنَّهُ لَا سَهْلَ إِلَّا مَا جَعَلْتَهُ سَهْلًا',
-    english: 'O Allah, there is nothing easy except what You make easy',
-    transliteration: 'Allahumma innahu la sahla illa ma ja’altahu sahla',
-    reward: 'Makes difficult matters easy through Allah’s grace'
-  },
-  {
-    arabic: 'اللَّهُمَّ عَافِنِي فِي بَدَنِي وَعَافِنِي فِي سَمْعِي وَعَافِنِي فِي بَصَرِي',
-    english: 'O Allah, grant me well-being in my body, grant me well-being in my hearing, and grant me well-being in my sight',
-    transliteration: 'Allahumma ’afini fi badani wa ’afini fi sam’i wa ’afini fi basari',
-    reward: 'Complete protection for body and senses'
-  },
-  {
-    arabic: 'اللَّهُمَّ أَكْثِرْ مَالِي وَأَغْنِنِي عَنِ النَّاسِ',
-    english: 'O Allah, increase my wealth and make me independent of people',
-    transliteration: 'Allahumma akthir mali wa aghninni ’an an-nas',
-    reward: 'Blessing in wealth and independence from people'
-  },
-  {
-    arabic: 'اللَّهُمَّ إِنَّكَ عُفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنَّي',
-    english: 'O Allah, You are Most Forgiving and You love forgiveness, so forgive me',
+    arabic: 'اللَّهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي',
     transliteration: 'Allahumma innaka ’afuwwun tuhibbul-’afwa fa’fu ’anni',
-    reward: 'The most beloved dua during Laylat al-Qadr (Night of Power)'
-  },
-  {
-    arabic: 'اللَّهُمَّ إِنَّا نَسْأَلُكَ مِنْ فَضْلِكَ وَرَحْمَتِكَ',
-    english: 'O Allah, we ask You for Your grace and mercy',
-    transliteration: 'Allahumma inna nas’aluka min fadlika wa rahmatik',
-    reward: 'Opens doors of divine grace and mercy'
+    english: 'O Allah, You are Most Forgiving and You love forgiveness, so forgive me',
+    source: { collection: 'ibnmajah', number: '3850' },
+    virtue: {
+      en: 'O Messenger of Allah, what do you think I should say in my supplication, if I come upon Laylatul-Qadr?',
+      ar: 'يَا رَسُولَ اللَّهِ أَرَأَيْتَ إِنْ وَافَقْتُ لَيْلَةَ الْقَدْرِ مَا أَدْعُو',
+      quoted: true
+    }
   }
 ];
 
-export const DHIKR_REWARD_AR = {
-  'Each recitation equals a tree planted in Paradise': 'تُغرس له شجرةٌ في الجنة',
-  'Fills the scales of good deeds': 'تملأ ميزان الحسنات',
-  'Fills what is between heaven and earth': 'تملأ ما بين السماء والأرض',
-  'The best of remembrance, heaviest on the scales': 'أفضل الذكر وأثقلها في الميزان',
-  '100 sins erased, even if like foam on the sea': 'يحط الله بها مائة خطيئة وإن كانت مثل زبد البحر',
-  'Beloved to Allah, light on the tongue, heavy on the scales': 'حبيبتان إلى الرحمن، خفيفتان على اللسان، ثقيلتان في الميزان',
-  'A treasure from the treasures of Paradise': 'كنز من كنوز الجنة',
-  'Opens doors of mercy and provision': 'يفتح أبواب الرحمة والرزق',
-  'Allah sends 10 blessings for each one sent': 'يُصلي الله عليه عشرًا بكل صلاة',
-  'Protection and blessings in all affairs': 'يحصل بها الحفظ والبركة في الأمور',
-  'Direct supplication for forgiveness': 'دعاء مباشر للمغفرة',
-  'Comprehensive dua for spiritual improvement': 'دعاء جامع لزيادة الإيمان والعمل الصالح',
-  'Protection from all harms and anxieties': 'حماية من كل شر وهم',
-  'The most comprehensive dua for both worlds': 'من أَوْسَعِ الأدعية للدنيا والآخرة',
-  'Dua for the four pillars of a good life': 'دعاء لأصول السعادة الأربع',
-  'Guarantees Paradise for the one who says it with conviction': 'ضمان الجنة لمن قالها موقنًا',
-  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'بداية سيد الاستغفار',
-  "Powerful dua for seeking Allah's help and mercy": 'دعاء قوي لطلب العون والرحمة',
-  'Dua for guidance and righteousness': 'دعاء للهداية والاستقامة',
-  'Dua for gratitude and righteous deeds': 'دعاء للشكر والعمل الصالح',
-  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'يعدل عتق 10 رقاب ويكتب 100 حسنة ويمحى 100 سيئة ويحفظه من الشيطان يومًا كاملاً',
-  'More beloved to the Prophet than all the world and what it contains': 'أحب إلى النبي مما طلعت عليه الشمس',
-  'Relief from anxieties and debts': 'فرج للهموم والدين',
-  'Protection from harm until morning': 'حفظ من كل أذى حتى الصباح',
-  'Nothing will harm the one who says it three times in morning and evening': 'لا يضره شيء إذا قالها ثلاثًا صباحًا ومساءً',
-  'Whoever recites it seven times morning and evening Allah will suffice him': 'من قالها سبع مرات صباحًا ومساءً كفاه الله',
-  'Ease in tasks and removal of anxiety': 'تيسير الأمور وشرح الصدر',
-  "Dua for parents leading to Allah's mercy": 'دعاء للوالدين يجلب رحمة الله',
-  'Protection from loss of blessings': 'حفظ من زوال النعمة وغضب الله'
+// Shown in the hadith section, labelled as the shahada, when no hadith loads.
+export const SHAHADA = {
+  ar: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
+  en: 'There is no god but Allah',
+  fr: 'Il n\'y a de divinité qu\'Allah'
 };
 
-export const DHIKR_REWARD_FR = {
-  'Each recitation equals a tree planted in Paradise': 'Chaque récitation équivaut à un arbre planté au Paradis',
-  'Fills the scales of good deeds': 'Remplit la balance des bonnes actions',
-  'Fills what is between heaven and earth': 'Remplit ce qui se trouve entre le ciel et la terre',
-  'The best of remembrance, heaviest on the scales': 'Le meilleur des rappels, le plus lourd sur la balance',
-  '100 sins erased, even if like foam on the sea': '100 péchés effacés, même s’ils étaient comme l’écume de la mer',
-  'Beloved to Allah, light on the tongue, heavy on the scales': 'Aimées d’Allah, légères sur la langue, lourdes sur la balance',
-  'A treasure from the treasures of Paradise': 'Un trésor parmi les trésors du Paradis',
-  'Opens doors of mercy and provision': 'Ouvre les portes de la miséricorde et de la subsistance',
-  'Allah sends 10 blessings for each one sent': 'Allah envoie 10 bénédictions pour chacune envoyée',
-  'Protection and blessings in all affairs': 'Protection et bénédictions dans toutes les affaires',
-  'Direct supplication for forgiveness': 'Invocation directe pour le pardon',
-  'Comprehensive dua for spiritual improvement': 'Invocation globale pour l’amélioration spirituelle',
-  'Protection from all harms and anxieties': 'Protection contre tous les maux et angoisses',
-  'The most comprehensive dua for both worlds': 'L’invocation la plus globale pour les deux mondes',
-  'Dua for the four pillars of a good life': 'Invocation pour les quatre piliers d’une bonne vie',
-  'Guarantees Paradise for the one who says it with conviction': 'Garantit le Paradis à celui qui le dit avec conviction',
-  'Beginning of Sayyid al-Istighfar - master of seeking forgiveness': 'Début de Sayyid al-Istighfar - le maître de la demande de pardon',
-  "Powerful dua for seeking Allah's help and mercy": 'Invocation puissante pour demander l’aide et la miséricorde d’Allah',
-  'Dua for guidance and righteousness': 'Invocation pour la guidance et la droiture',
-  'Dua for gratitude and righteous deeds': 'Invocation pour la gratitude et les bonnes actions',
-  'Saying it 100 times equals freeing 10 slaves, 100 good deeds written and 100 sins erased, protection from Shaytan all day': 'Le dire 100 fois équivaut à libérer 10 esclaves, 100 bonnes actions écrites et 100 péchés effacés, protection contre Satan toute la journée',
-  'More beloved to the Prophet than all the world and what it contains': 'Plus aimé du Prophète que tout le monde et ce qu’il contient',
-  'Relief from anxieties and debts': 'Soulagement des angoisses et des dettes',
-  'Protection from harm until morning': 'Protection contre le mal jusqu’au matin',
-  'Nothing will harm the one who says it three times in morning and evening': 'Rien ne nuira à celui qui le dit trois fois matin et soir',
-  'Whoever recites it seven times morning and evening Allah will suffice him': 'Quiconque le récite sept fois matin et soir, Allah lui suffira',
-  'Ease in tasks and removal of anxiety': 'Facilité dans les tâches et suppression de l’anxiété',
-  "Dua for parents leading to Allah's mercy": 'Invocation pour les parents menant à la miséricorde d’Allah',
-  'Protection from loss of blessings': 'Protection contre la perte des bienfaits',
-  'Protection from Hellfire and blessing in sustenance': 'Protection contre l’Enfer et bénédiction dans la subsistance',
-  'Makes difficult matters easy through Allah’s grace': 'Facilite les affaires difficiles par la grâce d’Allah',
-  'Complete protection for body and senses': 'Protection complète pour le corps et les sens',
-  'Blessing in wealth and independence from people': 'Bénédiction dans la richesse et indépendance des gens',
-  'The most beloved dua during Laylat al-Qadr (Night of Power)': 'L’invocation la plus aimée pendant Laylat al-Qadr (Nuit du Destin)',
-  'Opens doors of divine grace and mercy': 'Ouvre les portes de la grâce divine et de la miséricorde'
-};
+export function randomDhikrIndex() {
+  return Math.floor(Math.random() * dhikrCollection.length);
+}
 
-export function getRandomDhikr() {
-  return dhikrCollection[Math.floor(Math.random() * dhikrCollection.length)];
+// The virtue line for the UI language. Arabic uses the Arabic line, French
+// its own line where one exists; everything else falls back to English.
+export function virtueFor(dhikr, lang) {
+  const v = dhikr.virtue;
+  if (!v) return null;
+  if (lang === 'ar') return { text: v.ar, lang: 'ar', quoted: v.quoted === true };
+  if (lang === 'fr' && v.fr) return { text: v.fr, lang: 'fr', quoted: false };
+  return { text: v.en, lang: 'en', quoted: v.quoted === true };
 }
