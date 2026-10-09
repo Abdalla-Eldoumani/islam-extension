@@ -15,7 +15,7 @@ const targets = [
   join(repoRoot, 'firefox', 'shared')
 ];
 
-// Agent-infra files never land in a build directory.
+// Markdown notes and Finder metadata never land in a build directory.
 const SKIP_NAMES = new Set(['.DS_Store']);
 const shouldSkip = (name) => SKIP_NAMES.has(name) || name.endsWith('.md');
 
