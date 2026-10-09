@@ -1,75 +1,75 @@
 # Privacy
 
-This extension does not collect personal data, does not run analytics, does not load remote scripts at runtime, and does not phone home.
+The extension collects no personal data, runs no analytics, loads no remote code and has no server of its own.
 
-The browser stores some preferences locally so the popup remembers your choices. Network requests are made only to the third-party APIs listed below, only when you use the related feature, and only with the data the API needs to respond.
+It stores your preferences and some caches in the browser's local extension storage. It sends requests only to the services below, only for the feature in use, and only with what each service needs to answer.
 
 ## Permissions
 
 ### Chrome (Manifest V3)
 
-| Permission | Why we need it |
+| Permission | Why |
 | --- | --- |
-| `offscreen` | Hosts the `<audio>` element so playback survives the popup closing. Required for Manifest V3 background audio. |
-| `storage` | Persists your language choice, selected reciter and surah, autoplay flag, dhikr settings, and the hadith cache. |
-| `alarms` | Schedules dhikr reminders at intervals of 1 minute or longer. Sub-minute intervals use `setTimeout`, which does not need a permission. |
-| `notifications` | Shows the dhikr reminder when the interval fires and the popup is closed. |
-| `windows` | Opens the popup-mode dhikr reminder window. Used only when the user picks the popup reminder style. |
+| `offscreen` | Holds the audio element in an offscreen document so recitation continues after the popup closes. |
+| `storage` | Saves the language, selected surah and reciter, autoplay, playback position, sleep timer, reminder settings, and the reciter and hadith caches. |
+| `alarms` | Runs the reminder schedule, the one-minute reminder dismissal, and the sleep timer. |
+| `notifications` | Shows a reminder as a system notification when that style is chosen. |
 
-Host permissions are listed below the table. The extension requests no broad `<all_urls>` access and runs no content scripts.
+The small reminder window uses the `windows` API, which needs no permission.
 
 ### Firefox (Manifest V2)
 
-`storage`, `alarms`, `notifications`. Hosts requested via the same listed entries. No `<all_urls>`. No content scripts. No `tabs`, `activeTab`, or `webRequest`.
+`storage`, `alarms` and `notifications`, plus the same host entries. The background page holds the audio element, so no `offscreen` permission is needed.
 
-### Hosts
+Neither build asks for `<all_urls>`, `tabs`, `activeTab`, `history` or `webRequest`, and neither injects scripts into web pages.
 
-The host permissions enumerate the audio CDNs and the hadith APIs:
+### Hosts the extension fetches from
 
-- `api.quran.com` — Surah metadata, recitations catalogue, audio URLs.
-- `verses.quran.com` — Audio CDN for Quran.com recitations.
-- `www.mp3quran.net` and `*.mp3quran.net` — Reciter catalogue and audio mirrors.
-- `cdn.islamic.network` — Audio CDN for Alafasy, Husary, Shuraym, Tablawee.
-- `mirrors.quranicaudio.com`, `download.quranicaudio.com` — Audio mirrors for the Quran.com catalogue.
-- `cdn.jsdelivr.net` — Arabic, English, and French hadith editions, served from the `fawazahmed0/hadith-api` repo via JSDelivr.
-- `hadeethenc.com` — Hadith fallback when the JSDelivr source fails.
+| Host | What it is used for |
+| --- | --- |
+| `api.quran.com` | Surah names, the Quran.com reciter list, and the address of each Quran.com recitation file. |
+| `www.mp3quran.net` | The MP3Quran reciter list. |
+| `api.alquran.cloud` | The Al-Quran Cloud audio editions, and the surah list if Quran.com does not answer. |
+| `cdn.islamic.network` | The directory of whole-surah audio files for the Al-Quran Cloud editions. |
+| `cdn.jsdelivr.net` | Hadith from the `fawazahmed0/hadith-api` repository at a pinned commit. |
 
-The CSP `connect-src` enumerates the same hosts as a defence-in-depth check. The `media-src` allowlist constrains audio URL hosts; URLs returned by API responses that fall outside the allowlist are rejected before reaching the audio element.
+These are the `host_permissions` (Firefox: `permissions`) and the CSP `connect-src`.
+
+### Hosts audio plays from
+
+`download.quranicaudio.com` (Quran.com recitations), `cdn.islamic.network` (Al-Quran Cloud editions) and `*.mp3quran.net` (MP3Quran servers). These make up the CSP `media-src`, and the extension refuses an audio address on any other host.
 
 ## What is stored locally
 
-Everything stays on your device in `chrome.storage.local` (or `browser.storage.local` on Firefox). Nothing syncs across devices. Nothing leaves the browser.
+Everything is in `storage.local`: nothing syncs between devices, and nothing is sent anywhere.
 
-| Key | Purpose | Cleared when |
+| Key | Contents | Cleared |
 | --- | --- | --- |
-| `audioState` | Last played surah, reciter, and timestamp so you can resume. | Never automatically. Cleared on uninstall. |
-| `userSelections` | Selected sura, reciter, autoplay flag. | Never automatically. |
-| `dhikrSettings` | Notifications on/off, interval, reminder mode. | Never automatically. |
-| `currentDhikr` | Most recently displayed dhikr. | Overwritten on each reminder. |
-| `reciterCache` | Deduplicated reciter list with a 6-hour expiry. | Refreshed every 6 hours. |
-| `hadithCacheEn`, `hadithCacheFr` | Up to 30 hadiths each, replenished asynchronously. | Trimmed as entries are consumed. |
-| `uiLanguage` | The locale you picked from the selector. | Never automatically. |
+| `uiLanguage` | The language you picked. | On uninstall. |
+| `userSelections` | Selected surah and reciter, autoplay on or off. | On uninstall. |
+| `audioState` | The last surah played, its reciter, file address and position, for Resume. | Replaced as you play; on uninstall. |
+| `sleepTimer` | The sleep timer choice. | Reset when playback is paused; on uninstall. |
+| `dhikrSettings` | Reminders on or off, the interval and the style. | On uninstall. |
+| `shownReminder` | Which reminder is on screen, so it can be closed. | When the reminder closes. |
+| `reciterCatalog` | The merged reciter list. | Refreshed after six hours. |
+| `hadithCacheEn`, `hadithCacheFr`, `hadithCacheAr` | Up to 30 hadith per language with their collection and number. | One is used each time the popup opens, and the cache is refilled. |
 
-You can clear all of this from the extension's settings in `chrome://extensions` (Chrome) or `about:addons` (Firefox).
+Removing the extension from `chrome://extensions` or `about:addons` deletes all of it.
 
-## What third parties receive
+## What the services receive
 
-When you use a feature, the corresponding API receives a request. The request includes:
+Each request carries what every web request carries: your IP address and your browser's User-Agent. The address says what is wanted, for example `/api/v4/chapter_recitations/7/114` for a recitation file or `/editions/eng-bukhari/6405.min.json` for a hadith. A hadith address therefore shows which language the popup uses.
 
-- Your IP address (every HTTP request does).
-- Your User-Agent string (every HTTP request does).
-- The path the extension constructed: `/recitations/<id>/by_chapter/<sura>` for audio, `/editions/eng-bukhari/<n>.min.json` for English hadith, and so on.
-
-The third parties do not receive any of your stored data, your locale choice, or any identifier the extension creates. The extension does not send cookies and does not authenticate against any of the APIs.
+The services receive nothing from storage and no identifier created by the extension. The extension does not sign in to any service.
 
 ## What the extension does not do
 
-- No analytics, no telemetry, no usage tracking.
-- No accounts, no sign-in, no third-party auth.
-- No advertising network connections.
-- No remote scripts. The `default-src 'self'` CSP forbids loading any code from a host other than the extension package.
-- No background tabs, no content scripts injected into pages, no access to your browsing history.
+- No analytics, telemetry or usage tracking.
+- No accounts or sign-in.
+- No advertising.
+- No remote code: the CSP `default-src 'self'` allows scripts only from the extension package.
+- No access to your tabs, pages or browsing history.
 
 ## Reporting a privacy issue
 
-Open an issue at the GitHub repository, or email the maintainer using the address listed in the Chrome Web Store listing. We treat privacy reports as high priority.
+Open an issue on the GitHub repository, or email the maintainer at the address on the Chrome Web Store listing.
