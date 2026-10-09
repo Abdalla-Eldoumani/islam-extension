@@ -36,7 +36,7 @@
     }
   },
   "action": {
-    "default_popup": "popup/index.html",
+    "default_popup": "shared/popup/index.html",
     "default_title": "Qur'an & Sunnah Companion"
   },
   "icons": {
