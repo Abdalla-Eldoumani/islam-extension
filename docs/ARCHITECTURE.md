@@ -57,6 +57,14 @@ popup click  ->  background service worker  ->  offscreen document
 
 When a surah ends and autoplay is on, the background script reads the next surah ID and sends a fresh `playAudio` message. The offscreen document handles wraparound (114 -> 1).
 
+### Polling cadence
+
+Three independent timers drive audio state, at different rates:
+
+- **1s** — the popup polls audio state while playing (`progressTrackingInterval`) to update the progress bar and play/pause UI.
+- **2s** — the background audio-monitoring `setInterval` (`background.js`, `}, 2000)`) reads `audioState` and triggers the next surah when the current one ends and autoplay is on.
+- **10s** — the offscreen document throttles `audioState` persistence in its `timeupdate` handler (`offscreen.js`, `now - lastSaveTime > 10000`): frequent enough to lose under 10s on a crash, infrequent enough not to thrash storage.
+
 ## Audio playback flow (Firefox)
 
 Same popup -> background message. The background page calls `audioPlayer.play()` directly on a long-lived `<audio>` element. No offscreen document. The `audioState` shape and message contract are identical to Chrome.
@@ -85,9 +93,9 @@ All messages between popup, background, and offscreen go through `chrome.runtime
 | `resumeAudio` | popup -> background -> offscreen | none |
 | `seekAudio` | popup -> background -> offscreen | `{ time }` |
 | `getAudioState` | popup -> background -> offscreen | none, returns `{ state }` |
-| `startDhikrNotifications` | popup -> background | `{ intervalSeconds }` |
+| `startDhikrNotifications` | popup -> background | `{ interval, mode }` (`interval` in seconds) |
 | `stopDhikrNotifications` | popup -> background | none |
-| `updateDhikrInterval` | popup -> background | `{ intervalSeconds }` |
+| `updateDhikrInterval` | popup -> background | `{ interval }` (seconds) |
 | `setSleepTimer` | popup -> background | `{ minutes }` (0 cancels) |
 | `showBrowserNotification` | background -> offscreen | `{ title, body, icon }` |
 
@@ -101,13 +109,13 @@ Everything lives in `chrome.storage.local` (Firefox: `browser.storage.local`). K
 | --- | --- | --- |
 | `audioState` | `{ audioUrl, suraId, reciterKey, currentTime, duration, isPlaying, timestamp }` | written by the offscreen (Chrome) and the persistent background (Firefox) on play / pause / seek / ended / throttled timeupdate. The popup reads this on open as the primary restoration source. |
 | `userSelections` | `{ suraId, reciterKey, autoplayEnabled, timestamp }` | until manually cleared |
-| `dhikrSettings` | `{ enabled, intervalSeconds, reminderMode }` | until manually cleared |
+| `dhikrSettings` | `{ notificationsEnabled, interval, mode, timestamp }` (`interval` in seconds; `mode` is the reminder mode, e.g. `'notification'`; `timestamp` is the save time) | until manually cleared |
 | `currentDhikr` | one entry from `dhikrCollection` | overwritten on each reminder |
 | `reciterCache` | `{ reciters: [...], timestamp }` | refreshed every 6 hours |
 | `reciterCoverage` | `{ timestamp, map: { [reciterId]: 'complete' \| 'limited' } }` | refreshed every 24 hours by the background coverage probe; 30-day TTL when read |
 | `sleepTimer` | `{ minutes: 0 \| 15 \| 30 \| 45 \| 60 }` | persists across sessions; 0 means off |
-| `hadithCacheEn` | `string[]` | up to 30 entries, replenished asynchronously |
-| `hadithCacheFr` | `string[]` | same |
+| `hadithCacheEn` | array of `{ text, edition }` entries (legacy bare strings tolerated on read) | up to 30 entries, replenished asynchronously |
+| `hadithCacheFr` | array of `{ text, edition }` entries (legacy bare strings tolerated on read) | same |
 | `uiLanguage` | `'en' \| 'fr' \| 'ar'` | until manually cleared |
 
 The 10MB quota is far above realistic usage (well under 1MB even pessimistically).
@@ -150,3 +158,4 @@ Why copies rather than symlinks: symlinks across `chrome/` and `firefox/` break 
 - No bundler. ES modules resolve relative paths natively.
 - No framework. Vanilla DOM APIs throughout.
 - No analytics, no telemetry, no remote scripts. See `PRIVACY.md`.
+- No request rate-limiting, backoff, or in-flight de-duplication on the hadith and Qur'an-surah fetches. Rapidly reopening the popup can fire repeated requests; the only mitigations are `cache: 'force-cache'` on the hadith fetches and the Al-Quran Cloud surah-list fallback. This is a known limitation, deferred as RESIL-01.
