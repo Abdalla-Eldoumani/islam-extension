@@ -23,7 +23,7 @@
     "persistent": true
   },
   "browser_action": {
-    "default_popup": "popup/index.html",
+    "default_popup": "shared/popup/index.html",
     "default_title": "Qur'an & Sunnah Companion",
     "default_icon": {
       "16": "assets/icon16.png",
