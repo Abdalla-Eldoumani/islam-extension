@@ -493,7 +493,7 @@ async function showDhikrPopup(dhikr, isTest = false) {
     await browser.storage.local.set({ currentDhikr: dhikr });
 
     // Create a focused popup window
-    await browser.windows.create({
+    const reminderWindow = await browser.windows.create({
       url: browser.runtime.getURL('popup/reminder.html'),
       type: 'popup',
       width: 420,
@@ -501,6 +501,13 @@ async function showDhikrPopup(dhikr, isTest = false) {
       focused: true
     });
     console.log('Background: Dhikr popup window opened');
+    // Auto-dismiss the reminder window after 60 seconds so a forgotten popup
+    // reminder cannot pile up on screen, matching the system-notification path.
+    if (reminderWindow && reminderWindow.id != null) {
+      setTimeout(() => {
+        browser.windows.remove(reminderWindow.id).catch(() => {});
+      }, 60_000);
+    }
   } catch (err) {
     console.error('Background: Failed to open Dhikr popup window:', err);
   }
