@@ -1,35 +1,29 @@
 # Firefox Manifest V3 migration
 
-The Firefox build runs on Manifest V2 with a persistent background page. This document tracks why we have not migrated to MV3 yet and what changes when we do.
+The Firefox build uses Manifest V2 with a persistent background page. This note records why, and what a Manifest V3 Firefox build would need.
 
-## Why MV2 today
+## Why Manifest V2 today
 
-Audio playback in Manifest V3 requires either an offscreen document (Chrome only) or a service worker that owns long-lived audio. Chrome ships the offscreen API. Firefox does not. Firefox MV3 service workers terminate after idle, the same as Chrome MV3 service workers, but Firefox has no equivalent of the offscreen document.
+Recitation has to keep playing after the popup closes, so some extension context must hold the audio element for as long as a surah plays.
 
-Until Firefox ships an offscreen API or extends event-page semantics for media playback, an MV3 Firefox build cannot reliably keep audio playing after the popup closes.
+- Chrome's Manifest V3 uses service workers, which have no DOM and stop when idle. Chrome provides the offscreen document to hold audio; the Chrome build uses it.
+- Firefox's Manifest V3 runs background scripts as event pages: DOM pages that Firefox unloads when they are idle. Firefox has no offscreen document. An event page holding an audio element is not guaranteed to stay loaded while it plays, so the build would need a way to keep playback alive.
 
-Mozilla has signalled MV2 will be supported through at least 2027. The 2027 horizon is far enough that a careful migration plan is appropriate, not an emergency.
+A Manifest V2 background page with `persistent: true` stays loaded, and the Firefox build plays audio there.
 
-## What changes on migration
+In its [March 2024 update](https://blog.mozilla.org/addons/2024/03/13/manifest-v3-manifest-v2-march-2024-update/), Mozilla said Firefox has no plans to deprecate Manifest V2 and will support it for the foreseeable future, with at least 12 months' notice if that changes.
 
-When Firefox ships the missing pieces, the migration is largely a manifest swap plus background-page restructuring.
+## What would change
 
-- `firefox/manifest.json` — bump to `manifest_version: 3`. Replace `background.page` with the equivalent of `background.service_worker` and the appropriate offscreen permission.
-- `firefox/background/background.html` and `background.js` — restructure as a service worker that creates an offscreen document on first audio message, the same pattern Chrome already uses.
-- `firefox/offscreen/` — does not exist in the current MV2 build; it is (re)created only during this future migration, restoring the offscreen document removed during code consolidation. The structure mirrors `chrome/offscreen/` exactly; ideally `shared/` grows an offscreen module to remove the new duplication.
-- `permissions` — add `offscreen` if Firefox names the API the same way Chrome does.
-- `browser_action` — rename to `action` (MV3 convention).
-- `web_accessible_resources` — switch from the array form to the object form (MV3 requirement).
-- Host permissions — move from the `permissions` array to a separate `host_permissions` array (MV3 requirement).
-
-The audio path, message contracts, and storage schema do not change. The popup, the dhikr scheduler, the reciter catalogue, and the hadith fetchers all stay as they are.
+- `firefox/manifest.json`: `manifest_version: 3`; `background.scripts` for the event page; host entries moved from `permissions` to `host_permissions`; `browser_action` renamed to `action`; the CSP moved under `content_security_policy.extension_pages`.
+- `firefox/background/background.js`: no module-level state that must outlive an unload. Reminders and stored playback state already live in storage and alarms (`shared/reminders.js`, `shared/playback.js`), so they carry over; the open question is only the audio element.
+- The popup, the reminder window, the reciter catalogue and the hadith module stay as they are.
 
 ## Risks
 
-- **Audio API parity** — the Firefox offscreen-equivalent API may differ enough that `shared/browser.js` needs more polyfilling than today.
-- **Persistent background loss** — MV2's `persistent: true` means the script never dies. MV3 service workers always die. Any code that assumed long-lived module state moves to `chrome.storage.local`.
-- **Audio state restoration** — when the worker dies mid-playback, the offscreen document keeps audio alive but the worker loses its in-memory state. The current Chrome build already handles this; Firefox will need the same handling.
+- **Playback stopping when the event page unloads**: the main reason not to migrate yet. Test a full long surah with the popup closed before shipping.
+- **Resume after an unload**: `getAudioState` already falls back to the stored state when no player holds a track, and `resumeAudio` restarts from it, which is the same path Chrome uses when its offscreen document closes.
 
 ## Tracking
 
-This document is the single source of truth for the migration plan. When Firefox ships the missing piece, edit this file with the date, the API name, and the migration commit hash so future contributors know where to look.
+When Firefox offers a way to keep extension audio playing under Manifest V3, record the date, the API and the migration commit here.
