@@ -16,7 +16,7 @@ When Firefox ships the missing pieces, the migration is largely a manifest swap 
 
 - `firefox/manifest.json` — bump to `manifest_version: 3`. Replace `background.page` with the equivalent of `background.service_worker` and the appropriate offscreen permission.
 - `firefox/background/background.html` and `background.js` — restructure as a service worker that creates an offscreen document on first audio message, the same pattern Chrome already uses.
-- `firefox/offscreen/` — restore the offscreen document we removed during code consolidation. The structure mirrors `chrome/offscreen/` exactly; ideally `shared/` grows an offscreen module to remove the new duplication.
+- `firefox/offscreen/` — does not exist in the current MV2 build; it is (re)created only during this future migration, restoring the offscreen document removed during code consolidation. The structure mirrors `chrome/offscreen/` exactly; ideally `shared/` grows an offscreen module to remove the new duplication.
 - `permissions` — add `offscreen` if Firefox names the API the same way Chrome does.
 - `browser_action` — rename to `action` (MV3 convention).
 - `web_accessible_resources` — switch from the array form to the object form (MV3 requirement).
