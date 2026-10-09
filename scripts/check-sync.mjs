@@ -1,6 +1,6 @@
 // Verifies that chrome/shared and firefox/shared are byte-identical to the
-// repo-root /shared. Used by the pre-commit hook so a contributor cannot
-// commit drift.
+// repo-root /shared. Run by the pre-commit hook and by CI so drift cannot be
+// committed or merged.
 //
 // Usage: npm run check-sync (exits 0 on match, 1 on drift)
 
@@ -67,19 +67,19 @@ for (const target of targets) {
   const targetIndex = await buildIndex(target);
   const rel = relative(repoRoot, target).split('\\').join('/');
   if (!targetIndex) {
-    console.error(`${rel} missing — run npm run sync`);
+    console.error(`${rel} missing: run npm run sync`);
     drift++;
     continue;
   }
   for (const [path, hash] of sourceIndex) {
     if (targetIndex.get(path) !== hash) {
-      console.error(`${rel}/${path} drift — run npm run sync`);
+      console.error(`${rel}/${path} drift: run npm run sync`);
       drift++;
     }
   }
   for (const path of targetIndex.keys()) {
     if (!sourceIndex.has(path)) {
-      console.error(`${rel}/${path} not in shared — run npm run sync`);
+      console.error(`${rel}/${path} not in shared: run npm run sync`);
       drift++;
     }
   }
