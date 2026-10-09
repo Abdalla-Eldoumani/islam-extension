@@ -1,28 +1,18 @@
-// Surah audio URL resolution across the three providers we support:
-// Quran.com (qc), MP3Quran (mp3), and Islamic.network (islamic).
-// The reciter key carries provider + raw id like "qc:7" or "mp3:228" or
-// "islamic:ar.alafasy". A bare numeric key defaults to Quran.com.
+// Surah audio URL for a catalogue entry (see reciter-catalogue.js). Keys look
+// like "qc:7", "mp3:228" or "islamic:ar.alafasy".
 
-const QURAN_COM_API = 'https://api.quran.com/api/v4';
-const VERSES_BASE = 'https://verses.quran.com';
-const ISLAMIC_NETWORK_BASE = 'https://cdn.islamic.network/quran/audio/128';
+const CHAPTER_RECITATIONS = 'https://api.quran.com/api/v4/chapter_recitations';
+const SURAH_AUDIO_BASE = 'https://cdn.islamic.network/quran/audio-surah';
 
-// Hosts the manifest's media-src enumerates. Any URL we hand to <audio> must
-// resolve to one of these. Anything else is a misconfiguration we should fail
-// fast on rather than letting the audio element fail silently.
-const ALLOWED_MEDIA_HOSTS = new Set([
-  'verses.quran.com',
-  'cdn.islamic.network',
-  'mirrors.quranicaudio.com',
-  'download.quranicaudio.com',
-  'www.mp3quran.net'
-]);
+// The manifests' media-src lists the same hosts. A URL from any API response
+// must resolve to one of them before it reaches an audio element.
+const ALLOWED_MEDIA_HOSTS = new Set(['download.quranicaudio.com', 'cdn.islamic.network']);
 
 export function isAllowedAudioHost(url) {
   try {
     const u = new URL(url);
-    if (ALLOWED_MEDIA_HOSTS.has(u.hostname)) return true;
-    return u.hostname.endsWith('.mp3quran.net');
+    if (u.protocol !== 'https:') return false;
+    return ALLOWED_MEDIA_HOSTS.has(u.hostname) || u.hostname.endsWith('.mp3quran.net');
   } catch (_) {
     return false;
   }
@@ -35,75 +25,40 @@ export function ensureAllowedAudioHost(url) {
   return url;
 }
 
-function parseReciterKey(reciterKey) {
-  if (reciterKey.includes(':')) {
-    const parts = reciterKey.split(':');
-    return { provider: parts[0], rawId: parts.slice(1).join(':') };
+export function hasSurah(reciter, suraId) {
+  const n = Number(suraId);
+  if (!Number.isInteger(n) || n < 1 || n > 114) return false;
+  return !reciter?.surahs || reciter.surahs.includes(n);
+}
+
+// The next surah this reciter has recorded, wrapping from 114 to 1.
+export function getNextSuraId(currentSuraId, reciter = null) {
+  let n = Number(currentSuraId);
+  for (let i = 0; i < 114; i++) {
+    n = n >= 114 ? 1 : n + 1;
+    if (hasSurah(reciter, n)) return String(n);
   }
-  return { provider: 'qc', rawId: reciterKey };
+  return null;
 }
 
-export function getNextSuraId(currentSuraId) {
-  const id = parseInt(currentSuraId, 10);
-  return id >= 114 ? '1' : String(id + 1);
-}
-
-// Caller passes a `resolveMp3Reciter(reciterKey, rawId)` returning the reciter
-// object (or null). The popup resolves from its in-memory catalogue; the
-// background resolves via API on each invocation.
-export async function getSuraAudioUrl(reciterKey, suraId, { resolveMp3Reciter } = {}) {
-  const { provider, rawId } = parseReciterKey(reciterKey);
+export async function getSuraAudioUrl(reciter, suraId) {
+  if (!reciter) throw new Error('Reciter not found in catalogue');
+  if (!hasSurah(reciter, suraId)) throw new Error('Surah not recorded by this reciter');
+  const n = Number(suraId);
+  const [provider, ...rest] = reciter.id.split(':');
+  const rawId = rest.join(':');
 
   if (provider === 'mp3') {
-    if (!resolveMp3Reciter) {
-      throw new Error('mp3 provider requires resolveMp3Reciter');
-    }
-    const reciter = await resolveMp3Reciter(reciterKey, rawId);
-    if (!reciter) throw new Error('Reciter not found in catalogue');
-    const server = reciter.server || reciter.Server;
-    if (!server) throw new Error('Reciter entry missing server URL');
-    const base = server.endsWith('/') ? server : server + '/';
-    const suraStr = String(suraId).padStart(3, '0');
-    return ensureAllowedAudioHost(`${base}${suraStr}.mp3`);
+    return ensureAllowedAudioHost(`${reciter.server}${String(n).padStart(3, '0')}.mp3`);
   }
-
   if (provider === 'islamic') {
-    return ensureAllowedAudioHost(`${ISLAMIC_NETWORK_BASE}/${rawId}/${suraId}.mp3`);
+    return ensureAllowedAudioHost(`${SURAH_AUDIO_BASE}/${reciter.bitrate}/${rawId}/${n}.mp3`);
   }
-
-  // Default: Quran.com. Try chapter recitations first, fall back to first
-  // verse-by-verse audio file.
-  const reciterId = rawId;
-  const chapterUrl = `${QURAN_COM_API}/chapter_recitations/${reciterId}/${suraId}`;
-  try {
-    const chapterResponse = await fetch(chapterUrl);
-    if (chapterResponse.ok) {
-      const chapterData = await chapterResponse.json();
-      if (chapterData.audio_file?.audio_url) {
-        const audioUrl = chapterData.audio_file.audio_url;
-        const resolved = audioUrl.startsWith('http') ? audioUrl : `${VERSES_BASE}/${audioUrl}`;
-        return ensureAllowedAudioHost(resolved);
-      }
-    }
-  } catch (_) {
-    // fall through to verse-by-verse
+  if (provider === 'qc') {
+    const res = await fetch(`${CHAPTER_RECITATIONS}/${rawId}/${n}`);
+    if (!res.ok) throw new Error(`Quran.com returned ${res.status}`);
+    const audioUrl = (await res.json()).audio_file?.audio_url;
+    return ensureAllowedAudioHost(audioUrl);
   }
-
-  const versesUrl = `${QURAN_COM_API}/recitations/${reciterId}/by_chapter/${suraId}`;
-  const response = await fetch(versesUrl);
-  if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
-  }
-  const data = await response.json();
-  if (!data.audio_files || data.audio_files.length === 0) {
-    throw new Error('No audio files found in API response.');
-  }
-  const firstAudio = data.audio_files[0];
-  const audioUrl = firstAudio.url || firstAudio.audio_url;
-  if (!audioUrl) throw new Error('Audio URL not found in API response.');
-  let resolved;
-  if (audioUrl.startsWith('//')) resolved = `https:${audioUrl}`;
-  else if (audioUrl.startsWith('http')) resolved = audioUrl;
-  else resolved = `${VERSES_BASE}/${audioUrl}`;
-  return ensureAllowedAudioHost(resolved);
+  throw new Error(`Unknown provider: ${provider}`);
 }
