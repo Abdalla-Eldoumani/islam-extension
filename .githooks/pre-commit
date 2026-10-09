@@ -1,0 +1,8 @@
+#!/bin/sh
+# Sync-drift guard. Aborts the commit when chrome/shared or firefox/shared
+# has drifted from the repo-root shared/ source. Run once after cloning:
+#   git config core.hooksPath .githooks
+# check-sync.mjs uses only node builtins, so no npm install is needed here.
+# It exits non-zero on drift; running it last lets sh propagate that status
+# as the hook's status, which aborts the commit.
+node scripts/check-sync.mjs
