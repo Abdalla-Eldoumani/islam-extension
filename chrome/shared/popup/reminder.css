@@ -9,7 +9,12 @@
   padding-block: 8px 16px;
 }
 
+/* A long dua scrolls in the small window, so Close stays in reach. */
 .reminder__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--surface-base);
   display: flex;
   align-items: center;
   justify-content: space-between;
