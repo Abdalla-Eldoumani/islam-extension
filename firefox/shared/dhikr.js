@@ -4,17 +4,25 @@
 // Qur'an entries are copied byte for byte from api.quran.com (Imlaei text)
 // with the Saheeh International English. Hadith entries carry the wording of
 // the sunnah.com hadith they name, in this file's own spelling conventions;
-// for the takbir and the salawat the named hadith is the one giving the
-// virtue. A quoted virtue is copied byte for byte from that sunnah.com page,
-// English and Arabic. virtue.fr exists only where the French line matches
-// the source; otherwise the English line is shown.
+// the paired tasbih and the Sayyid al-Istighfar are the exception: their
+// Arabic is the hadith's own text, copied exactly. For the salawat the named
+// hadith is the one giving the virtue. A quoted virtue is copied byte for
+// byte from that sunnah.com page, English and Arabic. virtue.fr exists only
+// where the French line matches the source; otherwise the English line is
+// shown. englishFromSunnah marks an English line taken from sunnah.com and
+// credited in the source line.
 
 export const dhikrCollection = [
   {
     arabic: 'سُبْحَانَ اللَّهِ',
     transliteration: 'Subhan Allah',
     english: 'Glory be to Allah',
-    source: { collection: 'muslim', number: '223' }
+    source: { collection: 'muslim', number: '223' },
+    virtue: {
+      en: 'Subhan Allah (Glory be to Allah) and al-Hamdu Lillah fill up what is between the heavens and the earth',
+      ar: 'سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ تَمْلآنِ - أَوْ تَمْلأُ - مَا بَيْنَ السَّمَوَاتِ وَالأَرْضِ',
+      quoted: true
+    }
   },
   {
     arabic: 'الْحَمْدُ لِلَّهِ',
@@ -31,12 +39,7 @@ export const dhikrCollection = [
     arabic: 'اللَّهُ أَكْبَرُ',
     transliteration: 'Allahu Akbar',
     english: 'Allah is the Greatest',
-    source: { collection: 'tirmidhi', number: '3519' },
-    virtue: {
-      en: 'Fills what is between heaven and earth',
-      ar: 'تملأ ما بين السماء والأرض',
-      fr: 'Remplit ce qui se trouve entre le ciel et la terre'
-    }
+    source: { collection: 'tirmidhi', number: '3519' }
   },
   {
     arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
@@ -61,10 +64,15 @@ export const dhikrCollection = [
     }
   },
   {
-    arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ',
-    transliteration: 'Subhan Allahil-Azeem wa bihamdihi',
-    english: 'Glory be to Allah the Magnificent and praise be to Him',
-    source: { collection: 'tirmidhi', number: '3464' }
+    arabic: 'سُبْحَانَ اللَّهِ الْعَظِيمِ، سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+    transliteration: 'Subhan Allahil-Azeem, Subhan Allahi wa bihamdihi',
+    english: 'Glory be to Allah the Magnificent. Glory be to Allah and praise be to Him',
+    source: { collection: 'bukhari', number: '6406' },
+    virtue: {
+      en: 'There are two expressions which are very easy for the tongue to say, but they are very heavy in the balance and are very dear to The Beneficent (Allah)',
+      ar: 'كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ، حَبِيبَتَانِ إِلَى الرَّحْمَنِ',
+      quoted: true
+    }
   },
   {
     arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ',
@@ -89,9 +97,9 @@ export const dhikrCollection = [
     english: 'O Allah, send blessings upon Muhammad ﷺ',
     source: { collection: 'muslim', number: '408' },
     virtue: {
-      en: 'Allah sends 10 blessings for each one sent',
-      ar: 'يُصلي الله عليه عشرًا بكل صلاة',
-      fr: 'Allah envoie 10 bénédictions pour chacune envoyée'
+      en: 'He who blesses me once, Allah would bless him ten times.',
+      ar: 'مَنْ صَلَّى عَلَىَّ وَاحِدَةً صَلَّى اللَّهُ عَلَيْهِ عَشْرًا',
+      quoted: true
     }
   },
   {
@@ -132,14 +140,15 @@ export const dhikrCollection = [
     virtue: { en: 'Paradise will be his due.', ar: 'وَجَبَتْ لَهُ الْجَنَّةُ', quoted: true }
   },
   {
-    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ',
-    transliteration: 'Allahumma anta rabbi la ilaha illa anta khalaqtani wa ana \'abduk',
-    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant',
+    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي، لاَ إِلَهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَىَّ وَأَبُوءُ لَكَ بِذَنْبِي، فَاغْفِرْ لِي، فَإِنَّهُ لاَ يَغْفِرُ الذُّنُوبَ إِلاَّ أَنْتَ',
+    transliteration: 'Allahumma anta Rabbi la ilaha illa anta, Khalaqtani wa ana `Abduka, wa ana `ala `ahdika wa wa`dika mastata`tu, A`udhu bika min Sharri ma sana`tu, abu\'u Laka bini`matika `alaiya, wa abu\'u laka bidhanbi faghfir lee fa innahu la yaghfiru adhdhunuba illa anta',
+    english: 'O Allah, You are my Lord, there is none worthy of worship except You. You have created me, and I am Your servant, and I am faithful to Your covenant and promise as much as I can. I seek refuge in You from the evil of what I have done. I acknowledge Your blessings upon me, and I admit my sins. So forgive me, for none forgives sins except You.',
+    englishFromSunnah: true,
     source: { collection: 'bukhari', number: '6306' },
     virtue: {
-      en: 'Beginning of Sayyid al-Istighfar - master of seeking forgiveness',
-      ar: 'بداية سيد الاستغفار',
-      fr: 'Début de Sayyid al-Istighfar - le maître de la demande de pardon'
+      en: 'If somebody recites it during the day with firm faith in it, and dies on the same day before the evening, he will be from the people of Paradise; and if somebody recites it at night with firm faith in it, and dies before the morning, he will be from the people of Paradise.',
+      ar: 'وَمَنْ قَالَهَا مِنَ النَّهَارِ مُوقِنًا بِهَا، فَمَاتَ مِنْ يَوْمِهِ قَبْلَ أَنْ يُمْسِيَ، فَهُوَ مِنْ أَهْلِ الْجَنَّةِ، وَمَنْ قَالَهَا مِنَ اللَّيْلِ وَهْوَ مُوقِنٌ بِهَا، فَمَاتَ قَبْلَ أَنْ يُصْبِحَ، فَهْوَ مِنْ أَهْلِ الْجَنَّةِ',
+      quoted: true
     }
   },
   {
