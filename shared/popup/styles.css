@@ -1,5 +1,5 @@
-/* Popup and reminder window. One ruled page: parchment, ink and gold
-   hairlines, sections separated by rules rather than cards. */
+/* Popup and reminder window. One ruled page: slate ink on a cool paper
+   ground with sage hairlines, sections separated by rules rather than cards. */
 
 @font-face {
   font-family: 'Cormorant Garamond';
@@ -61,28 +61,31 @@
 :root {
   color-scheme: light dark;
 
-  --surface-base: #F5F0E6;
-  --surface-raised: #FBF7EE;
+  --surface-base: #EFF2F0;
+  --surface-raised: #F7F9F7;
 
-  --ink-primary: #1A1410;
-  --ink-secondary: #3F352A;
-  --ink-tertiary: #6E5E4D;
+  --ink-primary: #1B2528;
+  --ink-secondary: #36444A;
+  --ink-tertiary: #566368;
 
-  --gold-primary: #B8893E;
-  --gold-deep: #8B6428;
+  --sage: #668471;
+  --sage-deep: #3D6150;
 
-  --rule-hairline: rgba(184, 137, 62, 0.4);
-  --rule-soft: rgba(26, 20, 16, 0.22);
+  --rule-hairline: rgba(61, 97, 80, 0.34);
+  --rule-soft: rgba(27, 37, 40, 0.2);
   /* Field underlines mark where to type, so they keep 3:1 against the page. */
-  --rule-field: rgba(26, 20, 16, 0.5);
-  --wash: rgba(184, 137, 62, 0.08);
+  --rule-field: rgba(27, 37, 40, 0.52);
+  --wash: rgba(61, 97, 80, 0.08);
 
-  --status-negative: #9B3030;
+  --status-negative: #A23A3A;
 
-  /* Text and focus colour for links, pressed toggles and focus rings. */
-  --accent-ink: var(--gold-deep);
-  --focus: var(--gold-deep);
-  --panel-shadow: 0 6px 20px rgba(26, 20, 16, 0.12);
+  /* Text and focus colour for links, pressed toggles and focus rings, and the
+     fill behind the one primary control. */
+  --accent-ink: var(--sage-deep);
+  --accent-solid: var(--sage-deep);
+  --on-accent: var(--surface-raised);
+  --focus: var(--sage-deep);
+  --panel-shadow: 0 6px 20px rgba(27, 37, 40, 0.14);
 
   /* Latin first so Latin glyphs never fall to a system serif; the Arabic
      script falls through to Amiri. Arabic text sets Amiri first instead. */
@@ -96,26 +99,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface-base: #0F0D0A;
-    --surface-raised: #16130E;
+    --surface-base: #12171A;
+    --surface-raised: #1A2124;
 
-    --ink-primary: #ECE3D2;
-    --ink-secondary: #C9B89D;
-    --ink-tertiary: #A29076;
+    --ink-primary: #E8EDEA;
+    --ink-secondary: #BCC8C2;
+    --ink-tertiary: #93A19B;
 
-    --gold-primary: #D4A843;
-    --gold-deep: #B8893E;
+    --sage: #8DB19B;
+    --sage-deep: #9CC2AB;
 
-    --rule-hairline: rgba(212, 168, 67, 0.32);
-    --rule-soft: rgba(236, 227, 210, 0.22);
-    --rule-field: rgba(236, 227, 210, 0.5);
-    --wash: rgba(212, 168, 67, 0.1);
+    --rule-hairline: rgba(141, 177, 155, 0.34);
+    --rule-soft: rgba(232, 237, 234, 0.2);
+    --rule-field: rgba(232, 237, 234, 0.5);
+    --wash: rgba(141, 177, 155, 0.1);
 
-    --status-negative: #D46A6A;
+    --status-negative: #E07A7A;
 
-    --accent-ink: var(--gold-primary);
-    --focus: var(--gold-primary);
-    --panel-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    --accent-solid: var(--sage);
+    --on-accent: var(--surface-base);
+    --panel-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -137,13 +140,13 @@ body {
   background: var(--surface-base);
   color: var(--ink-primary);
   font-family: var(--font-ui);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
 }
 
 html[dir="rtl"] body {
   font-family: var(--font-arabic);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.7;
 }
 
@@ -207,7 +210,7 @@ html[dir="rtl"] body {
   border-radius: 0;
   background: transparent;
   color: var(--ink-secondary);
-  font: 500 13px/1 var(--font-ui);
+  font: 500 14px/1 var(--font-ui);
   cursor: pointer;
 }
 
@@ -216,7 +219,7 @@ html[dir="rtl"] body {
   align-items: center;
   gap: 10px;
   margin-block: 6px 2px;
-  color: var(--gold-primary);
+  color: var(--sage);
 }
 
 .ornament::before,
@@ -250,7 +253,7 @@ html[dir="rtl"] body {
 
 .leaf__note {
   margin-block: -8px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-tertiary);
 }
 
@@ -260,10 +263,15 @@ html[dir="rtl"] body {
   margin-block-end: 12px;
 }
 
+/* The leaf's own padding closes the section; a last field adds no second gap. */
+.leaf > .field:last-child {
+  margin-block-end: 0;
+}
+
 .field__label {
   display: block;
   margin-block-end: 2px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink-tertiary);
 }
@@ -279,7 +287,7 @@ html[dir="rtl"] body {
   background: transparent;
   color: var(--ink-primary);
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .field__input::placeholder {
@@ -349,14 +357,14 @@ html[dir="rtl"] body {
   border: 0;
   background: none;
   color: var(--ink-primary);
-  font: 500 14px/1.2 var(--font-ui);
+  font: 500 15px/1.2 var(--font-ui);
   cursor: pointer;
   transition: color 120ms ease-out;
 }
 
 html[dir="rtl"] .action {
   font-family: var(--font-arabic);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .action:hover:not(:disabled) {
@@ -380,11 +388,16 @@ html[dir="rtl"] .action__icon--forward {
 .action__ring {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--gold-primary);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  color: var(--accent-ink);
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  transition: background-color 120ms ease-out;
+}
+
+.action--primary:hover:not(:disabled) .action__ring {
+  background: var(--ink-primary);
 }
 
 /* Toggle mark: an open ring that fills when the toggle is on. */
@@ -411,7 +424,7 @@ html[dir="rtl"] .action__icon--forward {
 }
 
 .action--compact {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-secondary);
 }
 
@@ -421,10 +434,35 @@ html[dir="rtl"] .action__icon--forward {
   border: 0;
   background: none;
   color: var(--accent-ink);
-  font: 500 13px/1.2 var(--font-ui);
+  font: 500 14px/1.2 var(--font-ui);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+/* ---- surah hero ----------------------------------------------------- */
+
+.surah-hero {
+  margin-block: 2px 8px;
+  padding-block: 14px 12px;
+  border-block: 1px solid var(--rule-hairline);
+  background: var(--wash);
+  text-align: center;
+}
+
+.surah-hero__arabic {
+  font-family: var(--font-arabic);
+  font-size: 44px;
+  line-height: 1.5;
+  color: var(--ink-primary);
+}
+
+.surah-hero__name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink-secondary);
 }
 
 /* ---- playback ------------------------------------------------------- */
@@ -437,7 +475,7 @@ html[dir="rtl"] .action__icon--forward {
   margin-block: 4px 0;
   padding-block: 2px;
   border-block: 1px solid var(--rule-hairline);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-secondary);
 }
 
@@ -449,14 +487,14 @@ html[dir="rtl"] .action__icon--forward {
   width: 100%;
   min-height: 44px;
   margin: 0;
-  accent-color: var(--gold-deep);
+  accent-color: var(--accent-solid);
   cursor: pointer;
 }
 
 .progress__times {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-tertiary);
   direction: ltr;
@@ -464,7 +502,7 @@ html[dir="rtl"] .action__icon--forward {
 
 .status {
   min-height: 1.5em;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-secondary);
 }
 
@@ -478,8 +516,23 @@ html[dir="rtl"] .action__icon--forward {
 
 /* ---- hadith --------------------------------------------------------- */
 
+.hadith__narrator {
+  margin-block-end: 4px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--ink-secondary);
+}
+
+.hadith__narrator:lang(ar) {
+  font-family: var(--font-arabic);
+  font-style: normal;
+  font-size: 18px;
+}
+
 .hadith__text {
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.65;
   color: var(--ink-primary);
   overflow-wrap: anywhere;
@@ -487,13 +540,13 @@ html[dir="rtl"] .action__icon--forward {
 
 .hadith__text:lang(ar) {
   font-family: var(--font-arabic);
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.95;
 }
 
 .source {
   margin-block-start: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-tertiary);
 }
 
@@ -521,16 +574,31 @@ html[dir="rtl"] .action__icon--forward {
 
 .dhikr__arabic {
   font-family: var(--font-arabic);
-  font-size: 25px;
+  font-size: 26px;
   line-height: 1.85;
   color: var(--ink-primary);
+}
+
+/* The size steps down with the length of the text; see sizeTier in dhikr-view.js. */
+.dhikr__arabic[data-size="s"] {
+  font-size: 32px;
+  line-height: 1.7;
+}
+
+.dhikr__arabic[data-size="l"] {
+  font-size: 23px;
+}
+
+.dhikr__arabic[data-size="xl"] {
+  font-size: 21px;
+  line-height: 2;
 }
 
 .dhikr__translit {
   margin-block-start: 6px;
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.4;
   color: var(--ink-secondary);
 }
@@ -538,7 +606,7 @@ html[dir="rtl"] .action__icon--forward {
 .dhikr__meaning {
   margin-block-start: 6px;
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
@@ -546,14 +614,14 @@ html[dir="rtl"] .action__icon--forward {
   margin: 12px auto 0;
   max-width: 30em;
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
   color: var(--ink-secondary);
 }
 
 .dhikr__virtue:lang(ar) {
   font-family: var(--font-arabic);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.85;
 }
 
@@ -587,7 +655,7 @@ html[dir="rtl"] .action__icon--forward {
   border-block-end: 1px solid transparent;
   background: none;
   color: var(--ink-secondary);
-  font: 500 13px/1 var(--font-ui);
+  font: 500 14px/1 var(--font-ui);
   cursor: pointer;
 }
 
