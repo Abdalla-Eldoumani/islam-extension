@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { truncateHadith, isSafeHadithText, sunnahNumber, isUsableHadith } from '../shared/hadith.js';
+import { truncateHadith, isSafeHadithText, sunnahNumber, isUsableHadith, splitNarrator, splitArabicRuns } from '../shared/hadith.js';
 
 // Religious-content test discipline: every fixture here is synthetic
 // non-religious filler. No real hadith wording is reproduced. The helpers
@@ -119,4 +119,48 @@ test('isSafeHadithText rejects empty, non-string, and over-length input', () => 
 test('isSafeHadithText accepts ordinary synthetic text within bounds', () => {
   assert.equal(isSafeHadithText('an ordinary line of synthetic filler text'), true);
   assert.equal(isSafeHadithText('z'.repeat(4096)), true);
+});
+
+test('splitNarrator separates a narrator line glued to the text by a colon', () => {
+  const text = 'Narrated Some Narrator:synthetic body line';
+  const { narrator, body } = splitNarrator(text);
+  assert.equal(narrator, 'Narrated Some Narrator:');
+  assert.equal(body, 'synthetic body line');
+  assert.equal(narrator + body, text, 'the two parts rejoin to the original text');
+});
+
+test('splitNarrator also splits "reported:" lines and keeps a leading quote in the body', () => {
+  const { narrator, body } = splitNarrator('Some Narrator reported:"synthetic body line"');
+  assert.equal(narrator, 'Some Narrator reported:');
+  assert.equal(body, '"synthetic body line"');
+});
+
+test('splitNarrator leaves text alone when there is nothing to split', () => {
+  const cases = [
+    'synthetic text with no colon at all',
+    'Narrated Some Narrator: already spaced',
+    'a reference like 2:255 is not a narrator line',
+    'he said "x:y" and left',
+    'z'.repeat(300) + ':glued after a very long head'
+  ];
+  for (const text of cases) assert.deepEqual(splitNarrator(text), { narrator: '', body: text });
+  assert.deepEqual(splitNarrator(null), { narrator: '', body: null });
+});
+
+test('splitArabicRuns marks Arabic-script runs and keeps every character', () => {
+  const text = 'synthetic line (\u0643\u062A\u0627\u0628 \u0642\u0644\u0645) and more';
+  const parts = splitArabicRuns(text);
+  assert.deepEqual(parts.map((p) => p.arabic), [false, true, false]);
+  assert.equal(parts[1].text, '\u0643\u062A\u0627\u0628 \u0642\u0644\u0645');
+  assert.equal(parts.map((p) => p.text).join(''), text, 'the parts rejoin to the original text');
+});
+
+test('splitArabicRuns treats a presentation-form ligature as an Arabic run and passes plain text through', () => {
+  assert.deepEqual(splitArabicRuns('name (\uFDFA) said'), [
+    { text: 'name (', arabic: false },
+    { text: '\uFDFA', arabic: true },
+    { text: ') said', arabic: false }
+  ]);
+  assert.deepEqual(splitArabicRuns('plain synthetic text'), [{ text: 'plain synthetic text', arabic: false }]);
+  assert.deepEqual(splitArabicRuns(''), []);
 });
