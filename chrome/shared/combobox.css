@@ -57,7 +57,7 @@
   overscroll-behavior: contain;
   color: var(--ink-primary);
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .combobox__panel[hidden] {
@@ -96,13 +96,13 @@ html[dir="rtl"] .combobox__option {
 
 .combobox__option[lang="ar"] {
   font-family: var(--font-arabic);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .combobox__option__secondary {
   color: var(--ink-tertiary);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .combobox__panel::-webkit-scrollbar {
