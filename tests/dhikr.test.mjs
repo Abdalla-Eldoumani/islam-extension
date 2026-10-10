@@ -49,6 +49,13 @@ test('every virtue line has English and Arabic text', () => {
   });
 });
 
+test('englishFromSunnah is a true flag and only hadith entries carry it', () => {
+  for (const d of dhikrCollection.filter((x) => 'englishFromSunnah' in x)) {
+    assert.equal(d.englishFromSunnah, true);
+    assert.equal(d.source.quran, undefined);
+  }
+});
+
 test('virtueFor picks the UI language and falls back to English', () => {
   const both = { virtue: { en: 'e', ar: 'a', fr: 'f', quoted: false } };
   const quoted = { virtue: { en: 'e', ar: 'a', quoted: true } };
