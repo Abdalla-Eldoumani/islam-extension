@@ -1,6 +1,6 @@
 {
   "name": "quran-sunnah-companion",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Browser extension with Qur'an recitation, hadith from Sahih al-Bukhari and Sahih Muslim, and dhikr reminders in a popup.",
   "private": true,
   "type": "module",
