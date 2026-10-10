@@ -5,7 +5,7 @@
 import { browser } from '../browser.js';
 import { createCombobox } from '../combobox.js';
 import { SHAHADA, dhikrCollection } from '../dhikr.js';
-import { getHadith, truncateHadith } from '../hadith.js';
+import { getHadith, splitArabicRuns, splitNarrator, truncateHadith } from '../hadith.js';
 import { LANG_STORAGE_KEY, getCurrentLang, resolveLang, setCurrentLang, t } from '../i18n.js';
 import { getSuraAudioUrl, hasSurah } from '../audio-urls.js';
 import { findReciter, loadReciters } from '../reciter-catalogue.js';
@@ -139,10 +139,25 @@ function refreshClearButtons() {
   $('clear-reciter').dataset.visible = String(!!$('reciter-input').value);
 }
 
+// The chosen surah's name, shown large above the controls. It repeats what the
+// field already says, so it is hidden from assistive technology.
+function renderSurahHero() {
+  const sura = findSura(view.suraId);
+  $('surah-hero').hidden = !sura;
+  if (!sura) return;
+  const lang = getCurrentLang();
+  const name = $('surah-hero-name');
+  $('surah-hero-arabic').textContent = sura.name_arabic;
+  name.hidden = lang === 'ar';
+  name.lang = lang;
+  name.textContent = `${sura.id} · ${sura.name_simple}`;
+}
+
 function showSelection() {
   if (view.suraId && suraBox) suraBox.setValue(view.suraId);
   if (view.reciterKey && reciterBox) reciterBox.setValue(view.reciterKey);
   refreshClearButtons();
+  renderSurahHero();
 }
 
 async function saveSelections() {
@@ -158,6 +173,7 @@ async function saveSelections() {
 
 function selectionChanged() {
   refreshClearButtons();
+  renderSurahHero();
   const reciter = currentReciter();
   if (view.suraId && reciter && !hasSurah(reciter, view.suraId)) setStatus('quran-status', t('surahNotAvailable'));
   else setStatus('quran-status', '');
@@ -334,12 +350,32 @@ async function seekTo(percent) {
 
 // ---- hadith -------------------------------------------------------------
 
+// Sets fetched text, marking the Arabic runs inside non-Arabic text so each
+// carries its own language and direction.
+function setHadithText(el, text, lang) {
+  if (lang === 'ar') {
+    el.textContent = text;
+    return;
+  }
+  el.replaceChildren(...splitArabicRuns(text).map(({ text: chunk, arabic }) => {
+    if (!arabic) return document.createTextNode(chunk);
+    const run = document.createElement('span');
+    run.lang = 'ar';
+    run.dir = 'rtl';
+    run.textContent = chunk;
+    return run;
+  }));
+}
+
 function renderHadith() {
   const lang = getCurrentLang();
   const textEl = $('hadith-text');
+  const narratorEl = $('hadith-narrator');
   const sourceEl = $('hadith-source');
   const expand = $('hadith-expand');
   textEl.lang = lang;
+  narratorEl.lang = lang;
+  narratorEl.hidden = true;
   if (view.hadith === undefined) {
     textEl.textContent = t('loading');
     textEl.dir = 'auto';
@@ -357,8 +393,11 @@ function renderHadith() {
     setStatus('hadith-status', t('hadithUnavailable'));
     return;
   }
-  const { truncated, short, full } = truncateHadith(view.hadith.text);
-  textEl.textContent = truncated && !view.hadithExpanded ? short : full;
+  const { narrator, body } = splitNarrator(view.hadith.text);
+  setHadithText(narratorEl, narrator, lang);
+  narratorEl.hidden = !narrator;
+  const { truncated, short, full } = truncateHadith(body);
+  setHadithText(textEl, truncated && !view.hadithExpanded ? short : full, lang);
   textEl.dir = 'auto';
   expand.hidden = !truncated;
   expand.textContent = view.hadithExpanded ? t('showLessHadith') : t('seeFullHadith');
