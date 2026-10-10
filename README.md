@@ -21,7 +21,7 @@ A browser extension with Qur'an recitation, a hadith from Sahih al-Bukhari or Sa
 ### Dhikr
 - 28 adhkar in Arabic, each with a transliteration and an English meaning.
 - Each dhikr names its source: a hadith linked to sunnah.com or verses linked to quran.com.
-- Qur'anic adhkar use the exact verse text from the Quran.com API with the Saheeh International translation. For adhkar taken from hadith, the English line is this project's own rendering of the meaning.
+- Qur'anic adhkar use the exact verse text from the Quran.com API with the Saheeh International translation. For adhkar taken from hadith, the English line is this project's own rendering of the meaning, except where the source line says "English from sunnah.com".
 - A virtue is shown only when its hadith is graded sahih or hasan. Quoted virtues reproduce the English and Arabic of the sunnah.com page.
 - Reminders from every 30 seconds to every hour, as a system notification or a small window. A reminder closes after a minute, or when the next one replaces it.
 
@@ -63,7 +63,7 @@ Plain JavaScript and CSS with no build step and no runtime dependencies. The pop
 
 ### Browser support
 - Chrome and other Chromium browsers, version 121 or later.
-- Firefox 109 or later.
+- Firefox 140 or later (Firefox for Android 142 or later).
 
 ### Languages
 English, French and Arabic, chosen from the menu in the header. Arabic turns the whole page right to left. On first use the interface follows the browser language.
@@ -107,6 +107,13 @@ The code is under the [MIT](LICENSE) licence. The bundled fonts (Amiri, Cormoran
 All praise is due to Allah (SWT). Thanks to Quran.com, MP3Quran, Al-Quran Cloud and the Islamic Network, to the maintainers of the hadith-api dataset and sunnah.com, and to the reciters whose recitations make this possible.
 
 ## Changelog
+
+### 2.2.1
+
+- Hadith. The narrator line ("Narrated Abu Huraira:") now sits on its own line above the text. The dataset runs the two together; the stored text is unchanged and only the display splits it.
+- Dhikr. Wording checked against the sunnah.com page each entry names. The paired tasbih now follows Bukhari 6406 and quotes its reward sentence, in English and Arabic. The salawat quotes its reward from Muslim 408, and the Sayyid al-Istighfar (Bukhari 6306) is the full supplication in the hadith's Arabic with sunnah.com's English, credited in its source line. The reward line under Allahu Akbar is removed: its hadith (Tirmidhi 3519) is graded hasan on sunnah.com and da'if by al-Albani, and the line was a paraphrase. Subhan Allah and al-Hamdu Lillah now quotes Muslim 223.
+- Firefox. The minimum version is 140 (142 on Android), the first release that reads the data-collection declaration in the manifest.
+- Design. A slate and sage palette in the light and dark schemes, 16 px body text, the selected surah's name set large above the player, and a solid play control. Long adhkar step down in size so the whole text fits.
 
 ### 2.2.0
 
