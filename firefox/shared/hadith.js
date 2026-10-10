@@ -30,6 +30,37 @@ export function truncateHadith(text) {
   return { truncated: true, short: text.slice(0, cut).trimEnd() + '…', full: text };
 }
 
+// The English editions run the narrator line into the text with no space
+// ("Narrated X:The Prophet said"). This finds that first colon so the popup
+// can show the two parts on separate lines; the stored text is not changed.
+// A colon followed by a digit (a verse reference) or preceded by a quotation
+// mark is not a narrator line.
+const NARRATOR_LINE = /^([^:\n"]{1,200}:)(?=[^\s\d])/;
+
+export function splitNarrator(text) {
+  const match = typeof text === 'string' ? NARRATOR_LINE.exec(text) : null;
+  return match
+    ? { narrator: match[1], body: text.slice(match[1].length) }
+    : { narrator: '', body: text };
+}
+
+// English and French entries carry Arabic inline, such as the honorific after
+// the Prophet's name. The popup marks those runs lang="ar" so screen readers
+// pronounce them; the text itself is returned unchanged.
+const ARABIC_RUN = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+(?:\s+[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g;
+
+export function splitArabicRuns(text) {
+  const parts = [];
+  let last = 0;
+  for (const match of text.matchAll(ARABIC_RUN)) {
+    if (match.index > last) parts.push({ text: text.slice(last, match.index), arabic: false });
+    parts.push({ text: match[0], arabic: true });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), arabic: false });
+  return parts;
+}
+
 // Structural guard on third-party text before it reaches the DOM.
 export function isSafeHadithText(text) {
   return typeof text === 'string'
