@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Qur'an & Sunnah Companion",
   "version": "2.2.1",
-  "description": "Your pocket-size īmān boost in every tab",
+  "description": "Qur'an recitation, a hadith from Sahih al-Bukhari or Sahih Muslim each time you open it, and reminders to make dhikr.",
   "permissions": [
     "storage",
     "alarms",
