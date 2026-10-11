@@ -113,7 +113,7 @@ All praise is due to Allah (SWT). Thanks to Quran.com, MP3Quran, Al-Quran Cloud 
 - Hadith. The narrator line ("Narrated Abu Huraira:") now sits on its own line above the text. The dataset runs the two together; the stored text is unchanged and only the display splits it.
 - Dhikr. Wording checked against the sunnah.com page each entry names. The paired tasbih now follows Bukhari 6406 and quotes its reward sentence, in English and Arabic. The salawat quotes its reward from Muslim 408, and the Sayyid al-Istighfar (Bukhari 6306) is the full supplication in the hadith's Arabic with sunnah.com's English, credited in its source line. The reward line under Allahu Akbar is removed: its hadith (Tirmidhi 3519) is graded hasan on sunnah.com and da'if by al-Albani, and the line was a paraphrase. Subhan Allah and al-Hamdu Lillah now quotes Muslim 223.
 - Firefox. The minimum version is 140 (142 on Android), the first release that reads the data-collection declaration in the manifest.
-- Design. A slate and sage palette in the light and dark schemes, 16 px body text, the selected surah's name set large above the player, and a solid play control. Long adhkar step down in size so the whole text fits. The icon is the same ring at every size, in the new colours; the 16 px icon used to be a crescent.
+- Design. A slate and sage palette in the light and dark schemes, 16 px body text, the selected surah's name set large above the player, and a solid play control. Long adhkar step down in size so the whole text fits. The icon is the same ring at every size, in the new colours; the 16 px icon used to be a crescent. In Arabic, the elapsed time now sits at the start of the progress bar, on the right.
 
 ### 2.2.0
 
