@@ -497,7 +497,6 @@ html[dir="rtl"] .action__icon--forward {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-tertiary);
-  direction: ltr;
 }
 
 .status {
